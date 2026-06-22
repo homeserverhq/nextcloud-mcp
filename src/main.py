@@ -1097,6 +1097,7 @@ async def create_event(
     location: str = "",
     rrule: str = "",
     timezone: str = "",
+    attendees: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new calendar event.
@@ -1109,9 +1110,10 @@ async def create_event(
         location: Event location.
         rrule: Recurrence rule.
         timezone: Timezone of the event.
+        attendees: Comma-separated attendee email addresses to invite (e.g. 'leon@example.com'). Leave empty for no attendees.
     """
     return await get_client().create_event(calendar_uri, summary, dtstart, dtend,
-                                           description, location, rrule, timezone, get_user_token())
+                                           description, location, rrule, timezone, get_user_token(), attendees=attendees)
 
 
 @mcp.tool()
@@ -1123,6 +1125,7 @@ async def update_event(
     dtend: Optional[str] = None,
     description: Optional[str] = None,
     location: Optional[str] = None,
+    attendees: Optional[str] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a calendar event.
@@ -1134,9 +1137,10 @@ async def update_event(
         dtend: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         description: New description.
         location: New location.
+        attendees: Comma-separated attendee email addresses. Leave empty (default) to preserve existing attendees.
     """
     return await get_client().update_event(calendar_uri, event_uid, summary, dtstart,
-                                           dtend, description, location, get_user_token())
+                                           dtend, description, location, get_user_token(), attendees=attendees or "")
 
 
 @mcp.tool()
@@ -1172,7 +1176,7 @@ async def create_meeting(
         attendees: Comma-separated email addresses (required).
         description: Meeting description (required).
         location: Meeting location.
-        calendar_uri: Calendar URI to add event to. Get this from list_calendars(). If omitted, uses default calendar.
+        calendar_uri: Leave empty (default) to use your personal/default calendar. Only fill this if you need to use a specific calendar.
     """
     return await get_client().create_meeting(summary, dtstart, dtend, attendees, description,
                                              location, calendar_uri, get_user_token())

@@ -235,8 +235,10 @@ class NextcloudClient:
                                 rtt = rtc.tag.split("}")[-1] if "}" in rtc.tag else rtc.tag
                                 rt.append(rtt)
                             item["resourcetype"] = rt
-                        if child.text is None and len(child) > 0:
+                        elif child.text is None and len(child) > 0:
                             item[tag] = ET.tostring(child, encoding="unicode")
+                        else:
+                            item[tag] = child.text or ""
             results.append(item)
         return results
 
@@ -326,7 +328,8 @@ class NextcloudClient:
     def _create_ics_event(self, summary: str, dtstart: str, dtend: str,
                           description: str = "", location: str = "",
                           rrule: str = "", timezone: str = "",
-                          uid: str = "") -> str:
+                          uid: str = "",
+                          attendees: list[dict] = None) -> str:
         cal = ICal()
         cal.add("prodid", "-//Nextcloud MCP//nextcloud-mcp//EN")
         cal.add("version", "2.0")
@@ -342,6 +345,15 @@ class NextcloudClient:
             event.add("rrule", rrule)
         if uid:
             event.add("uid", uid)
+        if attendees:
+            for att in attendees:
+                a = vCalAddress(f"mailto:{att['email']}")
+                a.params["CN"] = vText(att.get("cn", ""))
+                a.params["CUTYPE"] = vText("INDIVIDUAL")
+                a.params["PARTSTAT"] = vText("NEEDS-ACTION")
+                a.params["ROLE"] = vText("REQ-PARTICIPANT")
+                a.params["RSVP"] = vText("TRUE")
+                event.add("attendee", a)
         cal.add_component(event)
         return cal.to_ical().decode("utf-8")
 
@@ -820,10 +832,13 @@ class NextcloudClient:
     async def create_event(self, calendar_uri: str, summary: str,
                            dtstart: str, dtend: str, description: str = "",
                            location: str = "", rrule: str = "", timezone: str = "",
-                           api_key: str = None, uid: str = "") -> Any:
+                           api_key: str = None, uid: str = "",
+                           attendees: str = "") -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
+        resolved = await self._resolve_attendees(attendees, api_key)
         ics = self._create_ics_event(summary, dtstart, dtend, description,
-                                     location, rrule, timezone, uid)
+                                     location, rrule, timezone, uid,
+                                     attendees=resolved)
         euid = uid or summary.replace(" ", "_")
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
@@ -834,7 +849,8 @@ class NextcloudClient:
     async def update_event(self, calendar_uri: str, event_uid: str,
                            summary: str = None, dtstart: str = None,
                            dtend: str = None, description: str = None,
-                           location: str = None, api_key: str = None) -> Any:
+                           location: str = None, api_key: str = None,
+                           attendees: str = "") -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
         ics = await self._dav_get(path, api_key)
@@ -845,9 +861,14 @@ class NextcloudClient:
         final_dtend = dtend or current.get("dtend", "")
         final_desc = description if description is not None else current.get("description", "")
         final_loc = location if location is not None else current.get("location", "")
+        if attendees:
+            final_attendees = await self._resolve_attendees(attendees, api_key)
+        else:
+            final_attendees = self._parse_attendees_from_ics(ics)
         new_ics = self._create_ics_event(
             final_summary, final_dtstart, final_dtend,
-            final_desc, final_loc, "", "", event_uid)
+            final_desc, final_loc, "", "", event_uid,
+            attendees=final_attendees)
         return await self._dav_put(path, new_ics, api_key)
 
     async def delete_event(self, calendar_uri: str, event_uid: str,
@@ -855,6 +876,69 @@ class NextcloudClient:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(
             f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics", api_key)
+
+    async def _resolve_attendees(self, attendees_str: str,
+                                 api_key: str = None) -> list[dict]:
+        if not attendees_str:
+            return []
+        emails = [e.strip() for e in attendees_str.split(",") if e.strip()]
+        if not emails:
+            return []
+        addressbooks = await self.list_addressbooks(api_key)
+        email_to_cn = {}
+        for ab in addressbooks:
+            href = ab.get("href", "")
+            if not href:
+                continue
+            rt = ab.get("resourcetype", [])
+            if "addressbook" not in rt:
+                continue
+            ab_uri = _strip_dav_prefix(href, "addressbooks").rstrip("/")
+            if not ab_uri:
+                continue
+            try:
+                contacts = await self.list_contacts(ab_uri, api_key, limit=0)
+                for contact in contacts:
+                    contact_email = contact.get("email", "").strip().lower()
+                    if contact_email:
+                        email_to_cn[contact_email] = contact.get("fn", "")
+            except Exception:
+                continue
+        result = []
+        for email in emails:
+            cn = email_to_cn.get(email.strip().lower(), "")
+            result.append({"email": email.strip(), "cn": cn})
+        return result
+
+    def _parse_attendees_from_ics(self, ics_data: str) -> list[dict]:
+        att_list = []
+        for line in ics_data.splitlines():
+            if line.startswith("ATTENDEE"):
+                params_str = ""
+                email = ""
+                colon_idx = line.find(":")
+                if colon_idx > 0:
+                    params_str = line[8:colon_idx]
+                    email = line[colon_idx + 1:].replace("mailto:", "")
+                cn = ""
+                cn_m = re.search(r'CN=([^;"]+|"[^"]+")', params_str)
+                if cn_m:
+                    cn = cn_m.group(1).strip('"')
+                partstat = ""
+                ps_m = re.search(r'PARTSTAT=([^;]+)', params_str)
+                if ps_m:
+                    partstat = ps_m.group(1)
+                role = ""
+                r_m = re.search(r'ROLE=([^;]+)', params_str)
+                if r_m:
+                    role = r_m.group(1)
+                att_list.append({
+                    "email": email,
+                    "cn": cn,
+                    "partstat": partstat,
+                    "role": role,
+                })
+        return att_list
 
     async def create_meeting(self, summary: str, dtstart: str, dtend: str,
                              attendees: str, description: str = "",
@@ -872,22 +956,61 @@ class NextcloudClient:
             event.add("description", description)
         if location:
             event.add("location", location)
-        for attendee_email in attendees.split(","):
-            attendee_email = attendee_email.strip()
-            if attendee_email:
-                a = vCalAddress(f"mailto:{attendee_email}")
-                a.params["PARTSTAT"] = vText("NEEDS-ACTION")
-                a.params["ROLE"] = vText("REQ-PARTICIPANT")
-                event.add("attendee", a)
+        username = self.extract_username(api_key) if api_key else ""
+        org_cn = username
+        org_email = f"{username}@localhost"
+        if username:
+            try:
+                user_info = await self.get_user(username, api_key)
+                if isinstance(user_info, dict):
+                    org_cn = user_info.get("display-name", username)
+                    org_email = user_info.get("email", f"{username}@localhost")
+            except Exception:
+                pass
+        organizer = vCalAddress(f"mailto:{org_email}")
+        organizer.params["CN"] = vText(org_cn)
+        event["organizer"] = organizer
+        resolved = await self._resolve_attendees(attendees, api_key)
+        for att in resolved:
+            a = vCalAddress(f"mailto:{att['email']}")
+            a.params["CN"] = vText(att.get("cn", ""))
+            a.params["CUTYPE"] = vText("INDIVIDUAL")
+            a.params["PARTSTAT"] = vText("NEEDS-ACTION")
+            a.params["ROLE"] = vText("REQ-PARTICIPANT")
+            a.params["RSVP"] = vText("TRUE")
+            event.add("attendee", a)
         euid = summary.replace(" ", "_")
         cal.add_component(event)
         ics = cal.to_ical().decode("utf-8")
         if not calendar_uri:
             cals = await self.list_calendars(api_key)
-            calendar_uri = cals[0].get("displayname", "personal") if cals else "personal"
-        return await self._dav_put(
+            if cals:
+                for cal in cals:
+                    rt = cal.get("resourcetype", [])
+                    if "calendar" in rt:
+                        href = cal.get("href", "")
+                        dn = cal.get("displayname", "")
+                        if "/personal/" in href or dn.lower() == "personal":
+                            cal_uri = _strip_dav_prefix(href, "calendars") or dn
+                            calendar_uri = cal_uri
+                            break
+                if not calendar_uri:
+                    for cal in cals:
+                        rt = cal.get("resourcetype", [])
+                        if "calendar" in rt:
+                            href = cal.get("href", "")
+                            cal_uri = _strip_dav_prefix(href, "calendars") or cal.get("displayname", "personal")
+                            calendar_uri = cal_uri
+                            break
+                if not calendar_uri:
+                    calendar_uri = "personal"
+            else:
+                calendar_uri = "personal"
+        result = await self._dav_put(
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
             ics, api_key)
+        result["event_uid"] = euid
+        return result
 
     async def find_availability(self, calendar_uris: str, from_date: str,
                                 to_date: str, timezone: str = "",
