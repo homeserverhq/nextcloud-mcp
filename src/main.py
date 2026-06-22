@@ -214,7 +214,6 @@ class SendMessageParam(BaseModel):
 
 
 class SetFlagsParam(BaseModel):
-    account_id: int
     message_id: int
     seen: Optional[bool] = None
     flagged: Optional[bool] = None
@@ -336,16 +335,29 @@ async def get_group_members(
 
 
 @mcp.tool()
-async def list_shares(
-    shared_with_me: bool = False,
-    path: str = "",
+async def list_all_shares(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all shares.
     Args:
-        shared_with_me: Leave False (default) to list all shares. Set to True to only show shares received from others.
-        path: Leave empty (default) to list ALL shares. Only fill this to filter by a specific file path.
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().list_shares(get_user_token(), False, "", include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def get_shares_by_path(
+    path: str,
+    shared_with_me: bool = False,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get shares filtered by file path.
+    Args:
+        path: File path to filter by (required).
+        shared_with_me: Set to True to only show shares received from others. Defaults to False.
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().list_shares(get_user_token(), shared_with_me, path, include_all_fields)
@@ -360,7 +372,7 @@ async def get_share(
 ) -> dict[str, Any]:
     """Get a single share by ID.
     Args:
-        id: ID of the share. Get this from list_shares(). (required).
+        id: ID of the share. Get this from list_all_shares(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().get_share(id, get_user_token(), include_all_fields)
@@ -403,7 +415,7 @@ async def update_share(
 ) -> dict[str, Any]:
     """Update an existing share.
     Args:
-        id: ID of the share to update. Get this from list_shares(). (required).
+        id: ID of the share to update. Get this from list_all_shares(). (required).
         permissions: New permissions bitmask (1=read, 2=update, 4=create, 8=delete, 16=share, 31=all).
         password: New password for link shares.
         expire_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
@@ -419,7 +431,7 @@ async def delete_share(
 ) -> dict[str, Any]:
     """Delete a share by ID.
     Args:
-        id: ID of the share to delete. Get this from list_shares(). (required).
+        id: ID of the share to delete. Get this from list_all_shares(). (required).
     """
     data = await get_client().delete_share(id, get_user_token())
     if isinstance(data, list):
@@ -614,7 +626,7 @@ async def get_folder_tree(
 
 
 @mcp.tool()
-async def list_collection(
+async def get_collection_by_id(
     id: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1039,34 +1051,50 @@ async def delete_calendar(
 
 
 @mcp.tool()
-async def list_events(
-    calendar_uri: str = "",
+async def list_all_events(
     from_date: str = "",
     to_date: str = "",
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """List events in a calendar.
+    """List events from ALL calendars.
     Args:
-        calendar_uri: Leave empty (default) to list events from ALL calendars. Only fill this if you need a single calendar's events — get the URI from list_calendars() first.
         from_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         to_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    if not calendar_uri:
-        all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
-        all_events = []
-        for cal in all_cals:
-            href = cal.get("href", "")
-            if "/remote.php/dav/calendars/" in href:
-                uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
-            else:
-                continue
-            events = await get_client().list_events(uri, get_user_token(), from_date, to_date, limit, include_all_fields)
-            all_events.extend(events)
-        return {"items": json_to_toon(all_events[:limit])}
+    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
+    all_events = []
+    for cal in all_cals:
+        href = cal.get("href", "")
+        if "/remote.php/dav/calendars/" in href:
+            uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
+        else:
+            continue
+        events = await get_client().list_events(uri, get_user_token(), from_date, to_date, limit, include_all_fields)
+        all_events.extend(events)
+    return {"items": json_to_toon(all_events[:limit])}
+
+
+@mcp.tool()
+async def get_events_by_calendar(
+    calendar_uri: str,
+    from_date: str = "",
+    to_date: str = "",
+    limit: int = 50,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List events in a specific calendar.
+    Args:
+        calendar_uri: URI of the calendar. Get this from list_calendars() (required).
+        from_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
+        to_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
+        limit: Maximum results. Defaults to 50.
+        include_all_fields: Set to True to retrieve all available fields.
+    """
     data = await get_client().list_events(calendar_uri, get_user_token(), from_date, to_date, limit, include_all_fields)
     return {"items": json_to_toon(data)}
 
@@ -1081,7 +1109,7 @@ async def get_event(
     """Get a single calendar event.
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
-        event_uid: UID of the event. Get this from list_events(calendar_uri). (required).
+        event_uid: UID of the event. Get this from get_events_by_calendar(calendar_uri). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().get_event(calendar_uri, event_uid, get_user_token(), include_all_fields)
@@ -1131,7 +1159,7 @@ async def update_event(
     """Update a calendar event.
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
-        event_uid: UID of the event to update. Get this from list_events(calendar_uri). (required).
+        event_uid: UID of the event to update. Get this from get_events_by_calendar(calendar_uri). (required).
         summary: New event title.
         dtstart: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         dtend: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
@@ -1152,7 +1180,7 @@ async def delete_event(
     """Delete a calendar event.
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
-        event_uid: UID of the event to delete. Get this from list_events(calendar_uri). (required).
+        event_uid: UID of the event to delete. Get this from get_events_by_calendar(calendar_uri). (required).
     """
     return await get_client().delete_event(calendar_uri, event_uid, get_user_token())
 
@@ -1201,14 +1229,36 @@ async def find_availability(
 
 
 @mcp.tool()
-async def list_todos(
-    calendar_uri: str = "",
+async def list_all_todos(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """List TODO items.
+    """List TODO items from ALL calendars.
     Args:
-        calendar_uri: Leave empty (default) to list todos from the default task calendar. Only fill this if you need a different calendar — get the URI from list_calendars() first.
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
+    all_todos = []
+    for cal in all_cals:
+        href = cal.get("href", "")
+        if "/remote.php/dav/calendars/" in href:
+            uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
+        else:
+            continue
+        todos = await get_client().list_todos(get_user_token(), uri, include_all_fields)
+        all_todos.extend(todos)
+    return {"items": json_to_toon(all_todos)}
+
+
+@mcp.tool()
+async def get_todos_by_calendar(
+    calendar_uri: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List TODO items in a specific calendar.
+    Args:
+        calendar_uri: URI of the calendar. Get this from list_calendars() (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().list_todos(get_user_token(), calendar_uri, include_all_fields)
@@ -1251,7 +1301,7 @@ async def update_todo(
 ) -> dict[str, Any]:
     """Update a TODO item.
     Args:
-        todo_uid: UID of the todo. Get this from list_todos(calendar_uri). (required).
+        todo_uid: UID of the todo. Get this from get_todos_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
         summary: New title.
         description: New description.
@@ -1271,7 +1321,7 @@ async def delete_todo(
 ) -> dict[str, Any]:
     """Delete a TODO item.
     Args:
-        todo_uid: UID of the todo to delete. Get this from list_todos(calendar_uri). (required).
+        todo_uid: UID of the todo to delete. Get this from get_todos_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
     """
     return await get_client().delete_todo(todo_uid, calendar_uri, get_user_token())
@@ -1337,30 +1387,42 @@ async def delete_addressbook(
 
 
 @mcp.tool()
-async def list_contacts(
-    addressbook_uri: str = "",
+async def list_all_contacts(
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """List contacts in an address book.
+    """List contacts from ALL address books.
     Args:
-        addressbook_uri: Leave empty (default) to list contacts from ALL address books. Only fill this if you need a single address book's contacts — get the URI from list_addressbooks() first.
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    if not addressbook_uri:
-        all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields)
-        all_contacts = []
-        for abook in all_abooks:
-            href = abook.get("href", "")
-            if "/remote.php/dav/addressbooks/" in href:
-                uri = href.split("/remote.php/dav/addressbooks/", 1)[1].rstrip("/")
-            else:
-                continue
-            contacts = await get_client().list_contacts(uri, get_user_token(), limit, include_all_fields)
-            all_contacts.extend(contacts)
-        return {"items": json_to_toon(all_contacts[:limit])}
+    all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields)
+    all_contacts = []
+    for abook in all_abooks:
+        href = abook.get("href", "")
+        if "/remote.php/dav/addressbooks/" in href:
+            uri = href.split("/remote.php/dav/addressbooks/", 1)[1].rstrip("/")
+        else:
+            continue
+        contacts = await get_client().list_contacts(uri, get_user_token(), limit, include_all_fields)
+        all_contacts.extend(contacts)
+    return {"items": json_to_toon(all_contacts[:limit])}
+
+
+@mcp.tool()
+async def get_contacts_by_addressbook(
+    addressbook_uri: str,
+    limit: int = 50,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List contacts in a specific address book.
+    Args:
+        addressbook_uri: URI of the address book. Get this from list_addressbooks() (required).
+        limit: Maximum results. Defaults to 50.
+        include_all_fields: Set to True to retrieve all available fields.
+    """
     data = await get_client().list_contacts(addressbook_uri, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
 
@@ -1375,7 +1437,7 @@ async def get_contact(
     """Get a single contact by UID.
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
-        contact_uid: UID of the contact. Get this from list_contacts(addressbook_uri). (required).
+        contact_uid: UID of the contact. Get this from get_contacts_by_addressbook(addressbook_uri). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().get_contact(addressbook_uri, contact_uid, get_user_token(), include_all_fields)
@@ -1418,7 +1480,7 @@ async def update_contact(
     """Update a contact.
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
-        contact_uid: UID of the contact to update. Get this from list_contacts(addressbook_uri). (required).
+        contact_uid: UID of the contact to update. Get this from get_contacts_by_addressbook(addressbook_uri). (required).
         fn: New full name.
         email: New email.
         telephone: New phone number.
@@ -1438,20 +1500,33 @@ async def delete_contact(
     """Delete a contact.
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
-        contact_uid: UID of the contact to delete. Get this from list_contacts(addressbook_uri). (required).
+        contact_uid: UID of the contact to delete. Get this from get_contacts_by_addressbook(addressbook_uri). (required).
     """
     return await get_client().delete_contact(addressbook_uri, contact_uid, get_user_token())
 
 
 @mcp.tool()
-async def list_notes(
-    category: str = "",
+async def list_all_notes(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all notes.
     Args:
-        category: Leave empty (default) to list ALL notes. Only fill this to filter by a specific category.
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().list_notes(get_user_token(), "", include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def get_notes_by_category(
+    category: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get notes filtered by category.
+    Args:
+        category: Category to filter by (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().list_notes(get_user_token(), category, include_all_fields)
@@ -1466,7 +1541,7 @@ async def get_note(
 ) -> dict[str, Any]:
     """Get a single note by ID.
     Args:
-        id: Note ID. Get this from list_notes(). (required).
+        id: Note ID. Get this from list_all_notes(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().get_note(id, get_user_token(), include_all_fields)
@@ -1500,7 +1575,7 @@ async def update_note(
 ) -> dict[str, Any]:
     """Update a note.
     Args:
-        id: Note ID. Get this from list_notes(). (required).
+        id: Note ID. Get this from list_all_notes(). (required).
         title: New title.
         content: New content.
         category: New category.
@@ -1517,7 +1592,7 @@ async def delete_note(
 ) -> dict[str, Any]:
     """Delete a note by ID.
     Args:
-        id: Note ID to delete. Get this from list_notes(). (required).
+        id: Note ID to delete. Get this from list_all_notes(). (required).
     """
     await get_client().delete_note(id, get_user_token())
     return {"status": "deleted", "id": id}
@@ -1531,7 +1606,7 @@ async def append_content(
 ) -> dict[str, Any]:
     """Append content to an existing note.
     Args:
-        id: Note ID. Get this from list_notes(). (required).
+        id: Note ID. Get this from list_all_notes(). (required).
         content: Content to append (required).
     """
     existing = await get_client().get_note(id, get_user_token())
@@ -1927,19 +2002,19 @@ async def list_mailboxes(
 @mcp.tool()
 async def list_messages(
     account_id: int,
-    mailbox_id: str,
+    mailbox_db_id: int,
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """List messages in a mailbox.
+    """Sync and list messages in a mailbox.
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        mailbox_id: Mailbox ID. Get this from list_mailboxes(account_id). (required).
+        mailbox_db_id: Mailbox database ID (integer). Get this from list_mailboxes(account_id). (required).
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().mail_list_messages(account_id, mailbox_id, get_user_token(), limit, include_all_fields)
+    data = await get_client().mail_list_messages(account_id, mailbox_db_id, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
 
 
@@ -1950,10 +2025,10 @@ async def get_message(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Get a single message.
+    """Get a single message by its database ID.
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        message_id: Message ID. Get this from list_messages(account_id, mailbox_id). (required).
+        message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().mail_get_message(account_id, message_id, get_user_token(), include_all_fields)
@@ -1965,10 +2040,10 @@ async def get_message_body(
     message_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Get the body of a message.
+    """Get the body of a message by its database ID.
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        message_id: Message ID. Get this from list_messages(account_id, mailbox_id). (required).
+        message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id). (required).
     """
     return await get_client().mail_get_message_body(account_id, message_id, get_user_token())
 
@@ -1992,7 +2067,11 @@ async def send_message(
         cc: CC recipient email.
         bcc: BCC recipient email.
     """
-    return await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, get_user_token())
+    try:
+        result = await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, get_user_token())
+        return {"status": "sent", "data": result if isinstance(result, dict) else {}}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @mcp.tool()
@@ -2006,28 +2085,30 @@ async def set_message_flags(
     """Set flags on a message (read/unread, starred).
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        message_id: Message ID. Get this from list_messages(account_id, mailbox_id). (required).
+        message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id). (required).
         seen: Mark as seen/unseen.
         flagged: Mark as flagged/unflagged.
     """
-    params = SetFlagsParam(account_id=account_id, message_id=message_id, seen=seen, flagged=flagged)
-    return await get_client().mail_set_message_flags(account_id, message_id, params.seen, params.flagged, get_user_token())
+    params = SetFlagsParam(message_id=message_id, seen=seen, flagged=flagged)
+    result = await get_client().mail_set_message_flags(account_id, message_id, params.seen, params.flagged, get_user_token())
+    return {"status": "ok", "flags": result}
 
 
 @mcp.tool()
 async def move_message(
     account_id: int,
     message_id: int,
-    mailbox_id: str,
+    mailbox_db_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move a message to a different mailbox.
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        message_id: Message ID. Get this from list_messages(account_id, mailbox_id). (required).
-        mailbox_id: Destination mailbox ID. Get this from list_mailboxes(account_id). (required).
+        message_id: Message database ID to move. Get this from list_messages(account_id, mailbox_db_id). (required).
+        mailbox_db_id: Destination mailbox database ID. Get this from list_mailboxes(account_id). (required).
     """
-    return await get_client().mail_move_message(account_id, message_id, mailbox_id, get_user_token())
+    result = await get_client().mail_move_message(account_id, message_id, mailbox_db_id, get_user_token())
+    return {"status": "moved", "result": result}
 
 
 @mcp.tool()

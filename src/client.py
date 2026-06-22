@@ -69,9 +69,9 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "stack":            {"id", "title", "order"},
     "card":             {"id", "title", "description", "duedate", "type", "archived", "labels"},
     "label":            {"id", "title", "color"},
-    "mail_account":     {"id", "email", "name"},
-    "mailbox":          {"id", "name", "displayName", "unseen", "total"},
-    "mail_message":     {"id", "subject", "fromEmail", "fromName", "date", "unseen", "important"},
+    "mail_account":     {"id", "accountId", "name", "emailAddress", "email"},
+    "mailbox":          {"databaseId", "id", "name", "displayName", "unseen", "total", "specialUse"},
+    "mail_message":     {"databaseId", "uid", "subject", "from", "to", "dateInt", "flags", "previewText"},
     "talk_message":     {"id", "actorDisplayName", "timestamp", "message", "messageType"},
     "table":            {"id", "title", "emoji", "description"},
     "table_schema":     {"title", "emoji", "columns", "description"},
@@ -1501,51 +1501,60 @@ class NextcloudClient:
 
     async def mail_list_accounts(self, api_key: str = None, include_all_fields: bool = False) -> Any:
         try:
-            data = await self.get("/index.php/apps/mail/api/accounts", api_key, is_ocs=False)
+            data = await self.get("/index.php/apps/mail/api/accounts", api_key, is_ocs=True, is_raw_json=True)
             return self._filter_fields(data, "mail_account", include_all_fields)
         except Exception:
             return []
 
     async def mail_list_mailboxes(self, account_id: int, api_key: str = None,
                                   include_all_fields: bool = False) -> Any:
-        data = await self.get(f"/index.php/apps/mail/api/accounts/{account_id}/mailboxes", api_key, is_ocs=False)
+        data = await self.get(f"/index.php/apps/mail/api/mailboxes", api_key,
+                            is_ocs=True, is_raw_json=True,
+                            params={"accountId": account_id})
+        if isinstance(data, dict) and "mailboxes" in data:
+            data = data["mailboxes"]
         return self._filter_fields(data, "mailbox", include_all_fields)
 
-    async def mail_list_messages(self, account_id: int, mailbox_id: str,
+    async def mail_list_messages(self, account_id: int, mailbox_db_id: int,
                                  api_key: str = None, limit: int = 50,
                                  include_all_fields: bool = False) -> Any:
-        params = {"limit": limit}
-        data = await self.get(f"/index.php/apps/mail/api/accounts/{account_id}/mailboxes/{mailbox_id}/messages",
-                            api_key, params=params, is_ocs=False)
+        data = await self.get("/index.php/apps/mail/api/messages",
+                             api_key, is_ocs=True, is_raw_json=True,
+                             params={"mailboxId": mailbox_db_id, "limit": limit})
         return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_get_message(self, account_id: int, message_id: int,
                                api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/mail/api/accounts/{account_id}/messages/{message_id}",
-                            api_key, is_ocs=False)
+                            api_key, is_ocs=True, is_raw_json=True)
         return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_get_message_body(self, account_id: int, message_id: int,
                                     api_key: str = None) -> Any:
         return await self.get(f"/index.php/apps/mail/api/accounts/{account_id}/messages/{message_id}/body",
-                            api_key, is_ocs=False)
+                            api_key, is_ocs=True, is_raw_json=True)
 
     async def mail_send_message(self, account_id: int, subject: str, body: str,
                                 to: str, cc: str = "", bcc: str = "",
                                 api_key: str = None) -> Any:
-        draft = await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/drafts",
-                               api_key, is_ocs=False,
-                               json={"subject": subject, "body": {"body": body, "type": "text"},
-                                     "to": [{"email": to}],
-                                     "cc": [{"email": cc}] if cc else [],
-                                     "bcc": [{"email": bcc}] if bcc else []})
-        draft_id = ""
-        if isinstance(draft, dict):
-            draft_id = draft.get("id", "")
-        if not draft_id:
-            return draft
-        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/drafts/{draft_id}/send",
-                              api_key, is_ocs=False, json={})
+        from_email = ""
+        try:
+            accts = await self.mail_list_accounts(api_key)
+            if isinstance(accts, list) and accts:
+                from_email = (accts[0].get("emailAddress") or
+                             accts[0].get("email") or "")
+        except Exception:
+            pass
+        return await self.post("/ocs/v2.php/apps/mail/message/send",
+                             api_key,
+                             json={"accountId": account_id,
+                                   "fromEmail": from_email,
+                                   "subject": subject,
+                                   "body": body,
+                                   "isHtml": False,
+                                   "to": [{"email": to, "label": to}],
+                                   "cc": [{"email": cc, "label": cc}] if cc else [],
+                                   "bcc": [{"email": bcc, "label": bcc}] if bcc else []})
 
     async def mail_set_message_flags(self, account_id: int, message_id: int,
                                      seen: bool = None, flagged: bool = None,
@@ -1555,13 +1564,15 @@ class NextcloudClient:
             flags["seen"] = seen
         if flagged is not None:
             flags["flagged"] = flagged
-        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/messages/{message_id}/flags",
-                              api_key, json=flags, is_ocs=False)
+        return await self.put(f"/index.php/apps/mail/api/accounts/{account_id}/messages/{message_id}/flags",
+                             api_key, is_ocs=True, is_raw_json=True,
+                             json={"flags": flags})
 
     async def mail_move_message(self, account_id: int, message_id: int,
-                                mailbox_id: str, api_key: str = None) -> Any:
-        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/mailboxes/{mailbox_id}/messages/{message_id}/move",
-                              api_key, json={}, is_ocs=False)
+                                mailbox_db_id: int, api_key: str = None) -> Any:
+        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/messages/{message_id}/move",
+                             api_key, is_ocs=True, is_raw_json=True,
+                             json={"destMailboxId": mailbox_db_id})
 
     # =========================================================================
     # Domain: Talk (OCS)
@@ -1582,7 +1593,10 @@ class NextcloudClient:
 
     async def talk_delete_message(self, token: str, message_id: int,
                                   api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}/{message_id}", api_key)
+        try:
+            return await self.delete(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}/{message_id}", api_key)
+        except Exception as e:
+            return {"error": str(e)}
 
     # =========================================================================
     # Domain: Tables (OCS)
