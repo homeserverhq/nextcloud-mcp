@@ -32,10 +32,22 @@ def _normalize_datetime(value: str) -> str:
 
 
 def _to_dav_datetime(value: str) -> str:
-    if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$', value):
-        parsed = dt.datetime.fromisoformat(value)
-        return parsed.strftime('%Y%m%dT%H%M%S')
-    return value
+    """Convert an ISO 8601 date-time string to DAV/ICAL format."""
+    try:
+        dt_obj = dt.datetime.fromisoformat(value)
+        return dt_obj.strftime("%Y%m%dT%H%M%S")
+    except Exception:
+        return value.replace("-", "").replace(":", "").replace("+", "")[:15]
+
+
+def _strip_dav_prefix(uri: str, resource: str) -> str:
+    """Strip /remote.php/dav/{resource}/ prefix from a URI if it's already present.
+    Allows callers to pass either short form (user/cal) or full DAV href
+    (/remote.php/dav/calendars/user/cal/)."""
+    prefix = f"/remote.php/dav/{resource}/"
+    if uri.startswith(prefix):
+        return uri[len(prefix):].rstrip("/")
+    return uri
 
 
 class NextcloudClient:
@@ -755,6 +767,7 @@ class NextcloudClient:
 
     async def update_calendar(self, calendar_uri: str, display_name: str,
                               color: str = None, api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/"
         color_prop = ""
         if color:
@@ -772,11 +785,13 @@ class NextcloudClient:
         return await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
 
     async def delete_calendar(self, calendar_uri: str, api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(f"/remote.php/dav/calendars/{calendar_uri}/", api_key)
 
     async def list_events(self, calendar_uri: str, api_key: str = None,
                           from_date: str = "", to_date: str = "",
                           limit: int = 50, include_all_fields: bool = False) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         filters = {}
         if from_date:
             filters["start"] = _to_dav_datetime(from_date)
@@ -796,6 +811,7 @@ class NextcloudClient:
 
     async def get_event(self, calendar_uri: str, event_uid: str,
                         api_key: str = None, include_all_fields: bool = False) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
         ics = await self._dav_get(path, api_key)
         events = self._parse_ics_events(ics)
@@ -805,6 +821,7 @@ class NextcloudClient:
                            dtstart: str, dtend: str, description: str = "",
                            location: str = "", rrule: str = "", timezone: str = "",
                            api_key: str = None, uid: str = "") -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         ics = self._create_ics_event(summary, dtstart, dtend, description,
                                      location, rrule, timezone, uid)
         euid = uid or summary.replace(" ", "_")
@@ -818,6 +835,7 @@ class NextcloudClient:
                            summary: str = None, dtstart: str = None,
                            dtend: str = None, description: str = None,
                            location: str = None, api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
         ics = await self._dav_get(path, api_key)
         existing = self._parse_ics_events(ics)
@@ -834,6 +852,7 @@ class NextcloudClient:
 
     async def delete_event(self, calendar_uri: str, event_uid: str,
                            api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(
             f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics", api_key)
 
@@ -841,6 +860,7 @@ class NextcloudClient:
                              attendees: str, description: str = "",
                              location: str = "", calendar_uri: str = "",
                              api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal = ICal()
         cal.add("prodid", "-//Nextcloud MCP//nextcloud-mcp//EN")
         cal.add("version", "2.0")
@@ -878,7 +898,7 @@ class NextcloudClient:
         calendars = calendar_uris.split(",")
         results = {}
         for cal_uri in calendars:
-            cal_uri = cal_uri.strip()
+            cal_uri = _strip_dav_prefix(cal_uri.strip(), "calendars")
             if cal_uri:
                 try:
                     res = await self._dav_request("REPORT",
@@ -906,6 +926,7 @@ class NextcloudClient:
 
     async def list_todos(self, api_key: str = None, calendar_uri: str = "",
                          include_all_fields: bool = False) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal_uri = calendar_uri or await self._get_todo_calendar_uri(api_key)
         body = self._calendar_query_xml(comp_filter="VTODO")
         results = await self._dav_request("REPORT",
@@ -923,6 +944,7 @@ class NextcloudClient:
                           due_date: str = "", priority: int = 0,
                           status: str = "NEEDS-ACTION",
                           calendar_uri: str = "", api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal_uri = calendar_uri or await self._get_todo_calendar_uri(api_key)
         ics = self._create_ics_todo(summary, description, due_date, priority, status)
         euid = summary.replace(" ", "_")
@@ -935,6 +957,7 @@ class NextcloudClient:
                           summary: str = None, description: str = None,
                           priority: int = None, due_date: str = None,
                           status: str = None, api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics"
         try:
             ics = await self._dav_get(path, api_key)
@@ -953,12 +976,14 @@ class NextcloudClient:
 
     async def delete_todo(self, todo_uid: str, calendar_uri: str,
                           api_key: str = None) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(
             f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics", api_key)
 
     async def search_todos(self, query: str, api_key: str = None,
                            calendar_uri: str = "", limit: int = 50,
                            include_all_fields: bool = False) -> Any:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal_uri = calendar_uri or await self._get_todo_calendar_uri(api_key)
         body = self._calendar_query_xml(comp_filter="VTODO")
         results = await self._dav_request("REPORT",
@@ -1012,22 +1037,32 @@ class NextcloudClient:
         return {"addressbook_uri": f"users/{username}/{uri}", "display_name": display_name, "description": description, "status": "created"}
 
     async def delete_addressbook(self, addressbook_uri: str, api_key: str = None) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         return await self._dav_delete(f"/remote.php/dav/addressbooks/{addressbook_uri}/", api_key)
 
     async def list_contacts(self, addressbook_uri: str, api_key: str = None,
                             limit: int = 50, include_all_fields: bool = False) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         props = ["d:displayname", "d:getetag", "card:addressbook-data"]
         body = self._propfind_xml(props)
         results = await self._dav_request("PROPFIND",
             f"/remote.php/dav/addressbooks/{addressbook_uri}/", api_key, body=body,
             extra_headers={"Depth": "1"})
         parsed = []
+        base_href = f"/remote.php/dav/addressbooks/{addressbook_uri}/"
         for r in results:
-            if r.get("addressbook-data") or r.get("href", "").endswith(".vcf"):
-                if r.get("href", "").endswith(".vcf"):
+            href = r.get("href", "")
+            if href.rstrip("/") == base_href.rstrip("/"):
+                continue
+            vcard_text = r.get("addressbook-data") or ""
+            if not vcard_text:
+                try:
+                    last_segment = href.split("/")[-1]
                     vcard_text = await self._dav_get(
-                        f"/remote.php/dav/addressbooks/{addressbook_uri}/" + r["href"].split("/")[-1],
-                        api_key)
+                        f"{base_href}{last_segment}", api_key)
+                except Exception:
+                    parsed.append({"href": href})
+                    continue
             try:
                 vc = vcard_read(vcard_text)
                 org_val = vc.org.value if hasattr(vc, "org") else ""
@@ -1040,11 +1075,12 @@ class NextcloudClient:
                           "uid": vc.uid.value if hasattr(vc, "uid") else ""}
                 parsed.append(contact)
             except Exception:
-                parsed.append({"href": r.get("href", "")})
+                parsed.append({"href": href})
         return parsed[:limit] if limit else parsed
 
     async def get_contact(self, addressbook_uri: str, contact_uid: str,
                           api_key: str = None, include_all_fields: bool = False) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         path = f"/remote.php/dav/addressbooks/{addressbook_uri}/{contact_uid}.vcf"
         vcard_text = await self._dav_get(path, api_key)
         try:
@@ -1066,6 +1102,7 @@ class NextcloudClient:
     async def create_contact(self, addressbook_uri: str, fn: str, email: str,
                              telephone: str = "", organization: str = "",
                              adr: str = "", api_key: str = None) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         vcard_text = self._create_vcard(fn, email, telephone, organization, adr)
         cuid = fn.replace(" ", "_")
         result = await self._dav_put(
@@ -1078,6 +1115,7 @@ class NextcloudClient:
                              fn: str = None, email: str = None,
                              telephone: str = None, organization: str = None,
                              adr: str = None, api_key: str = None) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         path = f"/remote.php/dav/addressbooks/{addressbook_uri}/{contact_uid}.vcf"
         vcard_text = await self._dav_get(path, api_key)
         try:
@@ -1101,6 +1139,7 @@ class NextcloudClient:
 
     async def delete_contact(self, addressbook_uri: str, contact_uid: str,
                              api_key: str = None) -> Any:
+        addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         return await self._dav_delete(
             f"/remote.php/dav/addressbooks/{addressbook_uri}/{contact_uid}.vcf", api_key)
 

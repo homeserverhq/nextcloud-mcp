@@ -15,6 +15,7 @@ import uuid
 from typing import Any, Optional
 
 import httpx
+from toon_mcp import toon_to_json
 
 MCP_SERVER_PORT = os.environ.get("MCP_SERVER_PORT", "6080")
 API_KEY = os.environ.get("API_KEY", "")
@@ -238,48 +239,192 @@ def _check_verify_fields(label: str, tool: str, data: Any, expected: dict[str, A
 def run_verify_delete(
     session: MCPSession,
     label: str,
-    get_tool: str,
+    get_tool: str | None = None,
     params: dict[str, Any] = None,
+    *,
+    list_tool: str | None = None,
+    list_params: dict[str, Any] = None,
+    match_field: str | None = None,
+    expected_value: str | None = None,
 ) -> bool:
-    """Verify a resource was deleted by calling GET and expecting 'not found'."""
+    """Verify a resource was deleted via GET (not found) and/or list (absent).
+    At least one of get_tool or list_tool must be provided."""
     if params is None:
         params = {}
-    try:
-        result = session.call_tool(get_tool, params)
-        err = is_error(result)
-        if err:
-            if "not found" in err.lower() or "404" in err or "403" in err:
+    if list_params is None:
+        list_params = {}
+    ok = True
+    if get_tool:
+        try:
+            result = session.call_tool(get_tool, params)
+            err = is_error(result)
+            if err:
+                if "not found" in err.lower() or "404" in err or "403" in err:
+                    results.append({
+                        "label": label, "tool": get_tool, "status": "PASSED",
+                        "data": {"verified": "deleted"}
+                    })
+                    log(f"  PASS {label} (confirmed deleted via GET)")
+                else:
+                    results.append({
+                        "label": label, "tool": get_tool, "status": "FAILED",
+                        "reason": err
+                    })
+                    log(f"  FAIL {label}: {err}")
+                    ok = False
+            else:
                 results.append({
-                    "label": label, "tool": get_tool, "status": "PASSED",
-                    "data": {"verified": "deleted"}
+                    "label": label, "tool": get_tool, "status": "FAILED",
+                    "reason": "Record still exists after delete"
                 })
-                log(f"  PASS {label} (confirmed deleted)")
-                return True
+                log(f"  FAIL {label}: record still exists")
+                ok = False
+        except Exception as e:
             results.append({
                 "label": label, "tool": get_tool, "status": "FAILED",
-                "reason": err
+                "reason": str(e)
             })
-            log(f"  FAIL {label}: {err}")
-            return False
-        results.append({
-            "label": label, "tool": get_tool, "status": "FAILED",
-            "reason": "Record still exists after delete"
-        })
-        log(f"  FAIL {label}: record still exists")
-        return False
-    except Exception as e:
-        results.append({
-            "label": label, "tool": get_tool, "status": "FAILED",
-            "reason": str(e)
-        })
-        log(f"  FAIL {label}: {e}")
-        return False
+            log(f"  FAIL {label}: {e}")
+            ok = False
+    if list_tool and expected_value and match_field:
+        result = session.call_tool(list_tool, list_params)
+        err = is_error(result)
+        if err:
+            if "404" in err or "not found" in err.lower():
+                results.append({
+                    "label": label, "tool": list_tool, "status": "PASSED",
+                    "data": {"verified": "parent_gone"}
+                })
+                log(f"  PASS {label} (parent gone, confirmed deleted)")
+            else:
+                results.append({
+                    "label": label, "tool": list_tool, "status": "FAILED",
+                    "reason": f"List tool failed during delete verification: {err}"
+                })
+                log(f"  FAIL {label}: list tool error: {err}")
+                ok = False
+        else:
+            data = extract_content(result)
+            items = get_list_items(data)
+            found = False
+            for item in items:
+                if isinstance(item, dict) and str(item.get(match_field, "")) == str(expected_value):
+                    found = True
+                    break
+            if found:
+                results.append({
+                    "label": label, "tool": list_tool, "status": "FAILED",
+                    "reason": f"Resource still appears in {list_tool}() after delete"
+                })
+                log(f"  FAIL {label}: still in {list_tool}")
+                ok = False
+            else:
+                results.append({
+                    "label": label, "tool": list_tool, "status": "PASSED",
+                    "data": {"verified": "absent_from_list"}
+                })
+                log(f"  PASS {label} (confirmed absent from list)")
+    return ok
 
 
 def extract_id(data: Any, id_field: str = "id") -> Any:
     if isinstance(data, dict):
         return data.get(id_field)
     return None
+
+
+def get_list_items(data: Any) -> list[dict[str, Any]]:
+    if isinstance(data, dict):
+        for key in ("items", "results", "rows", "tree"):
+            if key in data:
+                val = data[key]
+                if isinstance(val, list):
+                    return val
+                if isinstance(val, str):
+                    try:
+                        parsed = toon_to_json(val)
+                        if isinstance(parsed, list):
+                            return parsed
+                        if isinstance(parsed, dict):
+                            for inner in ("collectives", "pages", "tags", "data"):
+                                if inner in parsed and isinstance(parsed[inner], list):
+                                    return parsed[inner]
+                    except Exception:
+                        pass
+        return []
+    elif isinstance(data, list):
+        return data
+    return []
+
+
+def _build_list_params(label: str) -> dict[str, Any]:
+    if label == "Stack":
+        return {"board_id": created.get("Board", 0)}
+    elif label == "Card":
+        return {"board_id": created.get("Board", 0), "stack_id": created.get("Stack", 0)}
+    elif label in ("Page", "Tag"):
+        return {"collective_id": created.get("Collective", 0)}
+    elif label in ("Event", "Todo"):
+        return {"calendar_uri": created.get("Calendar", "")}
+    elif label == "Contact":
+        return {"addressbook_uri": created.get("Addressbook", "")}
+    return {}
+
+
+def verify_in_list_and_extract(
+    session: MCPSession,
+    label: str,
+    list_tool: str,
+    list_params: dict[str, Any],
+    expected_value: str,
+    match_field: str,
+) -> dict[str, Any] | None:
+    phase_label = f"3A verify_{label.lower()}_in_list"
+    result = session.call_tool(list_tool, list_params)
+    err = is_error(result)
+    if err:
+        results.append({
+            "label": phase_label, "tool": list_tool,
+            "status": "FAILED", "reason": f"List tool failed: {err}"
+        })
+        log(f"  FAIL {phase_label}: list tool failed: {err}")
+        return None
+    data = extract_content(result)
+    items = get_list_items(data)
+    expected_str = str(expected_value)
+    found: dict[str, Any] | None = None
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        val = item.get(match_field, "")
+        if str(val) == expected_str:
+            found = item
+            break
+    if not found:
+        for candidate in ("displayname", "title", "name", "summary", "fn", "display_name"):
+            for item in items:
+                if isinstance(item, dict) and str(item.get(candidate, "")) == expected_str:
+                    found = item
+                    break
+            if found:
+                break
+    if not found:
+        avail = [str(i.get(match_field, "")) for i in items if isinstance(i, dict)]
+        results.append({
+            "label": phase_label, "tool": list_tool,
+            "status": "FAILED",
+            "reason": f"Created {label} not found in {list_tool}(). "
+                      f"Expected {match_field}={expected_value!r}. "
+                      f"Returned values: {avail}"
+        })
+        log(f"  FAIL {phase_label}: {label} not found in {list_tool}")
+        return None
+    results.append({
+        "label": phase_label, "tool": list_tool,
+        "status": "PASSED", "data": found
+    })
+    log(f"  PASS {phase_label}")
+    return found
 
 
 def direct_api_request(method: str, path: str, json_data: Any = None,
@@ -451,6 +596,28 @@ RESOURCE_TESTS = [
     ),
 ]
 
+# Map resource labels to list verification configs
+# value_key: field in resolved create_params holding the display name
+# list_match_field: field in list item response to match against
+# uri_prefix: if set, extract short-form URI from list item's href by stripping this prefix
+LIST_MATCH: dict[str, dict[str, Any]] = {
+    "Note": {"list_tool": "list_notes", "value_key": "title", "list_match_field": "title"},
+    "Table": {"list_tool": "list_tables", "value_key": "title", "list_match_field": "title"},
+    "Board": {"list_tool": "list_boards", "value_key": "title", "list_match_field": "title"},
+    "Calendar": {"list_tool": "list_calendars", "value_key": "display_name",
+                 "list_match_field": "displayname"},
+    "Addressbook": {"list_tool": "list_addressbooks", "value_key": "display_name",
+                    "list_match_field": "displayname"},
+    "Collective": {"list_tool": "collectives_list", "value_key": "name", "list_match_field": "name"},
+    "Stack": {"list_tool": "list_stacks", "value_key": "title", "list_match_field": "title"},
+    "Card": {"list_tool": "list_cards", "value_key": "title", "list_match_field": "title"},
+    "Event": {"list_tool": "list_events", "value_key": "summary", "list_match_field": "summary"},
+    "Todo": {"list_tool": "list_todos", "value_key": "summary", "list_match_field": "summary"},
+    "Contact": {"list_tool": "list_contacts", "value_key": "fn", "list_match_field": "fn"},
+    "Page": {"list_tool": "collectives_list_pages", "value_key": "title", "list_match_field": "title"},
+    "Tag": {"list_tool": "collectives_list_tags", "value_key": "name", "list_match_field": "name"},
+}
+
 # =============================================================================
 # Domain test entries — simpler format for non-CRUD tools
 # =============================================================================
@@ -493,7 +660,7 @@ DOMAIN_TESTS_READONLY = [
     ("list_shares", "list_shares", {}),
     # Read-only tools with required params
     ("get_user", "get_user", {"user_id": API_USER}),
-    ("get_group_members", "get_group_members", {"group_id": "admin"}),
+    ("get_group_members", "get_group_members", lambda s, r: {"group_id": s.get("discovered_group_id", "admin")}),
     ("webdav_list_directory", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/"}),
 ]
 
@@ -518,7 +685,7 @@ DOMAIN_TESTS_MUTATE = [
         "id": s["Note"]["id"], "content": "Appended line"
     }, ["Note"]),
     ("search_notes", "search_notes", {"query": "Hello"}),
-    ("search", "search", {"provider_id": "files", "term": "test"}),
+    ("search", "search", lambda s, r: {"provider_id": s.get("discovered_provider_id", "files"), "term": "test"}),
     ("webdav_search_files", "webdav_search_files", {"query": "test"}),
     # WebDAV basic operations (move/copy/delete handled inline with verification)
     ("webdav_create_directory", "webdav_create_directory",
@@ -685,6 +852,43 @@ def main():
             run_domain_test(session, f"B {label}", tool, params, prereqs)
 
         # ------------------------------------------------------------------
+        # Phase 2B: Discover Parameter Values (replace hardcoded IDs)
+        # ------------------------------------------------------------------
+        log("\n=== Phase 2B: Discover Parameter Values ===")
+        # Discover group_id from get_groups
+        result = session.call_tool("get_groups", {"limit": 10})
+        data = extract_content(result)
+        groups = data.get("groups", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        if groups:
+            g = groups[0]
+            store["discovered_group_id"] = g.get("id", g) if isinstance(g, dict) else g
+            log(f"  => Discovered group_id: {store['discovered_group_id']}")
+        # Discover provider_id from get_search_providers
+        result = session.call_tool("get_search_providers")
+        data = extract_content(result)
+        providers = data.get("providers", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        if providers:
+            p = providers[0]
+            store["discovered_provider_id"] = p.get("id", p) if isinstance(p, dict) else p
+            log(f"  => Discovered provider_id: {store['discovered_provider_id']}")
+        # Discover filter_name from get_activity_filters
+        result = session.call_tool("get_activity_filters")
+        data = extract_content(result)
+        flist = data.get("filters", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        if flist:
+            f = flist[0]
+            store["discovered_filter_name"] = f.get("name", f) if isinstance(f, dict) else f
+            log(f"  => Discovered filter_name: {store['discovered_filter_name']}")
+        # Discover message_id from get_predefined_statuses
+        result = session.call_tool("get_predefined_statuses")
+        data = extract_content(result)
+        statuses = data.get("statuses", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        if statuses:
+            m = statuses[0]
+            store["discovered_message_id"] = m.get("id", m) if isinstance(m, dict) else m
+            log(f"  => Discovered message_id: {store['discovered_message_id']}")
+
+        # ------------------------------------------------------------------
         # Phase 3: Full CRUD Cycles
         #
         # 3A: Create all resources (forward order — parents first)
@@ -725,6 +929,20 @@ def main():
                     if cid:
                         created[label] = cid
                         log(f"  => ID for {label}: {cid}")
+            if ok and label in LIST_MATCH:
+                lm = LIST_MATCH[label]
+                value = params.get(lm["value_key"])
+                if value:
+                    list_params = _build_list_params(label)
+                    matched = verify_in_list_and_extract(
+                        session, label, lm["list_tool"], list_params,
+                        str(value), lm["list_match_field"],
+                    )
+                    if matched and label in ("Calendar", "Addressbook"):
+                        href = matched.get("href", "")
+                        if href:
+                            created[label] = href
+                            log(f"  => List-derived URI for {label}: {href}")
 
         log("\n=== Phase 3B: Get & Verify All Resources ===")
         for entry in RESOURCE_TESTS:
@@ -1146,7 +1364,7 @@ def main():
         # ---- Phase 5J: Status Message Tests ----
         log("\n=== Phase 5J: Status Message Tests ===")
         ok = run_test(session, "5J set_predefined_message", "set_predefined_message",
-                     {"message_id": "meeting"})
+                     {"message_id": store.get("discovered_message_id", "meeting")})
         if ok:
             result = session.call_tool("get_user_status")
             data = extract_content(result)
@@ -1381,8 +1599,15 @@ def main():
                 run_test(session, "5Q get_notification", "get_notification", {"id": nid})
                 run_test(session, "5Q delete_notification", "delete_notification", {"id": nid})
         else:
-            run_test(session, "5Q get_notification", "get_notification", {"id": 999999})
-            run_test(session, "5Q delete_notification", "delete_notification", {"id": 999999})
+            results.append({
+                "label": "5Q get_notification", "tool": "get_notification",
+                "status": "SKIPPED", "reason": "No notifications to test with"
+            })
+            results.append({
+                "label": "5Q delete_notification", "tool": "delete_notification",
+                "status": "SKIPPED", "reason": "No notifications to test with"
+            })
+            log("  SKIP 5Q notification tests: no notifications")
         run_test(session, "5Q delete_all_notifications", "delete_all_notifications", {})
 
         # ---- Phase 5R: Misc Tests ----
@@ -1404,7 +1629,7 @@ def main():
             run_test(session, "5R search_todos", "search_todos",
                     {"query": make_name("Todo"), "calendar_uri": created["Calendar"]})
         run_test(session, "5R get_activity_filter", "get_activity_filter",
-                {"filter_name": "all", "limit": 5})
+                {"filter_name": store.get("discovered_filter_name", "all"), "limit": 5})
         run_test(session, "5R list_contacts_all", "list_contacts", {})
         run_test(session, "5R list_events_all", "list_events", {})
         if "Note" in created:
@@ -1469,13 +1694,17 @@ def main():
 
         # ------------------------------------------------------------------
         # Phase 3E: Verify Delete (REVERSE ORDER)
+        # Uses GET-based verification for resources with get_tool,
+        # and list-based verification for resources with list_tool.
         # ------------------------------------------------------------------
         log("\n=== Phase 3E: Verify Delete (REVERSE ORDER) ===")
         for entry in reversed(RESOURCE_TESTS):
             label, create_tool, create_params, list_tool, get_tool, \
                 update_tool, update_params, delete_tool, prereqs, id_field, \
                 verify_fields = entry
-            if get_tool is None or delete_tool is None:
+            if delete_tool is None:
+                continue
+            if get_tool is None and list_tool is None:
                 continue
             if label in ("Tag",):
                 continue
@@ -1492,8 +1721,20 @@ def main():
             elif label == "Card":
                 get_params["board_id"] = created.get("Board", 0)
                 get_params["stack_id"] = created.get("Stack", 0)
+            # Build list verification params
+            l_params = _build_list_params(label)
+            l_tool = list_tool
+            l_match = None
+            l_value = None
+            if label in LIST_MATCH:
+                lm = LIST_MATCH[label]
+                l_match = lm["list_match_field"]
+                resolved = resolve_params(create_params)
+                l_value = str(resolved.get(lm["value_key"], ""))
             run_verify_delete(session, f"3E verify_delete_{label.lower()}",
-                                    get_tool, get_params)
+                                    get_tool if get_tool else None, get_params if get_tool else None,
+                                    list_tool=l_tool, list_params=l_params,
+                                    match_field=l_match, expected_value=l_value if l_value else None)
 
         # ------------------------------------------------------------------
         # Phase 5S: Collective Cleanup Sequence
