@@ -85,6 +85,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "file_reminder":    {"id", "fileId", "dueDate", "userId"},
     "activity_filter":  {"id", "name", "icon"},
     "predefined_status": {"id", "icon", "message"},
+    "circle":           {"id", "name", "displayName", "source", "population", "description", "sanitizedName", "config", "url", "creation"},
     "folder_tree":      None,
 }
 
@@ -823,6 +824,8 @@ class NextcloudClient:
         body = self._propfind_xml(props)
         results = await self._dav_request("PROPFIND", f"/remote.php/dav/calendars/{username}/", api_key, body=body,
                                           extra_headers={"Depth": "1"})
+        if isinstance(results, list):
+            results = [r for r in results if "deleted-calendar" not in (r.get("resourcetype") or [])]
         return self._filter_fields(results, "calendar", include_all_fields)
 
     async def create_calendar(self, display_name: str, color: str = "",
@@ -949,8 +952,12 @@ class NextcloudClient:
     async def delete_event(self, calendar_uri: str, event_uid: str,
                            api_key: str = None) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
-        return await self._dav_delete(
-            f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics", api_key)
+        base_path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}"
+        try:
+            await self._dav_delete(f"{base_path}-deleted.ics", api_key)
+        except Exception:
+            pass
+        return await self._dav_delete(f"{base_path}.ics", api_key)
 
     async def _resolve_attendees(self, attendees_str: str,
                                  api_key: str = None) -> list[dict]:
@@ -1445,6 +1452,12 @@ class NextcloudClient:
         return await self.delete(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
                                  api_key, is_ocs=False)
 
+    async def deck_delete_board(self, board_id: int, api_key: str = None) -> Any:
+        return await self.delete(f"/index.php/apps/deck/api/v1.0/boards/{board_id}", api_key, is_ocs=False)
+
+    async def deck_delete_stack(self, board_id: int, stack_id: int, api_key: str = None) -> Any:
+        return await self.delete(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}", api_key, is_ocs=False)
+
     async def deck_archive_card(self, board_id: int, stack_id: int, card_id: int,
                                  api_key: str = None) -> Any:
         return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/archive",
@@ -1773,6 +1786,34 @@ class NextcloudClient:
     async def collectives_remove_tag(self, collective_id: int, page_id: int,
                                      tag_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/tags/{tag_id}", api_key)
+
+    # =========================================================================
+    # Domain: Circles (OCS)
+    # =========================================================================
+
+    async def circles_list(self, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.get("/ocs/v2.php/apps/circles/circles", api_key)
+        return self._filter_fields(data, "circle", include_all_fields)
+
+    async def circles_get(self, circle_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.get(f"/ocs/v2.php/apps/circles/circles/{circle_id}", api_key)
+        return self._filter_fields(data, "circle", include_all_fields)
+
+    async def circles_create(self, name: str, circle_type: int = 1, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/ocs/v2.php/apps/circles/circles", api_key, json={"name": name, "type": circle_type})
+        return self._filter_fields(data, "circle", include_all_fields)
+
+    async def circles_update(self, circle_id: str, name: str = None, description: str = None, config: int = None, api_key: str = None) -> Any:
+        if name is not None:
+            await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/name", api_key, json={"value": name})
+        if description is not None:
+            await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/description", api_key, json={"value": description})
+        if config is not None:
+            await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/config", api_key, json={"value": config})
+        return await self.circles_get(circle_id, api_key)
+
+    async def circles_delete(self, circle_id: str, api_key: str = None) -> Any:
+        return await self.delete(f"/ocs/v2.php/apps/circles/circles/{circle_id}", api_key)
 
     async def patch(self, path: str, api_key: Optional[str] = None, **kwargs: Any) -> Any:
         return await self.request("PATCH", path, api_key, **kwargs)

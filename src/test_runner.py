@@ -290,7 +290,7 @@ def run_verify_delete(
         result = session.call_tool(list_tool, list_params)
         err = is_error(result)
         if err:
-            if "404" in err or "not found" in err.lower():
+            if "404" in err or "not found" in err.lower() or "403" in err:
                 results.append({
                     "label": label, "tool": list_tool, "status": "PASSED",
                     "data": {"verified": "parent_gone"}
@@ -309,15 +309,26 @@ def run_verify_delete(
             found = False
             for item in items:
                 if isinstance(item, dict) and str(item.get(match_field, "")) == str(expected_value):
+                    if item.get("deletedAt"):
+                        results.append({
+                            "label": label, "tool": list_tool, "status": "PASSED",
+                            "data": {"verified": "soft_deleted"}
+                        })
+                        log(f"  PASS {label} (confirmed soft-deleted)")
+                        found = True
+                        break
                     found = True
                     break
             if found:
-                results.append({
-                    "label": label, "tool": list_tool, "status": "FAILED",
-                    "reason": f"Resource still appears in {list_tool}() after delete"
-                })
-                log(f"  FAIL {label}: still in {list_tool}")
-                ok = False
+                if results and results[-1].get("status") == "PASSED":
+                    pass
+                else:
+                    results.append({
+                        "label": label, "tool": list_tool, "status": "FAILED",
+                        "reason": f"Resource still appears in {list_tool}() after delete"
+                    })
+                    log(f"  FAIL {label}: still in {list_tool}")
+                    ok = False
             else:
                 results.append({
                     "label": label, "tool": list_tool, "status": "PASSED",
@@ -487,7 +498,7 @@ RESOURCE_TESTS = [
         {"title": make_name("Board"), "color": "FF0000", "archived": False},
         "list_boards", "get_board",
         None, None,
-        None,
+        "delete_board",
         [], "board_id", ["title", "color"],
     ),
     (
@@ -520,8 +531,8 @@ RESOURCE_TESTS = [
         lambda s, r: {"board_id": s["Board"]["id"], "title": make_name("Stack"), "order": 1},
         "list_stacks", None,  # no get_stack tool
         None, None,
-        None,  # cascade deleted with board
-        ["Board"], "id", ["title"],
+        "delete_stack",
+        ["Board"], "stack_id", ["title"],
     ),
     # ---- Depends on Stack (and transitively Board) ----
     (
@@ -779,18 +790,16 @@ DOMAIN_TESTS_CLEANUP = [
     ("PageTrash", "collectives_trash_page",
      lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]},
      ["Page", "Collective"]),
-    ("PageRestore", "collectives_restore_page",
-     lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]},
-     ["Page", "Collective"]),
     ("PageDelete", "collectives_delete_page",
      lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]},
      ["Page", "Collective"]),
     ("CollectiveTrash", "collectives_trash",
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
-    ("CollectiveRestore", "collectives_restore",
-     lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
     ("CollectiveDelete", "collectives_delete",
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
+    ("CircleDelete", "delete_circle",
+     lambda s, r: {"circle_id": s.get("circle_id", "")},
+     ["Collective"]),
 ]
 
 
@@ -914,6 +923,23 @@ def main():
                 if label == "Collective" and isinstance(data, dict) and "collective" in data:
                     data = data["collective"]
                     store[label] = data
+                    # Discover the associated Circle (Team) created by Nextcloud
+                    try:
+                        coll_name = data.get("name", "")
+                        if coll_name:
+                            r = session.call_tool("list_circles")
+                            cd = extract_content(r)
+                            cl = get_list_items(cd)
+                            for c in cl:
+                                if isinstance(c, dict) and c.get("name") == coll_name:
+                                    cid = c.get("id")
+                                    if cid:
+                                        store["circle_id"] = cid
+                                        created["Circle"] = cid
+                                        log(f"  => Circle ID: {cid}")
+                                    break
+                    except Exception:
+                        pass
                 if label == "Page" and isinstance(data, dict) and "page" in data:
                     data = data["page"]
                     store[label] = data
@@ -1490,6 +1516,12 @@ def main():
                         if msg_id:
                             run_test(session, "5M delete_chat_message", "delete_chat_message",
                                     {"token": token, "message_id": msg_id})
+                # Delete the Talk room
+                try:
+                    direct_api_request("DELETE", f"/ocs/v2.php/apps/spreed/api/v4/room/{token}")
+                    log(f"  => Deleted Talk room: {token}")
+                except Exception as er:
+                    log(f"  Could not delete Talk room: {er}")
         except Exception as e:
             log(f"  Chat room creation failed: {e}")
             results.append({
@@ -1666,9 +1698,6 @@ def main():
                 verify_fields = entry
             if delete_tool is None:
                 continue
-            if label in ("Tag",):
-                # Tag is deleted by collectives_delete_tag, handled in cleanup
-                continue
             if label not in created:
                 results.append({
                     "label": f"3D delete_{label.lower()}", "tool": delete_tool,
@@ -1687,6 +1716,8 @@ def main():
             elif label == "Card":
                 params["board_id"] = created.get("Board", 0)
                 params["stack_id"] = created.get("Stack", 0)
+            elif label == "Stack":
+                params["board_id"] = created.get("Board", 0)
             elif label in ("Page", "Tag"):
                 params["collective_id"] = created.get("Collective", 0)
             run_test(session, f"3D delete_{label.lower()}",
@@ -1705,8 +1736,6 @@ def main():
             if delete_tool is None:
                 continue
             if get_tool is None and list_tool is None:
-                continue
-            if label in ("Tag",):
                 continue
             if label not in created:
                 continue

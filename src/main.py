@@ -1736,6 +1736,32 @@ async def update_card(
 
 
 @mcp.tool()
+async def delete_board(
+    board_id: int,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a board by ID.
+    Args:
+        board_id: Board ID. Get this from list_boards(). (required).
+    """
+    return await get_client().deck_delete_board(board_id, get_user_token())
+
+
+@mcp.tool()
+async def delete_stack(
+    board_id: int,
+    stack_id: int,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a stack by ID.
+    Args:
+        board_id: Board ID the stack belongs to. (required).
+        stack_id: Stack ID to delete. Get this from list_stacks(board_id). (required).
+    """
+    return await get_client().deck_delete_stack(board_id, stack_id, get_user_token())
+
+
+@mcp.tool()
 async def delete_card(
     board_id: int,
     stack_id: int,
@@ -2551,6 +2577,72 @@ async def collectives_remove_tag(
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id). (required).
     """
     return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token())
+
+
+@mcp.tool()
+async def list_circles(
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List all Circles (Teams).
+    Args:
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().circles_list(get_user_token(), include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def get_circle(
+    circle_id: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a Circle by ID.
+    Args:
+        circle_id: Circle ID (required).
+    """
+    return await get_client().circles_get(circle_id, get_user_token())
+
+
+@mcp.tool()
+async def create_circle(
+    name: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a new Circle (Team).
+    Args:
+        name: Circle name (required).
+    """
+    return await get_client().circles_create(name, circle_type=1, api_key=get_user_token())
+
+
+@mcp.tool()
+async def update_circle(
+    circle_id: str,
+    name: str = None,
+    description: str = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update a Circle's properties.
+    Args:
+        circle_id: Circle ID (required).
+        name: New name for the circle (optional).
+        description: New description (optional).
+    """
+    return await get_client().circles_update(circle_id, name=name, description=description, api_key=get_user_token())
+
+
+@mcp.tool()
+async def delete_circle(
+    circle_id: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a Circle (Team) by ID.
+    Args:
+        circle_id: Circle ID to delete. Get this from list_circles(). (required).
+    """
+    result = await get_client().circles_delete(circle_id, get_user_token())
+    return {"status": "deleted", "result": result}
 
 
 @mcp.tool()
