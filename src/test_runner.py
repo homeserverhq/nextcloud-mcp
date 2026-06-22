@@ -574,6 +574,10 @@ DOMAIN_TESTS_DECK_LABEL_USER = [
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "user_id": API_USER
     }, ["Card"]),
+    ("update_card", "update_card", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "title": "update test"
+    }, ["Card"]),
 ]
 
 DOMAIN_TESTS_COLLECTIVES_MUTATE = [
@@ -590,23 +594,18 @@ DOMAIN_TESTS_COLLECTIVES_MUTATE = [
         "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"],
         "destination_collective_id": s["Collective"]["id"]
     }, ["Page"]),
-    ("collectives_search_pages", "collectives_search_pages", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "query": make_name("Page")
-    }, ["Collective"]),
     ("collectives_assign_tag", "collectives_assign_tag", lambda s, r: {
         "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
     }, ["Page", "Tag"]),
     ("collectives_remove_tag", "collectives_remove_tag", lambda s, r: {
         "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
     }, ["Page", "Tag"]),
+    ("collectives_search_pages", "collectives_search_pages", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "query": make_name("Page")
+    }, ["Collective"]),
 ]
 
-DOMAIN_TESTS_BACKEND_BROKEN = [
-    ("update_card", "update_card", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "title": "update test"
-    }, ["Card"]),
-]
+DOMAIN_TESTS_BACKEND_BROKEN = []
 
 
 DOMAIN_TESTS_CLEANUP = [
@@ -1407,21 +1406,21 @@ def main():
         run_test(session, "5R get_activity_filter", "get_activity_filter",
                 {"filter_name": "all", "limit": 5})
         if "Note" in created:
-            # Try to create an attachment via direct API
+            attach_filename = f"t{rid}-attach.txt"
+            attach_webdav_path = f"/remote.php/dav/files/{API_USER}/Notes/test/{attach_filename}"
+            attach_headers = {"Authorization": f"Basic {API_KEY}"}
             try:
-                attach_resp = direct_api_request("POST",
-                    f"/index.php/apps/notes/api/v1/notes/{created['Note']}/attachment",
-                    {"file": "test content"}, is_ocs=False)
-                attach_id = attach_resp.get("id") if isinstance(attach_resp, dict) else None
-                if attach_id:
-                    run_test(session, "5R get_attachment", "get_attachment",
-                            {"note_id": created["Note"], "attachment_id": str(attach_id)})
-                else:
-                    run_test(session, "5R get_attachment", "get_attachment",
-                            {"note_id": created["Note"], "attachment_id": "1"})
+                httpx.put(f"http://localhost:8060{attach_webdav_path}",
+                         headers=attach_headers, content=b"test attachment content", timeout=15.0)
             except Exception:
-                run_test(session, "5R get_attachment", "get_attachment",
-                        {"note_id": created["Note"], "attachment_id": "1"})
+                pass
+            run_test(session, "5R get_attachment", "get_attachment",
+                    {"note_id": created["Note"], "path": attach_filename})
+            try:
+                httpx.delete(f"http://localhost:8060{attach_webdav_path}",
+                            headers=attach_headers, timeout=15.0)
+            except Exception:
+                pass
 
         # ---- Phase 5S: WebDAV Fixture Cleanup ----
         log("\n=== Phase 5S: WebDAV Fixture Cleanup ===")

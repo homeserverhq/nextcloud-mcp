@@ -1119,11 +1119,11 @@ class NextcloudClient:
     async def delete_note(self, note_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/index.php/apps/notes/api/v1/notes/{note_id}", api_key, is_ocs=False)
 
-    async def get_attachment(self, note_id: int, attachment_id: str,
+    async def get_attachment(self, note_id: int, path: str,
                              api_key: str = None) -> Any:
         return await self.get(
-            f"/index.php/apps/notes/api/v1/notes/{note_id}/attachment/{attachment_id}",
-            api_key, is_ocs=False)
+            f"/index.php/apps/notes/api/v1.4/attachment/{note_id}",
+            api_key, is_ocs=False, params={"path": path})
 
     # =========================================================================
     # Domain: Deck (REST API — OCS routes return 404)
@@ -1167,6 +1167,19 @@ class NextcloudClient:
                                 payload: dict[str, Any], api_key: str = None) -> Any:
         allowed = {"title", "description", "duedate", "order"}
         clean = {k: v for k, v in payload.items() if k in allowed and v is not None}
+        try:
+            card_data = await self.get(
+                f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
+                api_key, is_ocs=False
+            )
+            if isinstance(card_data, dict):
+                clean.setdefault("type", card_data.get("type", "plain"))
+                owner = card_data.get("owner", {})
+                if isinstance(owner, dict):
+                    clean.setdefault("owner", owner.get("uid", ""))
+        except Exception:
+            clean.setdefault("type", "plain")
+            clean.setdefault("owner", "")
         return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
                               api_key, json=clean, is_ocs=False)
 
@@ -1452,7 +1465,7 @@ class NextcloudClient:
     async def collectives_search_pages(self, collective_id: int, query: str,
                                        api_key: str = None, limit: int = 50,
                                        include_all_fields: bool = False) -> Any:
-        params = {"search": query, "limit": limit}
+        params = {"searchString": query, "limit": limit}
         return await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/search",
                              api_key, params=params)
 

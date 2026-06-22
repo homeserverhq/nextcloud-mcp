@@ -1535,15 +1535,15 @@ async def search_notes(
 @mcp.tool()
 async def get_attachment(
     note_id: int,
-    attachment_id: str,
+    path: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get an attachment from a note.
     Args:
         note_id: Note ID (required).
-        attachment_id: Attachment ID (required).
+        path: Filename of the attachment within the Notes folder (required).
     """
-    return await get_client().get_attachment(note_id, attachment_id, get_user_token())
+    return await get_client().get_attachment(note_id, path, get_user_token())
 
 
 @mcp.tool()
