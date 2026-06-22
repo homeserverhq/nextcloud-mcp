@@ -384,7 +384,7 @@ async def create_share(
         path: Path to the file or folder to share (required).
         share_type: Type of share (0=user, 1=group, 3=public, 6=federated) (required).
         share_with: User/group ID to share with (required).
-        permissions: Permissions bitmask. Defaults to 1 (read).
+        permissions: Permissions bitmask (1=read, 2=update, 4=create, 8=delete, 16=share, 31=all). Defaults to 1 (read).
         password: Password for link shares.
         expire_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
     """
@@ -404,7 +404,7 @@ async def update_share(
     """Update an existing share.
     Args:
         id: ID of the share to update (required).
-        permissions: New permissions bitmask.
+        permissions: New permissions bitmask (1=read, 2=update, 4=create, 8=delete, 16=share, 31=all).
         password: New password for link shares.
         expire_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
     """
@@ -1003,7 +1003,7 @@ async def create_calendar(
     """Create a new calendar.
     Args:
         display_name: Display name for the calendar (required).
-        color: Calendar color.
+        color: Calendar color in #RRGGBB format (e.g. #FF0000 for red).
     """
     params = CreateCalendarParam(display_name=display_name, color=color)
     return await get_client().create_calendar(params.display_name, params.color, get_user_token())
@@ -1020,7 +1020,7 @@ async def update_calendar(
     Args:
         calendar_uri: URI of the calendar to update (required).
         display_name: New display name (required).
-        color: New calendar color.
+        color: New calendar color in #RRGGBB format (e.g. #FF0000 for red).
     """
     result = await get_client().update_calendar(calendar_uri, display_name, color, get_user_token())
     return {"status": "updated", "result": result}
@@ -1040,7 +1040,7 @@ async def delete_calendar(
 
 @mcp.tool()
 async def list_events(
-    calendar_uri: str,
+    calendar_uri: str = "",
     from_date: str = "",
     to_date: str = "",
     limit: int = 50,
@@ -1049,12 +1049,24 @@ async def list_events(
 ) -> dict[str, Any]:
     """List events in a calendar.
     Args:
-        calendar_uri: URI of the calendar (required).
+        calendar_uri: URI of the calendar. Get this from list_calendars. If omitted, events from all calendars are returned.
         from_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         to_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
+    if not calendar_uri:
+        all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
+        all_events = []
+        for cal in all_cals:
+            href = cal.get("href", "")
+            if "/remote.php/dav/calendars/" in href:
+                uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
+            else:
+                continue
+            events = await get_client().list_events(uri, get_user_token(), from_date, to_date, limit, include_all_fields)
+            all_events.extend(events)
+        return {"items": json_to_toon(all_events[:limit])}
     data = await get_client().list_events(calendar_uri, get_user_token(), from_date, to_date, limit, include_all_fields)
     return {"items": json_to_toon(data)}
 
@@ -1322,17 +1334,29 @@ async def delete_addressbook(
 
 @mcp.tool()
 async def list_contacts(
-    addressbook_uri: str,
+    addressbook_uri: str = "",
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """List contacts in an address book.
     Args:
-        addressbook_uri: URI of the address book (required).
+        addressbook_uri: URI of the address book. Get this from list_addressbooks. If omitted, contacts from all address books are returned.
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
+    if not addressbook_uri:
+        all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields)
+        all_contacts = []
+        for abook in all_abooks:
+            href = abook.get("href", "")
+            if "/remote.php/dav/addressbooks/" in href:
+                uri = href.split("/remote.php/dav/addressbooks/", 1)[1].rstrip("/")
+            else:
+                continue
+            contacts = await get_client().list_contacts(uri, get_user_token(), limit, include_all_fields)
+            all_contacts.extend(contacts)
+        return {"items": json_to_toon(all_contacts[:limit])}
     data = await get_client().list_contacts(addressbook_uri, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
 
@@ -1583,7 +1607,7 @@ async def create_board(
     """Create a new board.
     Args:
         title: Board title (required).
-        color: Display color.
+        color: Display color in #RRGGBB format (e.g. #FF0000 for red).
         archived: Whether the board is archived. Defaults to False.
     """
     params = CreateBoardParam(title=title, color=color, archived=archived)

@@ -733,8 +733,12 @@ class NextcloudClient:
             raise ValueError("Could not extract username from api_key")
         calendar_uri = display_name.lower().replace(" ", "_").replace("/", "_")
         path = f"/remote.php/dav/calendars/{quote(username, safe='')}/{quote(calendar_uri, safe='')}/"
+        color_prop = ""
+        if color:
+            color_hex = color if color.startswith("#") else f"#{color}"
+            color_prop = f'<apple:calendar-color>{color_hex}</apple:calendar-color>'
         body = f"""<?xml version="1.0" encoding="utf-8"?>
-<d:mkcol xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
+<d:mkcol xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:apple="http://apple.com/ns/ical/">
   <d:set>
     <d:prop>
       <d:resourcetype>
@@ -742,6 +746,7 @@ class NextcloudClient:
         <cal:calendar/>
       </d:resourcetype>
       <d:displayname>{display_name}</d:displayname>
+      {color_prop}
     </d:prop>
   </d:set>
 </d:mkcol>"""
@@ -751,11 +756,16 @@ class NextcloudClient:
     async def update_calendar(self, calendar_uri: str, display_name: str,
                               color: str = None, api_key: str = None) -> Any:
         path = f"/remote.php/dav/calendars/{calendar_uri}/"
+        color_prop = ""
+        if color:
+            color_hex = color if color.startswith("#") else f"#{color}"
+            color_prop = f'<apple:calendar-color xmlns:apple="http://apple.com/ns/ical/">{color_hex}</apple:calendar-color>'
         prop_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <d:propertyupdate xmlns:d="DAV:">
   <d:set>
     <d:prop>
       <d:displayname>{display_name}</d:displayname>
+      {color_prop}
     </d:prop>
   </d:set>
 </d:propertyupdate>"""
@@ -1137,6 +1147,8 @@ class NextcloudClient:
         return await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}", api_key, is_ocs=False)
 
     async def deck_create_board(self, payload: dict[str, Any], api_key: str = None) -> Any:
+        if "color" in payload and payload["color"]:
+            payload["color"] = payload["color"].lstrip("#")
         return await self.post("/index.php/apps/deck/api/v1.0/boards", api_key, json=payload, is_ocs=False)
 
     async def deck_list_stacks(self, board_id: int, api_key: str = None,

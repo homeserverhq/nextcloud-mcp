@@ -1405,6 +1405,8 @@ def main():
                     {"query": make_name("Todo"), "calendar_uri": created["Calendar"]})
         run_test(session, "5R get_activity_filter", "get_activity_filter",
                 {"filter_name": "all", "limit": 5})
+        run_test(session, "5R list_contacts_all", "list_contacts", {})
+        run_test(session, "5R list_events_all", "list_events", {})
         if "Note" in created:
             attach_filename = f"t{rid}-attach.txt"
             attach_webdav_path = f"/remote.php/dav/files/{API_USER}/Notes/test/{attach_filename}"
