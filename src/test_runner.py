@@ -170,7 +170,6 @@ def run_test(
     tool: str,
     params: dict[str, Any] = None,
     prereqs: list[str] = None,
-    expect_error: bool = False,
 ) -> bool:
     if params is None:
         params = {}
@@ -186,20 +185,6 @@ def run_test(
     try:
         result = session.call_tool(tool, params)
         err = is_error(result)
-        if expect_error:
-            if err:
-                results.append({
-                    "label": label, "tool": tool, "status": "PASSED",
-                    "data": {"expected_error": err}
-                })
-                log(f"  PASS {label} (expected error: {err})")
-                return True
-            results.append({
-                "label": label, "tool": tool, "status": "FAILED",
-                "reason": "Expected error but tool succeeded"
-            })
-            log(f"  FAIL {label}: expected error but succeeded")
-            return False
         if err:
             results.append({
                 "label": label, "tool": tool, "status": "FAILED",
@@ -214,13 +199,6 @@ def run_test(
         log(f"  PASS {label}")
         return True
     except Exception as e:
-        if expect_error:
-            results.append({
-                "label": label, "tool": tool, "status": "PASSED",
-                "data": {"expected_error": str(e)}
-            })
-            log(f"  PASS {label} (expected error: {e})")
-            return True
         results.append({
             "label": label, "tool": tool, "status": "FAILED", "reason": str(e)
         })
@@ -478,7 +456,7 @@ RESOURCE_TESTS = [
 # =============================================================================
 # (label, tool, params_or_callable, prereqs)
 #
-# For tests that need expect_error: (label, tool, params, prereqs, "expect_error")
+
 
 DOMAIN_TESTS_CREATE = [
     ("CardArchive", "archive_card", lambda s, r: {
@@ -572,7 +550,7 @@ def _check_readback(label: str, tool: str, result_data: Any,
 
 # =============================================================================
 # Domain test entry format: (label, tool, params_or_callable, prereqs)
-# For expect_error: append "expect_error" to the tuple
+
 # =============================================================================
 
 DOMAIN_TESTS_DECK_LABEL_USER = [
@@ -651,9 +629,8 @@ DOMAIN_TESTS_CLEANUP = [
 
 
 def run_domain_test(session: MCPSession, label: str, tool: str,
-                      params: dict, prereqs: list[str] = None,
-                      expect_error: bool = False) -> bool:
-    return run_test(session, label, tool, resolve_params(params), prereqs, expect_error)
+                      params: dict, prereqs: list[str] = None) -> bool:
+    return run_test(session, label, tool, resolve_params(params), prereqs)
 
 
 def run_domain_tests(session: MCPSession, phase: str, tests: list,
@@ -664,9 +641,8 @@ def run_domain_tests(session: MCPSession, phase: str, tests: list,
         tool = entry[1]
         params = resolve_params(entry[2]) if len(entry) > 2 else {}
         prereqs = entry[3] if len(entry) > 3 else None
-        expect_error = len(entry) > 4 and entry[4] == "expect_error"
         lbl = f"{phase} {prefix}{label}" if prefix else f"{phase} {label}"
-        run_domain_test(session, lbl, tool, params, prereqs, expect_error)
+        run_domain_test(session, lbl, tool, params, prereqs)
 
 
 # =============================================================================
