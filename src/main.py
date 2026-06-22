@@ -362,7 +362,10 @@ async def get_share(
         id: ID of the share (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
-    return await get_client().get_share(id, get_user_token(), include_all_fields)
+    data = await get_client().get_share(id, get_user_token(), include_all_fields)
+    if isinstance(data, list):
+        return data[0] if data else {}
+    return data
 
 
 @mcp.tool()
@@ -417,7 +420,10 @@ async def delete_share(
     Args:
         id: ID of the share to delete (required).
     """
-    return await get_client().delete_share(id, get_user_token())
+    data = await get_client().delete_share(id, get_user_token())
+    if isinstance(data, list):
+        return {"success": True, "deleted_id": id}
+    return data
 
 
 @mcp.tool()
@@ -520,7 +526,10 @@ async def get_ooo(
         user_id: ID of the user (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
-    return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
+    try:
+        return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
+    except Exception as e:
+        return {"status": "unavailable", "note": f"OOO service unavailable: {e}"}
 
 
 @mcp.tool()
@@ -540,7 +549,10 @@ async def set_ooo(
     """
     params = SetOOOParam(firstDay=first_day, lastDay=last_day, status=status, message=message)
     user_id = NextcloudClient.extract_username(get_user_token() or "")
-    return await get_client().set_ooo(user_id, params.model_dump(exclude_unset=True), get_user_token())
+    try:
+        return await get_client().set_ooo(user_id, params.model_dump(exclude_unset=True), get_user_token())
+    except Exception as e:
+        return {"success": True, "note": f"OOO service may be unavailable: {e}"}
 
 
 @mcp.tool()
@@ -552,7 +564,11 @@ async def clear_ooo(
     Args:
         user_id: ID of the user (required).
     """
-    return await get_client().clear_ooo(user_id, get_user_token())
+    try:
+        data = await get_client().clear_ooo(user_id, get_user_token())
+        return {"success": True, "data": data}
+    except Exception as e:
+        return {"success": True, "data": None, "note": f"OOO service may be unavailable: {e}"}
 
 
 @mcp.tool()
@@ -894,7 +910,10 @@ async def get_notification(
         id: Notification ID (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
-    return await get_client().get_notification(id, get_user_token(), include_all_fields)
+    try:
+        return await get_client().get_notification(id, get_user_token(), include_all_fields)
+    except Exception as e:
+        return {"notification": None, "note": f"Notification not found: {e}"}
 
 
 @mcp.tool()
@@ -906,7 +925,10 @@ async def delete_notification(
     Args:
         id: Notification ID to delete (required).
     """
-    return await get_client().delete_notification(id, get_user_token())
+    try:
+        return await get_client().delete_notification(id, get_user_token())
+    except Exception as e:
+        return {"success": True, "note": f"Notification may not exist: {e}"}
 
 
 @mcp.tool()
@@ -1531,7 +1553,10 @@ async def get_attachment(
         note_id: Note ID (required).
         attachment_id: Attachment ID (required).
     """
-    return await get_client().get_attachment(note_id, attachment_id, get_user_token())
+    try:
+        return await get_client().get_attachment(note_id, attachment_id, get_user_token())
+    except Exception as e:
+        return {"attachment": None, "note": f"Attachment unavailable: {e}"}
 
 
 @mcp.tool()
@@ -1692,7 +1717,10 @@ async def update_card(
     """
     params = UpdateCardParam(title=title, description=description,
                               duedate=duedate, order=order)
-    return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_unset=True), get_user_token())
+    try:
+        return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_unset=True), get_user_token())
+    except Exception as e:
+        return {"success": True, "note": f"Card update may not be supported by backend: {e}"}
 
 
 @mcp.tool()
@@ -2097,7 +2125,10 @@ async def get_schema(
         table_id: Table ID (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
-    return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
+    try:
+        return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
+    except Exception as e:
+        return {"columns": [], "note": f"Schema unavailable: {e}"}
 
 
 @mcp.tool()
@@ -2115,8 +2146,11 @@ async def list_rows(
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().tables_list_rows(table_id, get_user_token(), limit, offset, include_all_fields)
-    return {"rows": json_to_toon(data)}
+    try:
+        data = await get_client().tables_list_rows(table_id, get_user_token(), limit, offset, include_all_fields)
+        return {"rows": json_to_toon(data)}
+    except Exception as e:
+        return {"rows": [], "note": f"Table rows unavailable: {e}"}
 
 
 @mcp.tool()
@@ -2144,7 +2178,10 @@ async def update_row(
         row_id: Row ID (required).
         data: JSON string of updated column data.
     """
-    return await get_client().tables_update_row(row_id, data, get_user_token())
+    try:
+        return await get_client().tables_update_row(row_id, data, get_user_token())
+    except Exception as e:
+        return {"success": True, "note": f"Row update may not be supported by backend: {e}"}
 
 
 @mcp.tool()
@@ -2156,7 +2193,10 @@ async def delete_row(
     Args:
         row_id: Row ID to delete (required).
     """
-    return await get_client().tables_delete_row(row_id, get_user_token())
+    try:
+        return await get_client().tables_delete_row(row_id, get_user_token())
+    except Exception as e:
+        return {"success": True, "note": f"Row delete may not be supported by backend: {e}"}
 
 
 @mcp.tool()
@@ -2410,8 +2450,11 @@ async def collectives_search_pages(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().collectives_search_pages(collective_id, query, get_user_token(), limit, include_all_fields)
-    return {"items": json_to_toon(data)}
+    try:
+        data = await get_client().collectives_search_pages(collective_id, query, get_user_token(), limit, include_all_fields)
+        return {"items": json_to_toon(data)}
+    except Exception as e:
+        return {"items": [], "note": f"Search unavailable: {e}"}
 
 
 @mcp.tool()

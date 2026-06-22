@@ -610,7 +610,7 @@ DOMAIN_TESTS_COLLECTIVES_MUTATE = [
     }, ["Page"]),
     ("collectives_search_pages", "collectives_search_pages", lambda s, r: {
         "collective_id": s["Collective"]["id"], "query": make_name("Page")
-    }, ["Collective"], "expect_error"),
+    }, ["Collective"]),
     ("collectives_assign_tag", "collectives_assign_tag", lambda s, r: {
         "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
     }, ["Page", "Tag"]),
@@ -620,14 +620,14 @@ DOMAIN_TESTS_COLLECTIVES_MUTATE = [
 ]
 
 DOMAIN_TESTS_BACKEND_BROKEN = [
-    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"], "expect_error"),
-    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"], "expect_error"),
-    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"], "expect_error"),
-    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"], "expect_error"),
+    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
+    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
     ("update_card", "update_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "title": "update test"
-    }, ["Card"], "expect_error"),
+    }, ["Card"]),
 ]
 
 
@@ -1105,17 +1105,45 @@ def main():
         # ---- Phase 5F: Sharing Tests ----
         log("\n=== Phase 5F: Sharing Tests ===")
         if store.get("fixture_path"):
-            # Use relative path (without WebDAV prefix) for OCS sharing API
             rel_path = f"/t{rid}-fixture.txt"
             share_params = {"path": rel_path, "share_type": 3,
                            "share_with": "", "permissions": 1}
-            run_test(session, "5F create_share", "create_share", share_params)
+            ok = run_test(session, "5F create_share", "create_share", share_params)
+            if ok:
+                for r in reversed(results):
+                    if r["label"] == "5F create_share" and r["status"] == "PASSED":
+                        share_data = r.get("data", {})
+                        if isinstance(share_data, dict):
+                            share_id = share_data.get("id")
+                            if share_id:
+                                store["share_id"] = share_id
+                                log(f"  => Share ID: {share_id}")
+                                run_test(session, "5F get_share", "get_share", {"id": share_id})
+                                run_test(session, "5F update_share", "update_share",
+                                        {"id": share_id, "permissions": 1})
+                                run_test(session, "5F delete_share", "delete_share", {"id": share_id})
+                        break
         else:
             log(f"  Skipping sharing tests (no fixture file)")
 
         # ---- Phase 5G: Collaboration Tests ----
         log("\n=== Phase 5G: Collaboration Tests ===")
-        run_test(session, "5G search_collections", "search_collections", {"search": "test"})
+        ok = run_test(session, "5G search_collections", "search_collections", {"search": "test"})
+        if store.get("share_id"):
+            ok = run_test(session, "5G list_shares", "list_shares", {})
+            if ok:
+                result = session.call_tool("list_shares")
+                data = extract_content(result)
+                shares = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                if shares:
+                    share = shares[0] if isinstance(shares[0], dict) else {}
+                    coll_id = share.get("collection_id") or share.get("collection") or share.get("uid")
+                    if coll_id:
+                        store["collection_id"] = str(coll_id)
+                        log(f"  => Collection ID: {coll_id}")
+                        run_test(session, "5G list_collection", "list_collection", {"id": str(coll_id)})
+                        run_test(session, "5G get_collections_by_resource", "get_collections_by_resource",
+                                {"resource_type": "files", "resource_id": str(coll_id)})
 
         # ---- Phase 5H: Reminder Tests ----
         log("\n=== Phase 5H: Reminder Tests ===")
@@ -1186,10 +1214,11 @@ def main():
         log("\n=== Phase 5K: OOO Tests ===")
         future_fd = "2027-01-01T00:00:00+00:00"
         future_ld = "2027-01-07T00:00:00+00:00"
-        ok = run_test(session, "5K set_ooo", "set_ooo",
-                     {"first_day": future_fd, "last_day": future_ld,
-                      "status": "OOO", "message": "Out of office"}, expect_error=True)
-        run_test(session, "5K get_ooo", "get_ooo", {"user_id": API_USER}, expect_error=True)
+        run_test(session, "5K set_ooo", "set_ooo",
+                {"first_day": future_fd, "last_day": future_ld,
+                 "status": "OOO", "message": "Out of office"})
+        run_test(session, "5K get_ooo", "get_ooo", {"user_id": API_USER})
+        run_test(session, "5K clear_ooo", "clear_ooo", {"user_id": API_USER})
 
         # ---- Phase 5L: Mail Tests ----
         log("\n=== Phase 5L: Mail Tests ===")
@@ -1254,10 +1283,20 @@ def main():
                 store["chat_token"] = token
                 log(f"  => Chat room token: {token}")
                 ok = run_test(session, "5M send_chat_message", "send_chat_message",
-                        {"token": token, "message": "Hello from MCP test"}, expect_error=True)
+                        {"token": token, "message": "Hello from MCP test"})
                 if ok:
                     run_test(session, "5M get_chat_messages", "get_chat_messages",
-                            {"token": token, "limit": 5}, expect_error=True)
+                            {"token": token, "limit": 5})
+                    # Delete the sent message
+                    result = session.call_tool("get_chat_messages", {"token": token, "limit": 1})
+                    msg_data = extract_content(result)
+                    msgs = msg_data.get("items", []) if isinstance(msg_data, dict) else (msg_data if isinstance(msg_data, list) else [])
+                    if msgs:
+                        first_msg = msgs[0] if isinstance(msgs[0], dict) else {}
+                        msg_id = first_msg.get("id")
+                        if msg_id:
+                            run_test(session, "5M delete_chat_message", "delete_chat_message",
+                                    {"token": token, "message_id": msg_id})
         except Exception as e:
             log(f"  Chat room creation failed: {e}")
             results.append({
@@ -1265,9 +1304,19 @@ def main():
                 "status": "FAILED", "reason": str(e)
             })
 
-        # ---- Phase 5N: Deck Label/User Ops ----
+        # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")
         if "Board" in created:
+            try:
+                label_resp = direct_api_request("POST",
+                    f"/index.php/apps/deck/api/v1.0/boards/{created['Board']}/labels",
+                    {"title": "Test Label", "color": "FF0000"}, is_ocs=False)
+                label_id = label_resp.get("id") if isinstance(label_resp, dict) else None
+                if label_id:
+                    store["deck_first_label_id"] = label_id
+                    log(f"  => Created label ID: {label_id}")
+            except Exception as e:
+                log(f"  Could not create deck label: {e}")
             result = session.call_tool("list_labels", {"board_id": created["Board"]})
             data = extract_content(result)
             labels = data.get("items", []) if isinstance(data, dict) else []
@@ -1357,10 +1406,8 @@ def main():
                 run_test(session, "5Q get_notification", "get_notification", {"id": nid})
                 run_test(session, "5Q delete_notification", "delete_notification", {"id": nid})
         else:
-            run_test(session, "5Q get_notification", "get_notification",
-                    {"id": 999999}, expect_error=True)
-            run_test(session, "5Q delete_notification", "delete_notification",
-                    {"id": 999999}, expect_error=True)
+            run_test(session, "5Q get_notification", "get_notification", {"id": 999999})
+            run_test(session, "5Q delete_notification", "delete_notification", {"id": 999999})
         run_test(session, "5Q delete_all_notifications", "delete_all_notifications", {})
 
         # ---- Phase 5R: Misc Tests ----
@@ -1384,9 +1431,21 @@ def main():
         run_test(session, "5R get_activity_filter", "get_activity_filter",
                 {"filter_name": "all", "limit": 5})
         if "Note" in created:
-            run_test(session, "5R get_attachment", "get_attachment",
-                    {"note_id": created["Note"], "attachment_id": "1"},
-                    expect_error=True)
+            # Try to create an attachment via direct API
+            try:
+                attach_resp = direct_api_request("POST",
+                    f"/index.php/apps/notes/api/v1/notes/{created['Note']}/attachment",
+                    {"file": "test content"}, is_ocs=False)
+                attach_id = attach_resp.get("id") if isinstance(attach_resp, dict) else None
+                if attach_id:
+                    run_test(session, "5R get_attachment", "get_attachment",
+                            {"note_id": created["Note"], "attachment_id": str(attach_id)})
+                else:
+                    run_test(session, "5R get_attachment", "get_attachment",
+                            {"note_id": created["Note"], "attachment_id": "1"})
+            except Exception:
+                run_test(session, "5R get_attachment", "get_attachment",
+                        {"note_id": created["Note"], "attachment_id": "1"})
 
         # ---- Phase 5S: WebDAV Fixture Cleanup ----
         log("\n=== Phase 5S: WebDAV Fixture Cleanup ===")

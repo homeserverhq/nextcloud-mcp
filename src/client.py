@@ -1282,19 +1282,19 @@ class NextcloudClient:
 
     async def talk_send_message(self, token: str, message: str,
                                 api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/spreed/api/v4/chat/{token}",
+        return await self.post(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
                               api_key, json={"message": message})
 
     async def talk_get_messages(self, token: str, api_key: str = None,
                                 limit: int = 50, look_into_future: int = 0,
                                 include_all_fields: bool = False) -> Any:
         params = {"limit": limit, "lookIntoFuture": look_into_future}
-        return await self.get(f"/ocs/v2.php/apps/spreed/api/v4/chat/{token}",
+        return await self.get(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
                              api_key, params=params)
 
     async def talk_delete_message(self, token: str, message_id: int,
                                   api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/spreed/api/v4/chat/{token}/{message_id}", api_key)
+        return await self.delete(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}/{message_id}", api_key)
 
     # =========================================================================
     # Domain: Tables (OCS)
@@ -1325,8 +1325,8 @@ class NextcloudClient:
                                limit: int = 50, offset: int = 0,
                                include_all_fields: bool = False) -> Any:
         params = {"limit": limit, "offset": offset}
-        return await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
-                              api_key, params=params)
+        return await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
+                             api_key, params=params)
 
     async def tables_create_row(self, table_id: int, data: str,
                                  api_key: str = None) -> Any:
