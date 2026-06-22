@@ -539,7 +539,7 @@ async def set_ooo(
         message: Long OOO message (required).
     """
     params = SetOOOParam(firstDay=first_day, lastDay=last_day, status=status, message=message)
-    user_id = get_user_token() or ""
+    user_id = NextcloudClient.extract_username(get_user_token() or "")
     return await get_client().set_ooo(user_id, params.model_dump(exclude_unset=True), get_user_token())
 
 
@@ -674,7 +674,10 @@ async def set_file_reminder(
         file_id: ID of the file (required).
         due_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00) (required).
     """
-    return await get_client().set_file_reminder(file_id, due_date, get_user_token())
+    result = await get_client().set_file_reminder(file_id, due_date, get_user_token())
+    if isinstance(result, list):
+        return {"success": True, "reminder_set": True}
+    return result
 
 
 @mcp.tool()
@@ -686,7 +689,10 @@ async def delete_file_reminder(
     Args:
         file_id: ID of the file (required).
     """
-    return await get_client().delete_file_reminder(file_id, get_user_token())
+    result = await get_client().delete_file_reminder(file_id, get_user_token())
+    if isinstance(result, list):
+        return {"success": True, "reminder_deleted": True}
+    return result
 
 
 @mcp.tool()
@@ -906,7 +912,10 @@ async def delete_notification(
 @mcp.tool()
 async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
     """Delete all notifications."""
-    return await get_client().delete_all_notifications(get_user_token())
+    result = await get_client().delete_all_notifications(get_user_token())
+    if isinstance(result, list):
+        return {"success": True, "deleted": True}
+    return result
 
 
 @mcp.tool()
@@ -2368,6 +2377,22 @@ async def collectives_set_page_emoji(
         emoji: Emoji to set (required).
     """
     return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token())
+
+
+@mcp.tool()
+async def collectives_set_page_full_width(
+    collective_id: int,
+    page_id: int,
+    is_full_width: bool,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Set the full-width display for a page.
+    Args:
+        collective_id: Collective ID (required).
+        page_id: Page ID (required).
+        is_full_width: Whether the page should be displayed full-width (required).
+    """
+    return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token())
 
 
 @mcp.tool()

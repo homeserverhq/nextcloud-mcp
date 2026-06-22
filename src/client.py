@@ -169,7 +169,8 @@ class NextcloudClient:
         return f"""<?xml version="1.0" encoding="utf-8"?>
 <d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/"
             xmlns:c="urn:ietf:params:xml:ns:caldav"
-            xmlns:card="urn:ietf:params:xml:ns:carddav">
+            xmlns:card="urn:ietf:params:xml:ns:carddav"
+            xmlns:oc="http://owncloud.org/ns">
   <d:prop>
 {prop_elements}
   </d:prop>
@@ -630,7 +631,8 @@ class NextcloudClient:
     async def webdav_list_directory(self, path: str, api_key: str = None,
                                     depth: int = 1, include_all_fields: bool = False) -> Any:
         props = ["d:displayname", "d:getcontenttype", "d:getcontentlength",
-                 "d:getlastmodified", "d:resourcetype", "d:getetag"]
+                 "d:getlastmodified", "d:resourcetype", "d:getetag",
+                 "oc:fileid"]
         body = self._propfind_xml(props)
         return await self._dav_request("PROPFIND", path, api_key, body=body,
                                        extra_headers={"Depth": str(depth)})
@@ -834,8 +836,8 @@ class NextcloudClient:
         cal.add("version", "2.0")
         event = Event()
         event.add("summary", summary)
-        event.add("dtstart", _to_dav_datetime(dtstart))
-        event.add("dtend", _to_dav_datetime(dtend))
+        event.add("dtstart", dt.datetime.fromisoformat(dtstart))
+        event.add("dtend", dt.datetime.fromisoformat(dtend))
         if description:
             event.add("description", description)
         if location:

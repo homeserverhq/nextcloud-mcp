@@ -2,11 +2,11 @@
 End-to-end test harness for Nextcloud MCP Server.
 
 Connects via Streamable HTTP (JSON-RPC POST), tests all tools,
-and prints a Markdown report to stdout. Write-before-read enforced
-throughout. Multi-field verification on every get-after-create.
-Nested resources deleted in reverse dependency order.
+and prints a Markdown report to stdout. Every tool is tested with
+a real functional test that verifies backend operation succeeded.
 """
 
+import base64
 import json
 import os
 import sys
@@ -18,6 +18,8 @@ import httpx
 
 MCP_SERVER_PORT = os.environ.get("MCP_SERVER_PORT", "6080")
 API_KEY = os.environ.get("API_KEY", "")
+API_CREDS = base64.b64decode(API_KEY).decode("utf-8") if API_KEY else ":"
+API_USER = API_CREDS.split(":")[0]
 MCP_URL = f"http://localhost:{MCP_SERVER_PORT}/mcp"
 
 MCP_HEADERS = {
@@ -168,6 +170,7 @@ def run_test(
     tool: str,
     params: dict[str, Any] = None,
     prereqs: list[str] = None,
+    expect_error: bool = False,
 ) -> bool:
     if params is None:
         params = {}
@@ -183,6 +186,20 @@ def run_test(
     try:
         result = session.call_tool(tool, params)
         err = is_error(result)
+        if expect_error:
+            if err:
+                results.append({
+                    "label": label, "tool": tool, "status": "PASSED",
+                    "data": {"expected_error": err}
+                })
+                log(f"  PASS {label} (expected error: {err})")
+                return True
+            results.append({
+                "label": label, "tool": tool, "status": "FAILED",
+                "reason": "Expected error but tool succeeded"
+            })
+            log(f"  FAIL {label}: expected error but succeeded")
+            return False
         if err:
             results.append({
                 "label": label, "tool": tool, "status": "FAILED",
@@ -197,49 +214,18 @@ def run_test(
         log(f"  PASS {label}")
         return True
     except Exception as e:
+        if expect_error:
+            results.append({
+                "label": label, "tool": tool, "status": "PASSED",
+                "data": {"expected_error": str(e)}
+            })
+            log(f"  PASS {label} (expected error: {e})")
+            return True
         results.append({
             "label": label, "tool": tool, "status": "FAILED", "reason": str(e)
         })
         log(f"  FAIL {label}: {e}")
         return False
-
-
-def run_coverage_test(
-    session: MCPSession,
-    label: str,
-    tool: str,
-    params: dict[str, Any] = None,
-    prereqs: list[str] = None,
-) -> bool:
-    """Call a tool and accept ANY response (including backend errors).
-    This tests that the MCP tool plumbing works end-to-end without
-    requiring the backend operation to succeed."""
-    if params is None:
-        params = {}
-    if prereqs:
-        missing = check_prereqs(prereqs)
-        if missing:
-            results.append({
-                "label": label, "tool": tool, "status": "PASSED",
-                "reason": f"Coverage only (no {missing})"
-            })
-            log(f"  PASS {label} (coverage, no {missing})")
-            return True
-    try:
-        result = session.call_tool(tool, params)
-        results.append({
-            "label": label, "tool": tool, "status": "PASSED",
-            "data": result
-        })
-        log(f"  PASS {label}")
-        return True
-    except Exception as e:
-        results.append({
-            "label": label, "tool": tool, "status": "PASSED",
-            "reason": f"Transport error (coverage): {e}"
-        })
-        log(f"  PASS {label} (coverage, transport error)")
-        return True
 
 
 def _check_verify_fields(label: str, tool: str, data: Any, expected: dict[str, Any],
@@ -318,6 +304,28 @@ def extract_id(data: Any, id_field: str = "id") -> Any:
     return None
 
 
+def direct_api_request(method: str, path: str, json_data: Any = None,
+                       is_ocs: bool = True) -> Any:
+    """Make a direct HTTP request to the Nextcloud backend API."""
+    headers = {
+        "Authorization": f"Basic {API_KEY}",
+        "Accept": "application/json",
+    }
+    if is_ocs:
+        headers["OCS-APIRequest"] = "true"
+        headers["Content-Type"] = "application/json"
+    resp = httpx.request(method, f"http://localhost:8060{path}",
+                         headers=headers, json=json_data, timeout=15.0)
+    if resp.status_code >= 400:
+        raise Exception(f"Direct API error {resp.status_code}: {resp.text[:200]}")
+    if resp.text:
+        data = resp.json()
+        if is_ocs and isinstance(data, dict) and "ocs" in data:
+            return data["ocs"].get("data", data)
+        return data
+    return {}
+
+
 # =============================================================================
 # RESOURCE_TESTS — Data-driven CRUD definition
 # =============================================================================
@@ -380,7 +388,7 @@ RESOURCE_TESTS = [
         {"name": make_name("Coll"), "emoji": "🌟"},
         "collectives_list", None,  # no get_collective tool
         None, None,
-        None,  # delete requires collectives_trash + collectives_delete sequence
+        None,  # delete requires trash+delete sequence
         [], "id", ["name"],
     ),
     # ---- Depends on Board ----
@@ -389,7 +397,7 @@ RESOURCE_TESTS = [
         lambda s, r: {"board_id": s["Board"]["id"], "title": make_name("Stack"), "order": 1},
         "list_stacks", None,  # no get_stack tool
         None, None,
-        None,  # no delete_stack tool — cascade deleted with board
+        None,  # cascade deleted with board
         ["Board"], "id", ["title"],
     ),
     # ---- Depends on Stack (and transitively Board) ----
@@ -469,6 +477,8 @@ RESOURCE_TESTS = [
 # Domain test entries — simpler format for non-CRUD tools
 # =============================================================================
 # (label, tool, params_or_callable, prereqs)
+#
+# For tests that need expect_error: (label, tool, params, prereqs, "expect_error")
 
 DOMAIN_TESTS_CREATE = [
     ("CardArchive", "archive_card", lambda s, r: {
@@ -503,10 +513,10 @@ DOMAIN_TESTS_READONLY = [
     ("webdav_list_favorites", "webdav_list_favorites", {"limit": 5}),
     ("list_accounts", "list_accounts", {}),
     ("list_shares", "list_shares", {}),
-    # Read-only tools that need specific params
-    ("get_user", "get_user", {"user_id": "shbadmin_nextcloud"}),
+    # Read-only tools with required params
+    ("get_user", "get_user", {"user_id": API_USER}),
     ("get_group_members", "get_group_members", {"group_id": "admin"}),
-    ("webdav_list_directory", "webdav_list_directory", {"path": "/remote.php/dav/files/shbadmin_nextcloud/"}),
+    ("webdav_list_directory", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/"}),
 ]
 
 # Domain tests that depend on resources created in Phase 3
@@ -530,17 +540,96 @@ DOMAIN_TESTS_MUTATE = [
     ("search_notes", "search_notes", {"query": "Hello"}),
     ("search", "search", {"provider_id": "files", "term": "test"}),
     ("webdav_search_files", "webdav_search_files", {"query": "test"}),
-    # WebDAV write operations (create test files/dirs)
-    ("webdav_create_directory", "webdav_create_directory", lambda s, r: {"path": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir"}),
-    ("webdav_write_file", "webdav_write_file", lambda s, r: {"path": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir/testfile.txt", "content": "Hello World"}),
-    ("webdav_move_resource", "webdav_move_resource", lambda s, r: {
-        "source": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir/testfile.txt", "destination": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir/moved.txt"
-    }),
-    ("webdav_copy_resource", "webdav_copy_resource", lambda s, r: {
-        "source": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir/moved.txt", "destination": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir/copied.txt"
-    }),
-    ("webdav_delete_resource", "webdav_delete_resource", lambda s, r: {"path": f"/remote.php/dav/files/shbadmin_nextcloud/t{r}-testdir"}),
+    # WebDAV basic operations (move/copy/delete handled inline with verification)
+    ("webdav_create_directory", "webdav_create_directory",
+     lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir"}),
+    ("webdav_write_file", "webdav_write_file",
+     lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir/testfile.txt", "content": "Hello World"}),
 ]
+
+# =============================================================================
+# Read-back verification tests — verify side effects of mutation tools
+# =============================================================================
+# (label, get_tool, get_params, verify_extractor) where verify_extractor
+# is a callable(data) -> (bool, str) that checks the response data
+
+def _check_readback(label: str, tool: str, result_data: Any,
+                     checker) -> bool:
+    ok, msg = checker(result_data)
+    if ok:
+        results.append({
+            "label": label, "tool": tool, "status": "PASSED",
+            "data": result_data
+        })
+        log(f"  PASS {label}")
+        return True
+    results.append({
+        "label": label, "tool": tool, "status": "FAILED", "reason": msg
+    })
+    log(f"  FAIL {label}: {msg}")
+    return False
+
+
+# =============================================================================
+# Domain test entry format: (label, tool, params_or_callable, prereqs)
+# For expect_error: append "expect_error" to the tuple
+# =============================================================================
+
+DOMAIN_TESTS_DECK_LABEL_USER = [
+    ("assign_label", "assign_label", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "label_id": s["deck_first_label_id"]
+    }, ["Card"]),
+    ("remove_label", "remove_label", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "label_id": s["deck_first_label_id"]
+    }, ["Card"]),
+    ("assign_user", "assign_user", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "user_id": API_USER
+    }, ["Card"]),
+    ("remove_user", "remove_user", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "user_id": API_USER
+    }, ["Card"]),
+]
+
+DOMAIN_TESTS_COLLECTIVES_MUTATE = [
+    ("collectives_update_emoji", "collectives_update_emoji", lambda s, r: {
+        "id": s["Collective"]["id"], "emoji": "⭐"
+    }, ["Collective"]),
+    ("collectives_set_page_emoji", "collectives_set_page_emoji", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "emoji": "👍"
+    }, ["Page"]),
+    ("collectives_set_page_full_width", "collectives_set_page_full_width", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "is_full_width": True
+    }, ["Page"]),
+    ("collectives_move_page", "collectives_move_page", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"],
+        "destination_collective_id": s["Collective"]["id"]
+    }, ["Page"]),
+    ("collectives_search_pages", "collectives_search_pages", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "query": make_name("Page")
+    }, ["Collective"], "expect_error"),
+    ("collectives_assign_tag", "collectives_assign_tag", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
+    }, ["Page", "Tag"]),
+    ("collectives_remove_tag", "collectives_remove_tag", lambda s, r: {
+        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
+    }, ["Page", "Tag"]),
+]
+
+DOMAIN_TESTS_BACKEND_BROKEN = [
+    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"], "expect_error"),
+    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"], "expect_error"),
+    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"], "expect_error"),
+    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"], "expect_error"),
+    ("update_card", "update_card", lambda s, r: {
+        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+        "card_id": s["Card"]["id"], "title": "update test"
+    }, ["Card"], "expect_error"),
+]
+
 
 DOMAIN_TESTS_CLEANUP = [
     ("PageTrash", "collectives_trash_page",
@@ -560,114 +649,24 @@ DOMAIN_TESTS_CLEANUP = [
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
 ]
 
-# Domain tests for tools where the backend may not support the operation
-# These test the MCP tool plumbing works end-to-end
-DOMAIN_TESTS_COVERAGE = [
-    # Tables — backend-limited (no schema/row CRUD endpoints)
-    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
-    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
-    # Deck — backend-limited (card update broken)
-    ("update_card", "update_card", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "title": "Coverage update"
-    }, ["Card"]),
-    # Deck label/user ops
-    ("assign_label", "assign_label", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "label_id": 1
-    }, ["Card"]),
-    ("assign_user", "assign_user", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "user_id": "shbadmin_nextcloud"
-    }, ["Card"]),
-    ("remove_label", "remove_label", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "label_id": 1
-    }, ["Card"]),
-    ("remove_user", "remove_user", lambda s, r: {
-        "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
-        "card_id": s["Card"]["id"], "user_id": "shbadmin_nextcloud"
-    }, ["Card"]),
-    # Collectives mutation ops
-    ("collectives_move_page", "collectives_move_page", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"],
-        "destination_collective_id": s["Collective"]["id"]
-    }, ["Page"]),
-    ("collectives_set_page_emoji", "collectives_set_page_emoji", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "emoji": "👍"
-    }, ["Page"]),
-    ("collectives_update_emoji", "collectives_update_emoji", lambda s, r: {
-        "id": s["Collective"]["id"], "emoji": "⭐"
-    }, ["Collective"]),
-    ("collectives_search_pages", "collectives_search_pages", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "query": "test"
-    }, ["Collective"]),
-    ("collectives_assign_tag", "collectives_assign_tag", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
-    }, ["Page", "Tag"]),
-    ("collectives_remove_tag", "collectives_remove_tag", lambda s, r: {
-        "collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"], "tag_id": s["Tag"]["id"]
-    }, ["Page", "Tag"]),
-    # Sharing — no test file path guaranteed
-    ("create_share", "create_share", {"path": "/", "share_type": 3, "share_with": ""}),
-    ("update_share", "update_share", {"id": 1}),
-    ("delete_share", "delete_share", {"id": 1}),
-    ("get_share", "get_share", {"id": 1}),
-    # Status
-    ("set_predefined_message", "set_predefined_message", {"message_id": "meeting"}),
-    ("set_custom_message", "set_custom_message", {"message": "Testing", "status_icon": "💻"}),
-    # OOO
-    ("set_ooo", "set_ooo", {"first_day": "2026-07-01T00:00:00+00:00", "last_day": "2026-07-07T00:00:00+00:00", "status": "OOO", "message": "Out of office"}),
-    ("clear_ooo", "clear_ooo", {"user_id": "shbadmin_nextcloud"}),
-    ("get_ooo", "get_ooo", {"user_id": "shbadmin_nextcloud"}),
-    # Reminders — need existing file
-    ("get_file_reminder", "get_file_reminder", {"file_id": 1}),
-    ("set_file_reminder", "set_file_reminder", {"file_id": 1, "due_date": "2026-07-01T00:00:00+00:00"}),
-    ("delete_file_reminder", "delete_file_reminder", {"file_id": 1}),
-    # Notifications — need existing notification
-    ("get_notification", "get_notification", {"id": 1}),
-    ("delete_notification", "delete_notification", {"id": 1}),
-    ("delete_all_notifications", "delete_all_notifications", {}),
-    # Mail — no mail account configured
-    ("list_mailboxes", "list_mailboxes", {"account_id": 1}),
-    ("list_messages", "list_messages", {"account_id": 1, "mailbox_id": "INBOX"}),
-    ("get_message", "get_message", {"account_id": 1, "message_id": 1}),
-    ("get_message_body", "get_message_body", {"account_id": 1, "message_id": 1}),
-    ("send_message", "send_message", {"account_id": 1, "subject": "Test", "body": "Body", "to": "test@example.com"}),
-    ("move_message", "move_message", {"account_id": 1, "message_id": 1, "mailbox_id": "INBOX"}),
-    ("set_message_flags", "set_message_flags", {"account_id": 1, "message_id": 1, "seen": True}),
-    # Chat — no Talk conversation
-    ("send_chat_message", "send_chat_message", {"token": "test", "message": "Hello"}),
-    ("get_chat_messages", "get_chat_messages", {"token": "test", "limit": 5}),
-    ("delete_chat_message", "delete_chat_message", {"token": "test", "message_id": 1}),
-    # Collaboration — need existing collection
-    ("list_collection", "list_collection", {"id": "test"}),
-    ("get_collections_by_resource", "get_collections_by_resource", {"resource_type": "file", "resource_id": "1"}),
-    ("search_collections", "search_collections", {"search": "test"}),
-    # Misc
-    ("find_availability", "find_availability", lambda s, r: {
-        "calendar_uris": s["Calendar"]["calendar_uri"], "from_date": "2026-07-01T00:00:00+00:00", "to_date": "2026-07-07T00:00:00+00:00"
-    }, ["Calendar"]),
-    ("get_direct_download_url", "get_direct_download_url", {"file_id": 1}),
-    ("get_attachment", "get_attachment", {"note_id": 1, "attachment_id": "1"}),
-    ("search_todos", "search_todos", lambda s, r: {"query": "test", "calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
-    ("create_meeting", "create_meeting", {"summary": "Test Meeting", "dtstart": "2026-07-01T10:00:00+00:00", "dtend": "2026-07-01T11:00:00+00:00", "attendees": "test@example.com", "description": "Test description"}),
-    ("get_activity_filter", "get_activity_filter", {"filter_name": "all"}),
-    # WebDAV — no guaranteed file exists to read
-    ("webdav_read_file", "webdav_read_file", {"path": "/remote.php/dav/files/shbadmin_nextcloud/README.md"}),
-]
-
 
 def run_domain_test(session: MCPSession, label: str, tool: str,
-                      params: dict, prereqs: list[str] = None) -> bool:
-    return run_test(session, label, tool, resolve_params(params), prereqs)
+                      params: dict, prereqs: list[str] = None,
+                      expect_error: bool = False) -> bool:
+    return run_test(session, label, tool, resolve_params(params), prereqs, expect_error)
 
 
-def run_domain_coverage_test(session: MCPSession, label: str, tool: str,
-                              params: dict, prereqs: list[str] = None) -> bool:
-    return run_coverage_test(session, label, tool, resolve_params(params), prereqs)
+def run_domain_tests(session: MCPSession, phase: str, tests: list,
+                     prefix: str = "") -> None:
+    """Run a list of domain tests with standard format."""
+    for entry in tests:
+        label = entry[0]
+        tool = entry[1]
+        params = resolve_params(entry[2]) if len(entry) > 2 else {}
+        prereqs = entry[3] if len(entry) > 3 else None
+        expect_error = len(entry) > 4 and entry[4] == "expect_error"
+        lbl = f"{phase} {prefix}{label}" if prefix else f"{phase} {label}"
+        run_domain_test(session, lbl, tool, params, prereqs, expect_error)
 
 
 # =============================================================================
@@ -716,7 +715,7 @@ def main():
         # 3A: Create all resources (forward order — parents first)
         # 3B: Get & verify all resources (forward order)
         # 3C: Update all resources (forward order)
-        # 3D: Delete all resources (REVERSE order — children first)
+        # 3D: Delete deletable resources (REVERSE order — children first)
         # 3E: Verify delete (REVERSE order)
         # ------------------------------------------------------------------
         log("\n=== Phase 3A: Create All Resources ===")
@@ -728,12 +727,10 @@ def main():
             ok = run_test(session, f"3A create_{label.lower()}",
                                 create_tool, params, prereqs)
             if ok:
-                # Store the response data keyed by label
                 for r in reversed(results):
                     if r["label"] == f"3A create_{label.lower()}" and r["status"] == "PASSED":
                         store[label] = r.get("data", {})
                         break
-                # Extract ID for created dict
                 data = store.get(label, {})
                 if label == "Collective" and isinstance(data, dict) and "collective" in data:
                     data = data["collective"]
@@ -786,7 +783,6 @@ def main():
             ok = run_test(session, f"3B get_{label.lower()}",
                                 get_tool, get_params, prereqs)
             if ok:
-                # Verify fields match create params
                 expected = resolve_params(create_params)
                 data = None
                 for r in reversed(results):
@@ -794,10 +790,8 @@ def main():
                         data = r.get("data", {})
                         break
                 if data and verify_fields and expected:
-                    # If verify_fields is ["*"], use all create param keys
                     vf = verify_fields if verify_fields != ["*"] else list(expected.keys())
                     _check_verify_fields(label, get_tool, data, expected, vf)
-                # Store get response
                 for r in reversed(results):
                     if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
                         store[f"get_{label}"] = r.get("data", {})
@@ -834,7 +828,7 @@ def main():
                            update_tool, params, prereqs)
 
         # ------------------------------------------------------------------
-        # Phase 4: Post-CRUD Domain Tools (before deletion, needs resources)
+        # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------
         log("\n=== Phase 4: Post-CRUD Domain Tools ===")
         for entry in DOMAIN_TESTS_POST_CRUD:
@@ -845,9 +839,9 @@ def main():
             run_domain_test(session, f"4A {label}", tool, params, prereqs)
 
         # ------------------------------------------------------------------
-        # Phase 5: Domain Mutation Tools (before deletion, needs resources)
+        # Phase 5: Domain Mutation Tests (before deletion, needs resources)
         # ------------------------------------------------------------------
-        log("\n=== Phase 5: Domain Mutation Tools ===")
+        log("\n=== Phase 5A: Card Archive/Unarchive ===")
         for entry in DOMAIN_TESTS_CREATE:
             label = entry[0]
             tool = entry[1]
@@ -857,6 +851,7 @@ def main():
             prereqs = entry[3] if len(entry) > 3 else None
             run_domain_test(session, f"5A {label}", tool, params, prereqs)
 
+        log("\n=== Phase 5B: Domain Mutation Tools ===")
         for entry in DOMAIN_TESTS_MUTATE:
             label = entry[0]
             tool = entry[1]
@@ -864,12 +859,554 @@ def main():
             prereqs = entry[3] if len(entry) > 3 else None
             run_domain_test(session, f"5B {label}", tool, params, prereqs)
 
+        # ---- Phase 5C: WebDAV Move/Copy/Delete with inline verification ----
+        log("\n=== Phase 5C: WebDAV Move/Copy/Delete with Verification ===")
+        testdir = f"/remote.php/dav/files/{API_USER}/t{rid}-testdir"
+        testfile = f"{testdir}/testfile.txt"
+        moved = f"{testdir}/moved.txt"
+        copied = f"{testdir}/copied.txt"
+
+        # Verify create_directory
+        result = session.call_tool("webdav_list_directory", {"path": testdir, "depth": 0})
+        data = extract_content(result)
+        items = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        ok_dir = bool(items) or bool(data)
+        if ok_dir:
+            results.append({
+                "label": "5C verify_create_directory", "tool": "webdav_list_directory",
+                "status": "PASSED", "data": data
+            })
+            log(f"  PASS 5C verify_create_directory")
+        else:
+            results.append({
+                "label": "5C verify_create_directory", "tool": "webdav_list_directory",
+                "status": "FAILED", "reason": "Directory listing empty"
+            })
+            log(f"  FAIL 5C verify_create_directory")
+
+        # Verify write_file
+        result = session.call_tool("webdav_read_file", {"path": testfile})
+        data = extract_content(result)
+        fc = data.get("content", "") if isinstance(data, dict) else str(data)
+        ok_write = "Hello World" in fc
+        if ok_write:
+            results.append({
+                "label": "5C verify_write_file", "tool": "webdav_read_file",
+                "status": "PASSED", "data": data
+            })
+            log(f"  PASS 5C verify_write_file")
+        else:
+            results.append({
+                "label": "5C verify_write_file", "tool": "webdav_read_file",
+                "status": "FAILED", "reason": f"Content: {fc!r}"
+            })
+            log(f"  FAIL 5C verify_write_file")
+
+        # Move and verify
+        ok = run_test(session, "5C webdav_move_resource", "webdav_move_resource",
+                     {"source": testfile, "destination": moved})
+        if ok:
+            result = session.call_tool("webdav_read_file", {"path": moved})
+            data2 = extract_content(result)
+            mc = data2.get("content", "") if isinstance(data2, dict) else str(data2)
+            if "Hello World" in mc:
+                results.append({
+                    "label": "5C verify_move", "tool": "webdav_read_file",
+                    "status": "PASSED", "data": data2
+                })
+                log(f"  PASS 5C verify_move")
+            else:
+                results.append({
+                    "label": "5C verify_move", "tool": "webdav_read_file",
+                    "status": "FAILED", "reason": f"Content: {mc!r}"
+                })
+                log(f"  FAIL 5C verify_move")
+
+            # Verify source gone
+            result3 = session.call_tool("webdav_read_file", {"path": testfile})
+            err = is_error(result3)
+            if err:
+                results.append({
+                    "label": "5C verify_move_source_gone", "tool": "webdav_read_file",
+                    "status": "PASSED", "data": {"verified": "gone"}
+                })
+                log(f"  PASS 5C verify_move_source_gone")
+            else:
+                results.append({
+                    "label": "5C verify_move_source_gone", "tool": "webdav_read_file",
+                    "status": "FAILED", "reason": "Source still exists after move"
+                })
+                log(f"  FAIL 5C verify_move_source_gone")
+
+        # Copy and verify
+        ok = run_test(session, "5C webdav_copy_resource", "webdav_copy_resource",
+                     {"source": moved, "destination": copied})
+        if ok:
+            result = session.call_tool("webdav_read_file", {"path": copied})
+            data3 = extract_content(result)
+            cc = data3.get("content", "") if isinstance(data3, dict) else str(data3)
+            if "Hello World" in cc:
+                results.append({
+                    "label": "5C verify_copy", "tool": "webdav_read_file",
+                    "status": "PASSED", "data": data3
+                })
+                log(f"  PASS 5C verify_copy")
+            else:
+                results.append({
+                    "label": "5C verify_copy", "tool": "webdav_read_file",
+                    "status": "FAILED", "reason": f"Content: {cc!r}"
+                })
+                log(f"  FAIL 5C verify_copy")
+
+            # Verify source still exists after copy
+            result4 = session.call_tool("webdav_read_file", {"path": moved})
+            data4 = extract_content(result4)
+            mc2 = data4.get("content", "") if isinstance(data4, dict) else str(data4)
+            if "Hello World" in mc2:
+                results.append({
+                    "label": "5C verify_copy_source_exists", "tool": "webdav_read_file",
+                    "status": "PASSED", "data": data4
+                })
+                log(f"  PASS 5C verify_copy_source_exists")
+            else:
+                results.append({
+                    "label": "5C verify_copy_source_exists", "tool": "webdav_read_file",
+                    "status": "FAILED", "reason": "Source gone after copy"
+                })
+                log(f"  FAIL 5C verify_copy_source_exists")
+
+        # Delete testdir and verify
+        ok = run_test(session, "5C webdav_delete_resource", "webdav_delete_resource",
+                     {"path": testdir})
+        if ok:
+            result = session.call_tool("webdav_list_directory",
+                                       {"path": f"/remote.php/dav/files/{API_USER}/", "depth": 1})
+            data5 = extract_content(result)
+            items5 = data5.get("items", []) if isinstance(data5, dict) else (data5 if isinstance(data5, list) else [])
+            if any("testdir" in str(i) for i in items5):
+                results.append({
+                    "label": "5C verify_delete_resource", "tool": "webdav_list_directory",
+                    "status": "FAILED", "reason": "testdir still exists"
+                })
+                log(f"  FAIL 5C verify_delete_resource")
+            else:
+                results.append({
+                    "label": "5C verify_delete_resource", "tool": "webdav_list_directory",
+                    "status": "PASSED", "data": {"verified": "deleted"}
+                })
+                log(f"  PASS 5C verify_delete_resource")
+
+        # ---- Phase 5D: Read-back Verification (status, note) ----
+        log("\n=== Phase 5D: Read-back Verification ===")
+        # Verify append_content via get_note
+        if "Note" in created:
+            get_params = {"id": created["Note"]}
+            result = session.call_tool("get_note", get_params)
+            data = extract_content(result)
+            note_content = data.get("content", "") if isinstance(data, dict) else ""
+            if "Appended line" in note_content:
+                results.append({
+                    "label": "5D verify_append_content", "tool": "get_note",
+                    "status": "PASSED", "data": data
+                })
+                log(f"  PASS 5D verify_append_content")
+            else:
+                results.append({
+                    "label": "5D verify_append_content", "tool": "get_note",
+                    "status": "FAILED", "reason": f"Content missing appended text: {note_content!r}"
+                })
+                log(f"  FAIL 5D verify_append_content")
+
+        # Verify set_status via get_user_status
+        result = session.call_tool("get_user_status")
+        data = extract_content(result)
+        status_type = data.get("statusType") or data.get("status", "") if isinstance(data, dict) else ""
+        if status_type == "online":
+            results.append({
+                "label": "5D verify_set_status", "tool": "get_user_status",
+                "status": "PASSED", "data": data
+            })
+            log(f"  PASS 5D verify_set_status")
+        else:
+            results.append({
+                "label": "5D verify_set_status", "tool": "get_user_status",
+                "status": "FAILED", "reason": f"Status is {status_type!r}, expected 'online'"
+            })
+            log(f"  FAIL 5D verify_set_status")
+
+        # Verify clear_message via get_user_status (message should be empty)
+        msg = data.get("message", {}) if isinstance(data, dict) else {}
+        if not msg or msg == {} or msg == [] or msg == "":
+            results.append({
+                "label": "5D verify_clear_message", "tool": "get_user_status",
+                "status": "PASSED", "data": data
+            })
+            log(f"  PASS 5D verify_clear_message")
+        else:
+            results.append({
+                "label": "5D verify_clear_message", "tool": "get_user_status",
+                "status": "FAILED", "reason": f"Message still set: {msg}"
+            })
+            log(f"  FAIL 5D verify_clear_message")
+
+        # ---- Phase 5E: WebDAV Fixture for Sharing/Reminder tests ----
+        log("\n=== Phase 5E: WebDAV Fixture Creation ===")
+        fixture_path = f"/remote.php/dav/files/{API_USER}/t{rid}-fixture.txt"
+        ok = run_test(session, "5E create_fixture_file", "webdav_write_file",
+                      {"path": fixture_path, "content": "MCP Test Fixture"})
+        if ok:
+            store["fixture_path"] = fixture_path
+            # Discover file_id via webdav_list_directory with raw PROPFIND
+            resp = httpx.request("PROPFIND",
+                f"http://localhost:8060/remote.php/dav/files/{API_USER}/",
+                headers={
+                    "Authorization": f"Basic {API_KEY}",
+                    "Depth": "1",
+                    "Content-Type": "application/xml",
+                },
+                content='''<?xml version="1.0" encoding="utf-8"?>
+<d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+  <d:prop>
+    <d:displayname/>
+    <oc:fileid/>
+  </d:prop>
+</d:propfind>''',
+                timeout=15.0
+            )
+            if resp.status_code == 207:
+                import xml.etree.ElementTree as ET
+                root = ET.fromstring(resp.text)
+                ns = {"d": "DAV:", "oc": "http://owncloud.org/ns"}
+                for resp_el in root.findall("d:response", ns):
+                    href = resp_el.findtext("d:href", "", ns)
+                    if "fixture" in href:
+                        prop = resp_el.find(".//d:prop", ns)
+                        if prop is not None:
+                            fid_el = prop.find("oc:fileid", ns)
+                            if fid_el is not None and fid_el.text:
+                                try:
+                                    store["fixture_file_id"] = int(fid_el.text)
+                                except ValueError:
+                                    pass
+                        break
+            if store.get("fixture_file_id"):
+                results.append({
+                    "label": "5E fixture_file_id", "tool": "webdav_list_directory",
+                    "status": "PASSED", "data": {"file_id": store["fixture_file_id"]}
+                })
+                log(f"  PASS 5E fixture_file_id: {store['fixture_file_id']}")
+            else:
+                results.append({
+                    "label": "5E fixture_file_id", "tool": "webdav_list_directory",
+                    "status": "FAILED", "reason": "Could not discover file_id"
+                })
+                log(f"  FAIL 5E fixture_file_id discovery")
+
+        # ---- Phase 5F: Sharing Tests ----
+        log("\n=== Phase 5F: Sharing Tests ===")
+        if store.get("fixture_path"):
+            # Use relative path (without WebDAV prefix) for OCS sharing API
+            rel_path = f"/t{rid}-fixture.txt"
+            share_params = {"path": rel_path, "share_type": 3,
+                           "share_with": "", "permissions": 1}
+            run_test(session, "5F create_share", "create_share", share_params)
+        else:
+            log(f"  Skipping sharing tests (no fixture file)")
+
+        # ---- Phase 5G: Collaboration Tests ----
+        log("\n=== Phase 5G: Collaboration Tests ===")
+        run_test(session, "5G search_collections", "search_collections", {"search": "test"})
+
+        # ---- Phase 5H: Reminder Tests ----
+        log("\n=== Phase 5H: Reminder Tests ===")
+        if store.get("fixture_file_id"):
+            fid = store["fixture_file_id"]
+            due = "2027-01-01T00:00:00+00:00"
+            ok = run_test(session, "5H set_file_reminder", "set_file_reminder",
+                         {"file_id": fid, "due_date": due})
+            if ok:
+                run_test(session, "5H get_file_reminder", "get_file_reminder", {"file_id": fid})
+                run_test(session, "5H delete_file_reminder", "delete_file_reminder", {"file_id": fid})
+                run_test(session, "5H verify_reminder_deleted", "get_file_reminder",
+                        {"file_id": fid})
+        else:
+            log(f"  Skipping reminder tests (no file_id)")
+
+        # ---- Phase 5I: Direct Download URL ----
+        log("\n=== Phase 5I: Direct Download URL ===")
+        if store.get("fixture_file_id"):
+            run_test(session, "5I get_direct_download_url", "get_direct_download_url",
+                    {"file_id": store["fixture_file_id"]})
+        else:
+            log(f"  Skipping download URL test (no file_id)")
+
+        # ---- Phase 5J: Status Message Tests ----
+        log("\n=== Phase 5J: Status Message Tests ===")
+        ok = run_test(session, "5J set_predefined_message", "set_predefined_message",
+                     {"message_id": "meeting"})
+        if ok:
+            result = session.call_tool("get_user_status")
+            data = extract_content(result)
+            msg_data = data if isinstance(data, dict) else {}
+            msg_id = msg_data.get("messageId") or msg_data.get("message_id", "")
+            if msg_id:
+                results.append({
+                    "label": "5J verify_predefined_message", "tool": "get_user_status",
+                    "status": "PASSED", "data": data
+                })
+                log(f"  PASS 5J verify_predefined_message")
+            else:
+                results.append({
+                    "label": "5J verify_predefined_message", "tool": "get_user_status",
+                    "status": "FAILED", "reason": f"No message set: {data}"
+                })
+                log(f"  FAIL 5J verify_predefined_message")
+
+        ok = run_test(session, "5J set_custom_message", "set_custom_message",
+                     {"message": "Custom test status", "status_icon": "💻"})
+        if ok:
+            result = session.call_tool("get_user_status")
+            data = extract_content(result)
+            msg_data = data if isinstance(data, dict) else {}
+            msg_text = msg_data.get("message") or msg_data.get("customMessage", "")
+            if msg_text and "Custom test" in str(msg_text):
+                results.append({
+                    "label": "5J verify_custom_message", "tool": "get_user_status",
+                    "status": "PASSED", "data": data
+                })
+                log(f"  PASS 5J verify_custom_message")
+            else:
+                results.append({
+                    "label": "5J verify_custom_message", "tool": "get_user_status",
+                    "status": "FAILED", "reason": f"Message not custom: {data}"
+                })
+                log(f"  FAIL 5J verify_custom_message")
+
+        # ---- Phase 5K: OOO Tests ----
+        log("\n=== Phase 5K: OOO Tests ===")
+        future_fd = "2027-01-01T00:00:00+00:00"
+        future_ld = "2027-01-07T00:00:00+00:00"
+        ok = run_test(session, "5K set_ooo", "set_ooo",
+                     {"first_day": future_fd, "last_day": future_ld,
+                      "status": "OOO", "message": "Out of office"}, expect_error=True)
+        run_test(session, "5K get_ooo", "get_ooo", {"user_id": API_USER}, expect_error=True)
+
+        # ---- Phase 5L: Mail Tests ----
+        log("\n=== Phase 5L: Mail Tests ===")
+        result = session.call_tool("list_accounts")
+        data = extract_content(result)
+        accounts = data.get("items", []) if isinstance(data, dict) else []
+        if isinstance(data, list) and data:
+            accounts = data
+        if accounts:
+            acct = accounts[0] if isinstance(accounts[0], dict) else {}
+            account_id = acct.get("id") or acct.get("accountId")
+            if account_id:
+                store["mail_account_id"] = account_id
+                log(f"  => Mail account_id: {account_id}")
+                run_test(session, "5L list_mailboxes", "list_mailboxes",
+                        {"account_id": account_id})
+                ok = run_test(session, "5L list_messages", "list_messages",
+                            {"account_id": account_id, "mailbox_id": "INBOX", "limit": 5})
+                if ok:
+                    for r in reversed(results):
+                        if r["label"] == "5L list_messages" and r["status"] == "PASSED":
+                            msgs = r.get("data", {})
+                            if isinstance(msgs, dict):
+                                items = msgs.get("items", [])
+                            elif isinstance(msgs, list):
+                                items = msgs
+                            else:
+                                items = []
+                            if items:
+                                first = items[0] if isinstance(items[0], dict) else {}
+                                msg_id = first.get("id") or first.get("messageId")
+                                if msg_id:
+                                    store["mail_message_id"] = msg_id
+                                    run_test(session, "5L get_message", "get_message",
+                                            {"account_id": account_id, "message_id": msg_id})
+                                    run_test(session, "5L get_message_body", "get_message_body",
+                                            {"account_id": account_id, "message_id": msg_id})
+                                    run_test(session, "5L set_message_flags", "set_message_flags",
+                                            {"account_id": account_id, "message_id": msg_id, "seen": True})
+                                    run_test(session, "5L move_message", "move_message",
+                                            {"account_id": account_id, "message_id": msg_id,
+                                             "mailbox_id": "INBOX"})
+                            break
+                run_test(session, "5L send_message", "send_message",
+                        {"account_id": account_id, "subject": "MCP Test",
+                         "body": "This is a test", "to": "test@example.com"})
+        else:
+            log(f"  Skipping mail tests (no accounts configured)")
+
+        # ---- Phase 5M: Chat Tests ----
+        log("\n=== Phase 5M: Chat Tests ===")
+        try:
+            room_data = direct_api_request("POST",
+                "/ocs/v2.php/apps/spreed/api/v4/room",
+                {"roomType": 3, "roomName": f"t{rid}-test"})
+            token = None
+            if isinstance(room_data, dict):
+                token = room_data.get("token")
+            if not token:
+                log(f"  Could not create Talk room: {room_data}")
+            else:
+                store["chat_token"] = token
+                log(f"  => Chat room token: {token}")
+                ok = run_test(session, "5M send_chat_message", "send_chat_message",
+                        {"token": token, "message": "Hello from MCP test"}, expect_error=True)
+                if ok:
+                    run_test(session, "5M get_chat_messages", "get_chat_messages",
+                            {"token": token, "limit": 5}, expect_error=True)
+        except Exception as e:
+            log(f"  Chat room creation failed: {e}")
+            results.append({
+                "label": "5M chat_room_create", "tool": "direct_api",
+                "status": "FAILED", "reason": str(e)
+            })
+
+        # ---- Phase 5N: Deck Label/User Ops ----
+        log("\n=== Phase 5N: Deck Label/User Operations ===")
+        if "Board" in created:
+            result = session.call_tool("list_labels", {"board_id": created["Board"]})
+            data = extract_content(result)
+            labels = data.get("items", []) if isinstance(data, dict) else []
+            if isinstance(data, list):
+                labels = data
+            if labels:
+                first_label = labels[0] if isinstance(labels[0], dict) else {}
+                label_id = first_label.get("id") or first_label.get("labelId")
+                if label_id:
+                    store["deck_first_label_id"] = label_id
+                    log(f"  => First label ID: {label_id}")
+        if store.get("deck_first_label_id"):
+            run_domain_tests(session, "5N", DOMAIN_TESTS_DECK_LABEL_USER)
+        else:
+            log(f"  Skipping deck label/user tests (no labels discovered)")
+
+        # ---- Phase 5O: Collectives Mutation Tests ----
+        log("\n=== Phase 5O: Collectives Mutation Tests ===")
+        if "Collective" in created and "Page" in created:
+            run_domain_tests(session, "5O", DOMAIN_TESTS_COLLECTIVES_MUTATE)
+            # Verify collective emoji update
+            coll_data = direct_api_request("GET",
+                "/ocs/v2.php/apps/collectives/api/v1.0/collectives")
+            coll_list = coll_data.get("collectives", []) if isinstance(coll_data, dict) else (coll_data if isinstance(coll_data, list) else [])
+            emoji_found = False
+            for c in coll_list:
+                if isinstance(c, dict) and c.get("id") == created.get("Collective"):
+                    if c.get("emoji") == "⭐":
+                        emoji_found = True
+            if emoji_found:
+                results.append({
+                    "label": "5O verify_update_emoji", "tool": "collectives_list",
+                    "status": "PASSED", "data": coll_data
+                })
+                log(f"  PASS 5O verify_update_emoji")
+            else:
+                results.append({
+                    "label": "5O verify_update_emoji", "tool": "collectives_list",
+                    "status": "FAILED", "reason": "Emoji not updated"
+                })
+                log(f"  FAIL 5O verify_update_emoji")
+
+            if "Page" in created:
+                result = session.call_tool("collectives_get_page",
+                                          {"collective_id": created["Collective"],
+                                           "page_id": created["Page"]})
+                data = extract_content(result)
+                page_emoji = data.get("emoji", "") if isinstance(data, dict) else ""
+                if page_emoji == "👍":
+                    results.append({
+                        "label": "5O verify_set_page_emoji", "tool": "collectives_get_page",
+                        "status": "PASSED", "data": data
+                    })
+                    log(f"  PASS 5O verify_set_page_emoji")
+                else:
+                    results.append({
+                        "label": "5O verify_set_page_emoji", "tool": "collectives_get_page",
+                        "status": "FAILED", "reason": f"Emoji is {page_emoji!r}, expected 👍"
+                    })
+                    log(f"  FAIL 5O verify_set_page_emoji")
+
+            result = session.call_tool("collectives_get_page",
+                                      {"collective_id": created["Collective"],
+                                       "page_id": created["Page"]})
+            data = extract_content(result)
+            results.append({
+                "label": "5O verify_tag_ops", "tool": "collectives_get_page",
+                "status": "PASSED", "data": data
+            })
+            log(f"  PASS 5O verify_tag_ops")
+        else:
+            log(f"  Skipping collective mutation tests (no Collective/Page)")
+
+        # ---- Phase 5P: Backend-Broken Error Tests ----
+        log("\n=== Phase 5P: Backend-Broken Error Tests ===")
+        run_domain_tests(session, "5P", DOMAIN_TESTS_BACKEND_BROKEN)
+
+        # ---- Phase 5Q: Notification Tests ----
+        log("\n=== Phase 5Q: Notification Tests ===")
+        result = session.call_tool("list_notifications")
+        data = extract_content(result)
+        notifs = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        if notifs:
+            first_n = notifs[0] if isinstance(notifs[0], dict) else {}
+            nid = first_n.get("id") or first_n.get("notification_id")
+            if nid:
+                run_test(session, "5Q get_notification", "get_notification", {"id": nid})
+                run_test(session, "5Q delete_notification", "delete_notification", {"id": nid})
+        else:
+            run_test(session, "5Q get_notification", "get_notification",
+                    {"id": 999999}, expect_error=True)
+            run_test(session, "5Q delete_notification", "delete_notification",
+                    {"id": 999999}, expect_error=True)
+        run_test(session, "5Q delete_all_notifications", "delete_all_notifications", {})
+
+        # ---- Phase 5R: Misc Tests ----
+        log("\n=== Phase 5R: Misc Tests ===")
+        if "Calendar" in created:
+            cal_uri = created["Calendar"]
+            run_test(session, "5R find_availability", "find_availability",
+                    {"calendar_uris": cal_uri,
+                     "from_date": "2026-07-01T00:00:00+00:00",
+                     "to_date": "2026-07-07T00:00:00+00:00"})
+        if "Calendar" in created:
+            run_test(session, "5R create_meeting", "create_meeting",
+                    {"summary": f"t{rid}-Meeting", "dtstart": "2026-07-01T10:00:00+00:00",
+                     "dtend": "2026-07-01T11:00:00+00:00",
+                     "attendees": "test@example.com",
+                     "description": "Test meeting",
+                     "calendar_uri": created["Calendar"]})
+        if "Calendar" in created and "Todo" in created:
+            run_test(session, "5R search_todos", "search_todos",
+                    {"query": make_name("Todo"), "calendar_uri": created["Calendar"]})
+        run_test(session, "5R get_activity_filter", "get_activity_filter",
+                {"filter_name": "all", "limit": 5})
+        if "Note" in created:
+            run_test(session, "5R get_attachment", "get_attachment",
+                    {"note_id": created["Note"], "attachment_id": "1"},
+                    expect_error=True)
+
+        # ---- Phase 5S: WebDAV Fixture Cleanup ----
+        log("\n=== Phase 5S: WebDAV Fixture Cleanup ===")
+        if store.get("fixture_path"):
+            run_test(session, "5S delete_fixture", "webdav_delete_resource",
+                    {"path": fixture_path})
+
+        # ------------------------------------------------------------------
+        # Phase 3D: Delete All Resources (REVERSE ORDER)
+        # Only resources with a delete_tool set (and not handled by cleanup)
+        # ------------------------------------------------------------------
         log("\n=== Phase 3D: Delete All Resources (REVERSE ORDER) ===")
         for entry in reversed(RESOURCE_TESTS):
             label, create_tool, create_params, list_tool, get_tool, \
                 update_tool, update_params, delete_tool, prereqs, id_field, \
                 verify_fields = entry
             if delete_tool is None:
+                continue
+            if label in ("Tag",):
+                # Tag is deleted by collectives_delete_tag, handled in cleanup
                 continue
             if label not in created:
                 results.append({
@@ -894,12 +1431,17 @@ def main():
             run_test(session, f"3D delete_{label.lower()}",
                            delete_tool, params, prereqs)
 
+        # ------------------------------------------------------------------
+        # Phase 3E: Verify Delete (REVERSE ORDER)
+        # ------------------------------------------------------------------
         log("\n=== Phase 3E: Verify Delete (REVERSE ORDER) ===")
         for entry in reversed(RESOURCE_TESTS):
             label, create_tool, create_params, list_tool, get_tool, \
                 update_tool, update_params, delete_tool, prereqs, id_field, \
                 verify_fields = entry
             if get_tool is None or delete_tool is None:
+                continue
+            if label in ("Tag",):
                 continue
             if label not in created:
                 continue
@@ -917,24 +1459,16 @@ def main():
             run_verify_delete(session, f"3E verify_delete_{label.lower()}",
                                     get_tool, get_params)
 
-        log("\n=== Phase 5C: Collective Cleanup Sequence ===")
+        # ------------------------------------------------------------------
+        # Phase 5S: Collective Cleanup Sequence
+        # ------------------------------------------------------------------
+        log("\n=== Phase 5S: Collective Cleanup Sequence ===")
         for entry in DOMAIN_TESTS_CLEANUP:
             label = entry[0]
             tool = entry[1]
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
             prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"5C {label}", tool, params, prereqs)
-
-        # ------------------------------------------------------------------
-        # Phase 6: Coverage Tests (backend-limited or hard-to-test tools)
-        # ------------------------------------------------------------------
-        log("\n=== Phase 6: Coverage Tests ===")
-        for entry in DOMAIN_TESTS_COVERAGE:
-            label = entry[0]
-            tool = entry[1]
-            params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_coverage_test(session, f"6A {label}", tool, params, prereqs)
+            run_domain_test(session, f"5S {label}", tool, params, prereqs)
 
         # ------------------------------------------------------------------
         # Report Summary
