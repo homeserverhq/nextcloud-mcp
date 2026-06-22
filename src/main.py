@@ -1,5 +1,6 @@
 import os
 import sys
+import datetime as dt
 from contextvars import ContextVar
 from typing import Any, Optional
 
@@ -544,7 +545,11 @@ async def set_ooo(
         status: OOO status message (required).
         message: Long OOO message (required).
     """
-    params = SetOOOParam(firstDay=first_day, lastDay=last_day, status=status, message=message)
+    first_day_dt = dt.datetime.fromisoformat(first_day) if 'T' in first_day else first_day
+    last_day_dt = dt.datetime.fromisoformat(last_day) if 'T' in last_day else last_day
+    first_day_str = first_day_dt.strftime('%Y-%m-%d') if isinstance(first_day_dt, dt.datetime) else first_day_dt
+    last_day_str = last_day_dt.strftime('%Y-%m-%d') if isinstance(last_day_dt, dt.datetime) else last_day_dt
+    params = SetOOOParam(firstDay=first_day_str, lastDay=last_day_str, status=status, message=message)
     user_id = NextcloudClient.extract_username(get_user_token() or "")
     return await get_client().set_ooo(user_id, params.model_dump(exclude_unset=True), get_user_token())
 

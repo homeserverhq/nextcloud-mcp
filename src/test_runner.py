@@ -507,6 +507,8 @@ DOMAIN_TESTS_POST_CRUD = [
     ("list_todos", "list_todos", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
     ("collectives_list_pages", "collectives_list_pages", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
     ("collectives_list_tags", "collectives_list_tags", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
+    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
 ]
 
 DOMAIN_TESTS_MUTATE = [
@@ -523,6 +525,8 @@ DOMAIN_TESTS_MUTATE = [
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir"}),
     ("webdav_write_file", "webdav_write_file",
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir/testfile.txt", "content": "Hello World"}),
+    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}, ["Row"]),
+    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
 ]
 
 # =============================================================================
@@ -598,10 +602,6 @@ DOMAIN_TESTS_COLLECTIVES_MUTATE = [
 ]
 
 DOMAIN_TESTS_BACKEND_BROKEN = [
-    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
-    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
     ("update_card", "update_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "title": "update test"

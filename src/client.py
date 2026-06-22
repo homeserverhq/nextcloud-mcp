@@ -1319,14 +1319,25 @@ class NextcloudClient:
 
     async def tables_get_schema(self, table_id: int, api_key: str = None,
                                 include_all_fields: bool = False) -> Any:
-        return await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/scheme/{table_id}", api_key)
+        table = await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
+        columns = await self.get(f"/ocs/v2.php/apps/tables/api/2/columns/table/{table_id}", api_key)
+        return {
+            "title": table.get("title", ""),
+            "emoji": table.get("emoji"),
+            "columns": columns if isinstance(columns, list) else [],
+            "views": table.get("views", []),
+            "description": table.get("description", ""),
+            "tablesVersion": "",
+            "columnOrder": table.get("columnOrder", []),
+            "sort": table.get("sort", []),
+        }
 
     async def tables_list_rows(self, table_id: int, api_key: str = None,
                                limit: int = 50, offset: int = 0,
                                include_all_fields: bool = False) -> Any:
         params = {"limit": limit, "offset": offset}
-        return await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
-                             api_key, params=params)
+        return await self.request("GET", f"/apps/tables/api/1/tables/{table_id}/rows",
+                                 api_key, is_ocs=False, params=params)
 
     async def tables_create_row(self, table_id: int, data: str,
                                  api_key: str = None) -> Any:
@@ -1345,10 +1356,12 @@ class NextcloudClient:
         payload = {}
         if data is not None:
             payload["data"] = _json.loads(data) if isinstance(data, str) else data
-        return await self.put(f"/ocs/v2.php/apps/tables/api/2/rows/{row_id}", api_key, json=payload)
+        return await self.request("PUT", f"/apps/tables/api/1/rows/{row_id}",
+                                 api_key, is_ocs=False, json=payload)
 
     async def tables_delete_row(self, row_id: int, api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/tables/api/2/rows/{row_id}", api_key)
+        return await self.request("DELETE", f"/apps/tables/api/1/rows/{row_id}",
+                                 api_key, is_ocs=False)
 
     # =========================================================================
     # Domain: Collectives (OCS)
