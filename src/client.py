@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import datetime as dt
+import uuid
 import xml.etree.ElementTree as ET
 from typing import Any, Optional
 from urllib.parse import quote
@@ -899,6 +900,33 @@ class NextcloudClient:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(f"/remote.php/dav/calendars/{calendar_uri}/", api_key)
 
+    async def _find_caldav_href_by_uid(self, calendar_uri: str, uid: str,
+                                        comp_filter: str = "VEVENT",
+                                        api_key: str = None) -> str | None:
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
+        body = f'''<?xml version="1.0" encoding="utf-8"?>
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:prop>
+    <d:getetag/>
+    <d:resourcetype/>
+  </d:prop>
+  <c:filter>
+    <c:comp-filter name="VCALENDAR">
+      <c:comp-filter name="{comp_filter}">
+        <c:prop-filter name="UID">
+          <c:text-match collation="i;octet">{uid}</c:text-match>
+        </c:prop-filter>
+      </c:comp-filter>
+    </c:comp-filter>
+  </c:filter>
+</c:calendar-query>'''
+        results = await self._dav_request("REPORT",
+            f"/remote.php/dav/calendars/{calendar_uri}/", api_key, body=body,
+            extra_headers={"Depth": "1"})
+        if results:
+            return results[0].get("href", "").rstrip("/")
+        return None
+
     async def list_events(self, calendar_uri: str, api_key: str = None,
                           from_date: str = "", to_date: str = "",
                           limit: int = 50, include_all_fields: bool = False) -> Any:
@@ -924,7 +952,14 @@ class NextcloudClient:
                         api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
-        ics = await self._dav_get(path, api_key)
+        try:
+            ics = await self._dav_get(path, api_key)
+        except Exception:
+            href = await self._find_caldav_href_by_uid(calendar_uri, event_uid, "VEVENT", api_key)
+            if not href:
+                raise
+            path = href
+            ics = await self._dav_get(path, api_key)
         events = self._parse_ics_events(ics)
         return self._filter_fields(events[0] if events else {}, "event", include_all_fields)
 
@@ -935,10 +970,10 @@ class NextcloudClient:
                            attendees: str = "") -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         resolved = await self._resolve_attendees(attendees, api_key)
+        euid = uid or uuid.uuid4().hex
         ics = self._create_ics_event(summary, dtstart, dtend, description,
-                                     location, rrule, timezone, uid,
-                                     attendees=resolved)
-        euid = uid or summary.replace(" ", "_")
+                                      location, rrule, timezone, euid,
+                                      attendees=resolved)
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
             ics, api_key)
@@ -952,7 +987,14 @@ class NextcloudClient:
                            attendees: str = "") -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
-        ics = await self._dav_get(path, api_key)
+        try:
+            ics = await self._dav_get(path, api_key)
+        except Exception:
+            href = await self._find_caldav_href_by_uid(calendar_uri, event_uid, "VEVENT", api_key)
+            if not href:
+                raise
+            path = href
+            ics = await self._dav_get(path, api_key)
         existing = self._parse_ics_events(ics)
         current = existing[0] if existing else {}
         final_summary = summary or current.get("summary", "")
@@ -978,7 +1020,16 @@ class NextcloudClient:
             await self._dav_delete(f"{base_path}-deleted.ics", api_key)
         except Exception:
             pass
-        return await self._dav_delete(f"{base_path}.ics", api_key)
+        try:
+            return await self._dav_delete(f"{base_path}.ics", api_key)
+        except Exception:
+            href = await self._find_caldav_href_by_uid(calendar_uri, event_uid, "VEVENT", api_key)
+            if href:
+                return await self._dav_delete(href, api_key)
+            try:
+                return await self._dav_delete(f"{base_path}-deleted.ics", api_key)
+            except Exception:
+                raise
 
     async def _resolve_attendees(self, attendees_str: str,
                                  api_key: str = None) -> list[dict]:
@@ -1083,7 +1134,8 @@ class NextcloudClient:
             a.params["ROLE"] = vText("REQ-PARTICIPANT")
             a.params["RSVP"] = vText("TRUE")
             event.add("attendee", a)
-        euid = summary.replace(" ", "_")
+        euid = uuid.uuid4().hex
+        event.add("uid", euid)
         cal.add_component(event)
         ics = cal.to_ical().decode("utf-8")
         if not calendar_uri:
@@ -1171,7 +1223,14 @@ class NextcloudClient:
                        api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics"
-        ics = await self._dav_get(path, api_key)
+        try:
+            ics = await self._dav_get(path, api_key)
+        except Exception:
+            href = await self._find_caldav_href_by_uid(calendar_uri, todo_uid, "VTODO", api_key)
+            if not href:
+                raise
+            path = href
+            ics = await self._dav_get(path, api_key)
         todos = self._parse_ics_todos(ics)
         return self._filter_fields(todos[0] if todos else {}, "todo", include_all_fields)
 
@@ -1181,8 +1240,8 @@ class NextcloudClient:
                           calendar_uri: str = "", api_key: str = None) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal_uri = calendar_uri or await self._get_todo_calendar_uri(api_key)
-        ics = self._create_ics_todo(summary, description, due_date, priority, status)
-        euid = summary.replace(" ", "_")
+        euid = uuid.uuid4().hex
+        ics = self._create_ics_todo(summary, description, due_date, priority, status, euid)
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{cal_uri}/{euid}.ics", ics, api_key)
         result["todo_uid"] = euid
@@ -1198,7 +1257,13 @@ class NextcloudClient:
             ics = await self._dav_get(path, api_key)
             existing = self._parse_ics_todos(ics)
         except Exception:
-            existing = []
+            href = await self._find_caldav_href_by_uid(calendar_uri, todo_uid, "VTODO", api_key)
+            if href:
+                path = href
+                ics = await self._dav_get(path, api_key)
+                existing = self._parse_ics_todos(ics)
+            else:
+                existing = []
         current = existing[0] if existing else {}
         final_summary = summary or current.get("summary", "")
         final_desc = description if description is not None else current.get("description", "")
@@ -1212,8 +1277,14 @@ class NextcloudClient:
     async def delete_todo(self, todo_uid: str, calendar_uri: str,
                           api_key: str = None) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
-        return await self._dav_delete(
-            f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics", api_key)
+        path = f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics"
+        try:
+            return await self._dav_delete(path, api_key)
+        except Exception:
+            href = await self._find_caldav_href_by_uid(calendar_uri, todo_uid, "VTODO", api_key)
+            if href:
+                return await self._dav_delete(href, api_key)
+            raise
 
     async def search_todos(self, query: str, api_key: str = None,
                            calendar_uri: str = "", limit: int = 50,
