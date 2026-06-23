@@ -96,42 +96,22 @@ The server implements 167 MCP tools organized into the following categories:
 - `get_folder_tree` — Get the folder tree structure
 
 ### 🗂️ Collections (5 tools)
-- `get_collection_by_id` — Get a collection by ID
-- `search_collections` — Search across collections
-- `search_collections_raw` — Search collections with raw query
-- `get_collections_by_resource` — Get collections for a resource
-- `create_collection` — Create a new collection
-
-### ⏰ File Reminders (3 tools)
-- `get_file_reminder` — Get a file reminder
-- `set_file_reminder` — Set a file reminder
-- `delete_file_reminder` — Delete a file reminder
-
-### 🔍 Search (2 tools)
-- `get_search_providers` — List available search providers
-- `search` — Search across all providers
-
-### 📁 WebDAV Files (9 tools)
-- `webdav_list_directory` — List directory contents
-- `webdav_read_file` — Read a file
-- `webdav_write_file` — Write a file
-- `webdav_create_directory` — Create a directory
-- `webdav_delete_resource` — Delete a file or directory
-- `webdav_move_resource` — Move a file or directory
-- `webdav_copy_resource` — Copy a file or directory
-- `webdav_search_files` — Search files by name
-- `webdav_list_favorites` — List favorite files
+- `collection_get_by_id` — Get a collection by ID
+- `collection_search` — Search across collections
+- `collection_search_raw` — Search collections with raw query
+- `collection_get_by_resource` — Get collections for a resource
+- `collection_create` — Create a new collection
 
 ### 🔔 Notifications (4 tools)
-- `list_all_notifications` — List all notifications
-- `get_notification` — Get a notification by ID
-- `delete_notification` — Delete a notification by ID
-- `delete_all_notifications` — Delete all notifications
+- `notification_list` — List all notifications
+- `notification_get` — Get a notification by ID
+- `notification_delete` — Delete a notification by ID
+- `notification_delete_all` — Delete all notifications
 
 ### 📊 Activity (3 tools)
-- `get_activity` — Get activity stream
-- `get_activity_filters` — List activity filters
-- `get_activity_filter` — Get activity by filter
+- `activity_get` — Get activity stream
+- `activity_get_filters` — List activity filters
+- `activity_get_filter` — Get activity by filter
 
 ### 📅 Calendar (13 tools)
 - `list_all_calendars` — List all calendars

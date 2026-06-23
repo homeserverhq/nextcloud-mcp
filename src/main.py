@@ -628,7 +628,7 @@ async def get_folder_tree(
 
 
 @mcp.tool()
-async def get_collection_by_id(
+async def collection_get_by_id(
     id: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -642,7 +642,7 @@ async def get_collection_by_id(
 
 
 @mcp.tool()
-async def search_collections(
+async def collection_search(
     search: str = "",
     limit: int = 50,
     include_all_fields: bool = False,
@@ -659,7 +659,7 @@ async def search_collections(
 
 
 @mcp.tool()
-async def search_collections_raw(
+async def collection_search_raw(
     search: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -672,7 +672,7 @@ async def search_collections_raw(
 
 
 @mcp.tool()
-async def get_collections_by_resource(
+async def collection_get_by_resource(
     resource_type: str,
     resource_id: str,
     include_all_fields: bool = False,
@@ -689,7 +689,7 @@ async def get_collections_by_resource(
 
 
 @mcp.tool()
-async def create_collection(
+async def collection_create(
     resource_type: str = "file",
     resource_id: str = "",
     name: str = "",
@@ -926,7 +926,7 @@ async def webdav_list_favorites(
 
 
 @mcp.tool()
-async def list_all_notifications(
+async def notification_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -939,7 +939,7 @@ async def list_all_notifications(
 
 
 @mcp.tool()
-async def get_notification(
+async def notification_get(
     id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -953,7 +953,7 @@ async def get_notification(
 
 
 @mcp.tool()
-async def delete_notification(
+async def notification_delete(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -965,7 +965,7 @@ async def delete_notification(
 
 
 @mcp.tool()
-async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
+async def notification_delete_all(ctx: Context) -> dict[str, Any]:
     """Delete all notifications."""
     result = await get_client().delete_all_notifications(get_user_token())
     if isinstance(result, list):
@@ -974,7 +974,7 @@ async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def get_activity(
+async def activity_get(
     limit: int = 50,
     sort: str = "",
     object_type: str = "",
@@ -995,7 +995,7 @@ async def get_activity(
 
 
 @mcp.tool()
-async def get_activity_filters(
+async def activity_get_filters(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1008,7 +1008,7 @@ async def get_activity_filters(
 
 
 @mcp.tool()
-async def get_activity_filter(
+async def activity_get_filter(
     filter_name: str,
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1016,7 +1016,7 @@ async def get_activity_filter(
 ) -> dict[str, Any]:
     """Get filtered activity stream.
     Args:
-        filter_name: Filter name. Get this from get_activity_filters() (e.g. "all", "self"). (required).
+        filter_name: Filter name. Get this from activity_get_filters() (e.g. "all", "self"). (required).
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """

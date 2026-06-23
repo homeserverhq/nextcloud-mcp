@@ -673,9 +673,9 @@ DOMAIN_TESTS_READONLY = [
     ("get_folder_tree", "get_folder_tree", {"depth": 1}),
     ("get_search_providers", "get_search_providers", {}),
     ("get_capabilities", "get_capabilities", {}),
-    ("list_all_notifications", "list_all_notifications", {}),
-    ("get_activity", "get_activity", {"limit": 5}),
-    ("get_activity_filters", "get_activity_filters", {}),
+    ("notification_list", "notification_list", {}),
+    ("activity_get", "activity_get", {"limit": 5}),
+    ("activity_get_filters", "activity_get_filters", {}),
     ("list_all_calendars", "list_all_calendars", {}),
     ("list_all_addressbooks", "list_all_addressbooks", {}),
     ("note_list", "note_list", {}),
@@ -890,7 +890,7 @@ def main():
             store["discovered_provider_id"] = p.get("id", p) if isinstance(p, dict) else p
             log(f"  => Discovered provider_id: {store['discovered_provider_id']}")
         # Discover filter_name from get_activity_filters
-        result = session.call_tool("get_activity_filters")
+        result = session.call_tool("activity_get_filters")
         data = extract_content(result)
         flist = data.get("filters", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
         if flist:
@@ -1401,11 +1401,11 @@ def main():
                 break
         if created_file_source:
             log(f"  => File source: {created_file_source}")
-            run_test(session, "5G create_collection", "create_collection",
+            run_test(session, "5G create_collection", "collection_create",
                     {"resource_type": "file", "resource_id": str(created_file_source), "name": "test-collection-5g"})
             # Use search_collections_raw to get collection_id (avoids Toon format issues)
-            run_test(session, "5G search_collections", "search_collections", {"search": "test-collection-5g"})
-            result = session.call_tool("search_collections_raw", {"search": "test-collection-5g"})
+            run_test(session, "5G search_collections", "collection_search", {"search": "test-collection-5g"})
+            result = session.call_tool("collection_search_raw", {"search": "test-collection-5g"})
             data = extract_content(result)
             colls = data.get("items", []) if isinstance(data, dict) else []
             if colls:
@@ -1415,16 +1415,16 @@ def main():
         if created_coll_id:
             store["collection_id"] = str(created_coll_id)
             log(f"  => Collection ID: {created_coll_id}")
-            run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": str(created_coll_id)})
-            run_test(session, "5G get_collections_by_resource", "get_collections_by_resource",
+            run_test(session, "5G get_collection_by_id", "collection_get_by_id", {"id": str(created_coll_id)})
+            run_test(session, "5G get_collections_by_resource", "collection_get_by_resource",
                     {"resource_type": "file", "resource_id": str(created_file_source)})
         else:
             results.append({
-                "label": "5G get_collection_by_id", "tool": "get_collection_by_id",
+                "label": "5G get_collection_by_id", "tool": "collection_get_by_id",
                 "status": "FAILED", "reason": "No collection found from search_collections"
             })
             results.append({
-                "label": "5G get_collections_by_resource", "tool": "get_collections_by_resource",
+                "label": "5G get_collections_by_resource", "tool": "collection_get_by_resource",
                 "status": "FAILED", "reason": "No collection found from search_collections"
             })
             log("  FAIL 5G: no collection found")
@@ -1785,19 +1785,19 @@ def main():
         #     first_n = notifs[0] if isinstance(notifs[0], dict) else {}
         #     nid = first_n.get("id") or first_n.get("notification_id")
         # if nid:
-        #     run_test(session, "5Q get_notification", "get_notification", {"id": nid})
-        #     run_test(session, "5Q delete_notification", "delete_notification", {"id": nid})
+        #     run_test(session, "5Q get_notification", "notification_get", {"id": nid})
+        #     run_test(session, "5Q delete_notification", "notification_delete", {"id": nid})
         # else:
         #     results.append({
-        #         "label": "5Q get_notification", "tool": "get_notification",
+        #         "label": "5Q get_notification", "tool": "notification_get",
         #         "status": "FAILED", "reason": "No notifications to test with"
         #     })
         #     results.append({
-        #         "label": "5Q delete_notification", "tool": "delete_notification",
+        #         "label": "5Q delete_notification", "tool": "notification_delete",
         #         "status": "FAILED", "reason": "No notifications to test with"
         #     })
         #     log("  FAIL 5Q notification tests: no notifications")
-        # run_test(session, "5Q delete_all_notifications", "delete_all_notifications", {})
+        # run_test(session, "5Q delete_all_notifications", "notification_delete_all", {})
 
         # ---- Phase 5R: Misc Tests ----
         log("\n=== Phase 5R: Misc Tests ===")
@@ -1814,7 +1814,7 @@ def main():
                  "calendar_uri": cal_uri})
         run_test(session, "5R search_todos", "todo_search",
                 {"query": make_name("Todo"), "calendar_uri": cal_uri})
-        run_test(session, "5R get_activity_filter", "get_activity_filter",
+        run_test(session, "5R get_activity_filter", "activity_get_filter",
                 {"filter_name": store.get("discovered_filter_name", "all"), "limit": 5})
         run_test(session, "5R list_all_contacts", "list_all_contacts", {})
         run_test(session, "5R list_all_events", "list_all_events", {})
