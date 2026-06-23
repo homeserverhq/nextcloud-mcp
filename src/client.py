@@ -1527,8 +1527,8 @@ class NextcloudClient:
         return self._filter_fields(data, "board", include_all_fields)
 
     async def deck_create_board(self, payload: dict[str, Any], api_key: str = None) -> Any:
-        if "color" in payload and payload["color"]:
-            payload["color"] = payload["color"].lstrip("#")
+        color = payload.pop("color", None) or "FF0000"
+        payload["color"] = color.lstrip("#")
         return await self.post("/index.php/apps/deck/api/v1.0/boards", api_key, json=payload, is_ocs=False)
 
     async def deck_update_board(self, board_id: int, payload: dict[str, Any],
@@ -1547,6 +1547,7 @@ class NextcloudClient:
 
     async def deck_create_stack(self, board_id: int, payload: dict[str, Any],
                                  api_key: str = None) -> Any:
+        payload.setdefault("order", 0)
         return await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks", api_key, json=payload, is_ocs=False)
 
     async def deck_get_stack(self, board_id: int, stack_id: int, api_key: str = None,

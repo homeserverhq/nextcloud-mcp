@@ -644,6 +644,128 @@ LIST_MATCH: dict[str, dict[str, Any]] = {
 }
 
 # =============================================================================
+# Minimal-params create tests — call create with only required params, then delete
+# =============================================================================
+# (label, create_tool, create_params, delete_sequence_fn, prereqs, id_field)
+# delete_sequence_fn: (store, rid, cid) -> list[(tool, params_dict)]
+
+MINIMAL_PARAM_TESTS = [
+    # ---- Independent resources (no prereqs) ----
+    (
+        "Board", "deck_create_board",
+        {"title": make_name("minBoard")},
+        lambda s, r, cid: [("deck_delete_board", {"board_id": cid})],
+        [], "board_id",
+    ),
+    (
+        "Note", "note_create",
+        {"title": make_name("minNote"), "content": "min"},
+        lambda s, r, cid: [("note_delete", {"id": cid})],
+        [], "id",
+    ),
+    (
+        "Table", "table_create",
+        {"title": make_name("minTable"), "description": "min"},
+        lambda s, r, cid: [("table_delete", {"table_id": cid})],
+        [], "table_id",
+    ),
+    (
+        "Calendar", "create_calendar",
+        {"display_name": make_name("minCal")},
+        lambda s, r, cid: [("delete_calendar", {"calendar_uri": cid})],
+        [], "calendar_uri",
+    ),
+    (
+        "Addressbook", "create_addressbook",
+        {"display_name": make_name("minAddr"), "description": "min"},
+        lambda s, r, cid: [("delete_addressbook", {"addressbook_uri": cid})],
+        [], "addressbook_uri",
+    ),
+    (
+        "Collective", "collectives_create",
+        {"name": make_name("minColl")},
+        lambda s, r, cid: [("collectives_trash", {"id": cid}),
+                           ("collectives_delete", {"id": cid})],
+        [], "id",
+    ),
+    (
+        "Circle", "circle_create",
+        {"name": make_name("minCircle")},
+        lambda s, r, cid: [("circle_delete", {"circle_id": cid})],
+        [], "circle_id",
+    ),
+    # ---- Depends on Board ----
+    (
+        "Stack", "deck_create_stack",
+        lambda s, r: {"board_id": s["Board"]["id"], "title": make_name("minStack")},
+        lambda s, r, cid: [("deck_delete_stack", {"board_id": s["Board"]["id"], "stack_id": cid})],
+        ["Board"], "stack_id",
+    ),
+    # ---- Depends on Stack (and transitively Board) ----
+    (
+        "Card", "deck_create_card",
+        lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
+                      "title": make_name("minCard"), "description": "min"},
+        lambda s, r, cid: [("deck_delete_card", {"board_id": s["Board"]["id"],
+                           "stack_id": s["Stack"]["id"], "card_id": cid})],
+        ["Board", "Stack"], "card_id",
+    ),
+    # ---- Depends on Calendar ----
+    (
+        "Event", "create_event",
+        lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"],
+                     "summary": make_name("minEvent"), "dtstart": DT, "dtend": DT,
+                     "description": "min"},
+        lambda s, r, cid: [("delete_event", {"calendar_uri": s["Calendar"]["calendar_uri"],
+                           "event_uid": cid})],
+        ["Calendar"], "event_uid",
+    ),
+    # ---- Depends on Calendar ----
+    (
+        "Todo", "todo_create",
+        lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"],
+                     "summary": make_name("minTodo"), "description": "min",
+                     "due_date": DT},
+        lambda s, r, cid: [("todo_delete", {"calendar_uri": s["Calendar"]["calendar_uri"],
+                           "todo_uid": cid})],
+        ["Calendar"], "todo_uid",
+    ),
+    # ---- Depends on Addressbook ----
+    (
+        "Contact", "create_contact",
+        lambda s, r: {"addressbook_uri": s["Addressbook"]["addressbook_uri"],
+                     "fn": make_name("minContact"), "email": "min@t.com"},
+        lambda s, r, cid: [("delete_contact", {"addressbook_uri": s["Addressbook"]["addressbook_uri"],
+                           "contact_uid": cid})],
+        ["Addressbook"], "contact_uid",
+    ),
+    # ---- Depends on Table ----
+    (
+        "Row", "table_create_row",
+        lambda s, r: {"table_id": s["Table"]["id"], "data": "{}"},
+        lambda s, r, cid: [("table_delete_row", {"row_id": cid})],
+        ["Table"], "row_id",
+    ),
+    # ---- Depends on Collective ----
+    (
+        "Page", "collectives_create_page",
+        lambda s, r: {"collective_id": s["Collective"]["id"], "title": make_name("minPage")},
+        lambda s, r, cid: [("collectives_delete_page", {"collective_id": s["Collective"]["id"],
+                           "page_id": cid})],
+        ["Collective"], "page_id",
+    ),
+    # ---- Depends on Collective ----
+    (
+        "Tag", "collectives_create_tag",
+        lambda s, r: {"collective_id": s["Collective"]["id"],
+                     "name": make_name("minTag"), "color": "FF0000"},
+        lambda s, r, cid: [("collectives_delete_tag", {"collective_id": s["Collective"]["id"],
+                           "tag_id": cid})],
+        ["Collective"], "tag_id",
+    ),
+]
+
+# =============================================================================
 # Domain test entries — simpler format for non-CRUD tools
 # =============================================================================
 # (label, tool, params_or_callable, prereqs)
@@ -1070,6 +1192,53 @@ def main():
             run_test(session, f"3C update_{label.lower()}",
                            update_tool, params, prereqs)
 
+        # ------------------------------------------------------------------
+        # Phase 3.5: Minimal-Params Create & Delete
+        # Creates each resource with only required parameters, then deletes it.
+        # ------------------------------------------------------------------
+        log("\n=== Phase 3.5: Minimal-Params Create & Delete ===")
+        min_created: dict[str, Any] = {}
+        for entry in MINIMAL_PARAM_TESTS:
+            label, create_tool, create_params, delete_sequence_fn, prereqs, id_field = entry
+            if prereqs:
+                missing = check_prereqs(prereqs)
+                if missing:
+                    results.append({
+                        "label": f"3.5 create_{label.lower()}", "tool": create_tool,
+                        "status": "FAILED",
+                        "reason": f"Missing prerequisite: {missing}"
+                    })
+                    log(f"  FAIL 3.5 create_{label.lower()}: missing {missing}")
+                    continue
+            params = resolve_params(create_params)
+            ok = run_test(session, f"3.5 create_{label.lower()}", create_tool, params, prereqs)
+            if not ok:
+                continue
+            for r in reversed(results):
+                if r["label"] == f"3.5 create_{label.lower()}" and r["status"] == "PASSED":
+                    create_data = r.get("data", {})
+                    break
+            else:
+                create_data = {}
+            if label == "Collective" and isinstance(create_data, dict) and "collective" in create_data:
+                create_data = create_data["collective"]
+            if label == "Page" and isinstance(create_data, dict) and "page" in create_data:
+                create_data = create_data["page"]
+            if label == "Tag" and isinstance(create_data, dict) and "tag" in create_data:
+                create_data = create_data["tag"]
+            cid = extract_id(create_data, "id") or extract_id(create_data, id_field)
+            if cid is None:
+                results.append({
+                    "label": f"3.5 delete_{label.lower()}", "tool": "N/A",
+                    "status": "FAILED", "reason": f"Could not extract id (field={id_field}) from create response"
+                })
+                log(f"  FAIL 3.5 delete_{label.lower()}: no id from create response")
+                continue
+            min_created[label] = cid
+            log(f"  => Min {label} ID: {cid}")
+            delete_ops = delete_sequence_fn(store, rid, cid)
+            for del_tool, del_params in delete_ops:
+                run_test(session, f"3.5 delete_{label.lower()}", del_tool, del_params, prereqs)
         # ------------------------------------------------------------------
         # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------

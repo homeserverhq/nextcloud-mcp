@@ -404,7 +404,7 @@ async def create_share(
     """
     params = CreateShareParam(path=path, shareType=share_type, shareWith=share_with,
                               permissions=permissions, password=password, expireDate=expire_date)
-    return await get_client().create_share(params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -423,7 +423,7 @@ async def update_share(
         expire_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
     """
     params = UpdateShareParam(id=id, permissions=permissions, password=password, expireDate=expire_date)
-    return await get_client().update_share(id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -565,7 +565,7 @@ async def set_ooo(
     last_day_str = last_day_dt.strftime('%Y-%m-%d') if isinstance(last_day_dt, dt.datetime) else last_day_dt
     params = SetOOOParam(firstDay=first_day_str, lastDay=last_day_str, status=status, message=message)
     user_id = NextcloudClient.extract_username(get_user_token() or "")
-    return await get_client().set_ooo(user_id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1653,7 +1653,7 @@ async def note_create(
         category: Note category.
     """
     params = CreateNoteParam(title=title, content=content, category=category)
-    return await get_client().create_note(params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().create_note(params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1674,7 +1674,7 @@ async def note_update(
         favorite: Set as favorite.
     """
     params = UpdateNoteParam(id=id, title=title, content=content, category=category, favorite=favorite)
-    return await get_client().update_note(id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().update_note(id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1782,7 +1782,7 @@ async def deck_create_board(
         archived: Whether the board is archived. Defaults to False.
     """
     params = CreateBoardParam(title=title, color=color, archived=archived)
-    return await get_client().deck_create_board(params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().deck_create_board(params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1839,7 +1839,7 @@ async def deck_create_stack(
         order: Display order. Defaults to 0.
     """
     params = CreateStackParam(board_id=board_id, title=title, order=order)
-    return await get_client().deck_create_stack(board_id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().deck_create_stack(board_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1937,7 +1937,7 @@ async def deck_create_card(
     """
     params = CreateCardParam(title=title, description=description,
                               duedate=duedate, order=order)
-    return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -1963,7 +1963,7 @@ async def deck_update_card(
     """
     params = UpdateCardParam(title=title, description=description,
                               duedate=duedate, order=order)
-    return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -2355,7 +2355,7 @@ async def table_create(
         emoji: Table emoji.
     """
     params = CreateTableParam(title=title, description=description, emoji=emoji)
-    return await get_client().tables_create_table(params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().tables_create_table(params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -2374,7 +2374,7 @@ async def table_update(
         emoji: New emoji.
     """
     params = UpdateTableParam(table_id=table_id, title=title, description=description, emoji=emoji)
-    return await get_client().tables_update_table(table_id, params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().tables_update_table(table_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
@@ -2501,7 +2501,7 @@ async def collectives_create(
         emoji: Collective emoji.
     """
     params = CreateCollectiveParam(name=name, emoji=emoji)
-    return await get_client().collectives_create(params.model_dump(exclude_unset=True), get_user_token())
+    return await get_client().collectives_create(params.model_dump(exclude_defaults=True), get_user_token())
 
 
 @mcp.tool()
