@@ -1,32 +1,26 @@
-# Nextcloud MCP Multitenant Proxy Server
+# Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts
-as a secure, multi-tenant proxy between an AI Assistant and the
-Nextcloud backend API. It exposes **136 MCP tools** covering
-21 resource domains with full CRUD, search, and data management.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **167 MCP tools** covering 23 resource domains with full CRUD, collaboration, and data management capabilities.
 
-## Features
+## ✨ Features
 
-- **Identity Passthrough** — Extracts the `Authorization: Bearer <token>`
-  header from incoming HTTP requests and forwards it to the Nextcloud
-  API without server-side authentication.
-- **Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe
-  user identity isolation.
-- **Full Nextcloud Coverage** — 136 tools mapped to Nextcloud
-  API endpoints across 21 resource domains.
-- **TOON Optimization** — Bulk list responses are automatically compressed
-  using TOON (Token-Optimized Object Notation).
-- **Efficient Gets** — GET responses return only commonly used fields by
-  default. Full objects are available via an `include_all_fields` flag.
+- **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
+- **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
+- **📊 Full Nextcloud Coverage** — 167 tools mapped to Nextcloud API endpoints across 23 resource domains.
+- **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
+- **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
+- **🔒 High Fidelity** — Every tool is mapped directly to a verified Nextcloud API endpoint.
+- **📝 Full Function Signatures** — Every `@mcp.tool()` exposes individual typed parameters with descriptive docstrings, not opaque Pydantic models.
 
-## Environment Variables
+## 🔧 Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXTCLOUD_BASE_URL` | Yes | Docker-internal URL of the Nextcloud API (e.g. `http://nextcloud-web:80`) |
 | `MCP_SERVER_PORT` | Yes | Port number the MCP server listens on |
+| `ALLOW_ALL_AGGREGATE` | No | When `true` (default), aggregate listing tools honor the `include_all_fields` parameter. When `false`, the parameter is silently forced to `False` for aggregate list operations. |
 
-## Installation & Local Development
+## 📦 Installation & Local Development
 
 1. Ensure you have Python 3.12+ installed.
 2. Install dependencies:
@@ -40,7 +34,9 @@ Nextcloud backend API. It exposes **136 MCP tools** covering
     python -m src.main
     ```
 
-## Docker Deployment
+## 🐳 Docker Deployment
+
+Build and run the server using Docker:
 
 ```bash
 docker build -t nextcloud-mcp:latest .
@@ -53,76 +49,227 @@ docker run -d --name nextcloud-mcp \
 
 The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
-## Important Notes
+## ⚠️ Important Notes
 
-- **Auth**: Uses HTTP Basic Auth. The API key is a base64-encoded `username:app-password` string.
-- **`include_all_fields`** — The `include_all_fields` parameter (available on all `get_*` and `list_*` tools) controls whether all available fields are included in responses. Defaults to `False` for performance.
-- **TOON Compression** — All bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation).
-- **Required Fields & Defaults** — Each `create_*` tool requires specific key fields. All other fields default to empty strings or reasonable values.
+- **🔑 Auth** — Uses HTTP Basic Auth. The API key is a base64-encoded `username:app-password` string.
+- **📋 `include_all_fields`** — The `include_all_fields` parameter (available on all `get_*` and `list_*` tools) controls whether all available fields are included in responses. Defaults to `False` for performance; set to `True` only when additional fields are needed.
+- **🔒 `ALLOW_ALL_AGGREGATE`** — Controls whether aggregate listing tools respect the `include_all_fields` parameter. When set to `false`, all aggregate list operations silently return only default fields regardless of the caller's request. Defaults to `true`.
+- **⚡ TOON Compression** — All bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption by 30-60%.
+- **📝 Required Fields & Defaults** — Each `create_*` tool requires specific key fields (e.g. `name` for notes). All other fields default to empty strings or reasonable values.
 
-## API Tool Mapping
+## 🛠️ API Tool Mapping
 
-The server implements 136 MCP tools organized into the following categories:
+The server implements 167 MCP tools organized into the following categories:
 
-### Users/Groups (4 tools)
-- `get_users`, `get_user`, `get_groups`, `get_group_members`
+### ✅ Status (1 tool)
+- `check_server_status` — Health check endpoint for backend connectivity
 
-### File Sharing (5 tools)
-- `list_shares`, `get_share`, `create_share`, `update_share`, `delete_share`
+### 👥 Users/Groups (4 tools)
+- `get_users` — List all users
+- `get_user` — Get a user by ID
+- `get_groups` — List all groups
+- `get_group_members` — Get members of a group
 
-### User Status (7 tools)
-- `get_user_status`, `set_status`, `set_predefined_message`, `set_custom_message`, `clear_message`, `get_predefined_statuses`, `get_user_statuses`
+### 🔗 File Sharing (6 tools)
+- `list_all_shares` — List all shares
+- `get_shares_by_path` — Get shares by file path
+- `get_share` — Get a share by ID
+- `create_share` — Create a new share
+- `update_share` — Update an existing share
+- `delete_share` — Delete a share by ID
 
-### DAV Events/OOO (5 tools)
-- `get_ooo`, `set_ooo`, `clear_ooo`, `get_upcoming_events`, `get_direct_download_url`
+### 🟢 User Status (7 tools)
+- `get_user_status` — Get the current user's status
+- `set_status` — Set the current user's status
+- `set_predefined_message` — Set a predefined status message
+- `set_custom_message` — Set a custom status message
+- `clear_message` — Clear the current status message
+- `get_predefined_statuses` — List predefined statuses
+- `get_user_statuses` — List all user statuses
 
-### Folder Tree (1 tool)
-- `get_folder_tree`
+### 📅 OOO/Events (5 tools)
+- `get_ooo` — Get out-of-office settings for a user
+- `set_ooo` — Set out-of-office settings
+- `clear_ooo` — Clear out-of-office settings
+- `get_upcoming_events` — Get upcoming events from calendars
+- `get_direct_download_url` — Get a direct download URL for a file
 
-### Collections (3 tools)
-- `list_collection`, `search_collections`, `get_collections_by_resource`
+### 📂 Folder Tree (1 tool)
+- `get_folder_tree` — Get the folder tree structure
 
-### Files Reminders (3 tools)
-- `get_file_reminder`, `set_file_reminder`, `delete_file_reminder`
+### 🗂️ Collections (5 tools)
+- `get_collection_by_id` — Get a collection by ID
+- `search_collections` — Search across collections
+- `search_collections_raw` — Search collections with raw query
+- `get_collections_by_resource` — Get collections for a resource
+- `create_collection` — Create a new collection
 
-### Search (2 tools)
-- `get_search_providers`, `search`
+### ⏰ File Reminders (3 tools)
+- `get_file_reminder` — Get a file reminder
+- `set_file_reminder` — Set a file reminder
+- `delete_file_reminder` — Delete a file reminder
 
-### Capabilities (1 tool)
-- `get_capabilities`
+### 🔍 Search (2 tools)
+- `get_search_providers` — List available search providers
+- `search` — Search across all providers
 
-### WebDAV Files (9 tools)
-- `webdav_list_directory`, `webdav_read_file`, `webdav_write_file`, `webdav_create_directory`, `webdav_delete_resource`, `webdav_move_resource`, `webdav_copy_resource`, `webdav_search_files`, `webdav_list_favorites`
+### 🌐 Capabilities (1 tool)
+- `get_capabilities` — Get server capabilities
 
-### Notifications (4 tools)
-- `list_notifications`, `get_notification`, `delete_notification`, `delete_all_notifications`
+### 📁 WebDAV Files (9 tools)
+- `webdav_list_directory` — List directory contents
+- `webdav_read_file` — Read a file
+- `webdav_write_file` — Write a file
+- `webdav_create_directory` — Create a directory
+- `webdav_delete_resource` — Delete a file or directory
+- `webdav_move_resource` — Move a file or directory
+- `webdav_copy_resource` — Copy a file or directory
+- `webdav_search_files` — Search files by name
+- `webdav_list_favorites` — List favorite files
 
-### Activity (3 tools)
-- `get_activity`, `get_activity_filters`, `get_activity_filter`
+### 🔔 Notifications (4 tools)
+- `list_all_notifications` — List all notifications
+- `get_notification` — Get a notification by ID
+- `delete_notification` — Delete a notification by ID
+- `delete_all_notifications` — Delete all notifications
 
-### Calendar (11 tools)
-- `list_calendars`, `create_calendar`, `update_calendar`, `delete_calendar`, `list_events`, `get_event`, `create_event`, `update_event`, `delete_event`, `create_meeting`, `find_availability`
+### 📊 Activity (3 tools)
+- `get_activity` — Get activity stream
+- `get_activity_filters` — List activity filters
+- `get_activity_filter` — Get activity by filter
 
-### Todos (5 tools)
-- `list_todos`, `create_todo`, `update_todo`, `delete_todo`, `search_todos`
+### 📅 Calendar (13 tools)
+- `list_all_calendars` — List all calendars
+- `get_calendar` — Get a calendar by URI
+- `create_calendar` — Create a new calendar
+- `update_calendar` — Update an existing calendar
+- `delete_calendar` — Delete a calendar by URI
+- `list_all_events` — List all events across calendars
+- `get_events_by_calendar` — List events in a calendar
+- `get_event` — Get an event by UID
+- `create_event` — Create a new event
+- `update_event` — Update an existing event
+- `delete_event` — Delete an event by UID
+- `create_meeting` — Create a meeting with attendees
+- `find_availability` — Find available time slots
 
-### Contacts (8 tools)
-- `list_addressbooks`, `create_addressbook`, `delete_addressbook`, `list_contacts`, `get_contact`, `create_contact`, `update_contact`, `delete_contact`
+### ✅ Todos (7 tools)
+- `list_all_todos` — List all todos across calendars
+- `get_todos_by_calendar` — List todos in a calendar
+- `get_todo` — Get a todo by UID
+- `create_todo` — Create a new todo
+- `update_todo` — Update an existing todo
+- `delete_todo` — Delete a todo by UID
+- `search_todos` — Search across todos
 
-### Notes (8 tools)
-- `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`, `append_content`, `search_notes`, `get_attachment`
+### 👤 Contacts (11 tools)
+- `list_all_addressbooks` — List all address books
+- `get_addressbook` — Get an address book by URI
+- `create_addressbook` — Create a new address book
+- `update_addressbook` — Update an existing address book
+- `delete_addressbook` — Delete an address book by URI
+- `list_all_contacts` — List all contacts across address books
+- `get_contacts_by_addressbook` — List contacts in an address book
+- `get_contact` — Get a contact by UID
+- `create_contact` — Create a new contact
+- `update_contact` — Update an existing contact
+- `delete_contact` — Delete a contact by UID
 
-### Deck (17 tools)
-- `list_boards`, `get_board`, `create_board`, `list_stacks`, `create_stack`, `list_cards`, `get_card`, `create_card`, `update_card`, `delete_card`, `archive_card`, `unarchive_card`, `list_labels`, `assign_label`, `remove_label`, `assign_user`, `remove_user`
+### 📝 Notes (9 tools)
+- `list_all_notes` — List all notes
+- `get_notes_by_category` — List notes by category
+- `get_note` — Get a note by ID
+- `create_note` — Create a new note
+- `update_note` — Update an existing note
+- `delete_note` — Delete a note by ID
+- `append_content` — Append content to a note
+- `search_notes` — Search notes by content
+- `get_attachment` — Get a note attachment
 
-### Mail (8 tools)
-- `list_accounts`, `list_mailboxes`, `list_messages`, `get_message`, `get_message_body`, `send_message`, `set_message_flags`, `move_message`
+### 🎯 Deck (22 tools)
+- `list_all_boards` — List all boards
+- `get_board` — Get a board by ID
+- `create_board` — Create a new board
+- `update_board` — Update an existing board
+- `delete_board` — Delete a board by ID
+- `list_stacks` — List stacks in a board
+- `get_stack` — Get a stack by ID
+- `create_stack` — Create a new stack
+- `update_stack` — Update an existing stack
+- `delete_stack` — Delete a stack by ID
+- `list_cards` — List cards in a stack
+- `get_card` — Get a card by ID
+- `create_card` — Create a new card
+- `update_card` — Update an existing card
+- `delete_card` — Delete a card by ID
+- `archive_card` — Archive a card
+- `unarchive_card` — Unarchive a card
+- `list_labels` — List labels in a board
+- `assign_label` — Assign a label to a card
+- `remove_label` — Remove a label from a card
+- `assign_user` — Assign a user to a card
+- `remove_user` — Remove a user from a card
 
-### Talk (3 tools)
-- `send_chat_message`, `get_chat_messages`, `delete_chat_message`
+### 📧 Mail (8 tools)
+- `list_all_accounts` — List all mail accounts
+- `list_mailboxes` — List mailboxes in an account
+- `list_messages` — List messages in a mailbox
+- `get_message` — Get a message by ID
+- `get_message_body` — Get the body of a message
+- `send_message` — Send a new message
+- `set_message_flags` — Set message flags
+- `move_message` — Move a message to another mailbox
 
-### Tables (10 tools)
-- `list_tables`, `get_table`, `create_table`, `update_table`, `delete_table`, `get_schema`, `list_rows`, `create_row`, `update_row`, `delete_row`
+### 💬 Talk (3 tools)
+- `send_chat_message` — Send a chat message
+- `get_chat_messages` — Get chat messages from a room
+- `delete_chat_message` — Delete a chat message
 
-### Collectives (22 tools)
-- `collectives_list`, `collectives_create`, `collectives_update_emoji`, `collectives_trash`, `collectives_restore`, `collectives_delete`, `collectives_list_trashed`, `collectives_list_pages`, `collectives_get_page`, `collectives_create_page`, `collectives_trash_page`, `collectives_restore_page`, `collectives_delete_page`, `collectives_move_page`, `collectives_set_page_emoji`, `collectives_search_pages`, `collectives_list_tags`, `collectives_create_tag`, `collectives_update_tag`, `collectives_delete_tag`, `collectives_assign_tag`, `collectives_remove_tag`
+### 📊 Tables (11 tools)
+- `list_all_tables` — List all tables
+- `get_table` — Get a table by ID
+- `create_table` — Create a new table
+- `update_table` — Update an existing table
+- `delete_table` — Delete a table by ID
+- `get_schema` — Get the schema of a table
+- `list_rows` — List rows in a table
+- `get_row` — Get a row by ID
+- `create_row` — Create a new row
+- `update_row` — Update an existing row
+- `delete_row` — Delete a row by ID
+
+### 📚 Collectives (27 tools)
+- `collectives_list` — List all collectives
+- `collectives_get_collective` — Get a collective by ID
+- `collectives_create` — Create a new collective
+- `collectives_update_collective` — Update a collective
+- `collectives_update_emoji` — Update the emoji of a collective
+- `collectives_trash` — Trash a collective
+- `collectives_restore` — Restore a trashed collective
+- `collectives_delete` — Permanently delete a collective
+- `collectives_list_trashed` — List trashed collectives
+- `collectives_list_pages` — List pages in a collective
+- `collectives_get_page` — Get a page by ID
+- `collectives_create_page` — Create a new page
+- `collectives_update_page` — Update a page
+- `collectives_trash_page` — Trash a page
+- `collectives_restore_page` — Restore a trashed page
+- `collectives_delete_page` — Permanently delete a page
+- `collectives_move_page` — Move a page to a new parent
+- `collectives_set_page_emoji` — Set the emoji of a page
+- `collectives_set_page_full_width` — Toggle full-width mode on a page
+- `collectives_search_pages` — Search pages in a collective
+- `collectives_list_tags` — List tags in a collective
+- `collectives_get_tag` — Get a tag by ID
+- `collectives_create_tag` — Create a new tag
+- `collectives_update_tag` — Update a tag
+- `collectives_delete_tag` — Delete a tag by ID
+- `collectives_assign_tag` — Assign a tag to a page
+- `collectives_remove_tag` — Remove a tag from a page
+
+### 🔵 Circles (5 tools)
+- `list_all_circles` — List all circles
+- `get_circle` — Get a circle by ID
+- `create_circle` — Create a new circle
+- `update_circle` — Update an existing circle
+- `delete_circle` — Delete a circle by ID
