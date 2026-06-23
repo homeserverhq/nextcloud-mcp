@@ -18,7 +18,7 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 |----------|----------|-------------|
 | `NEXTCLOUD_BASE_URL` | Yes | Docker-internal URL of the Nextcloud API (e.g. `http://nextcloud-web:80`) |
 | `MCP_SERVER_PORT` | Yes | Port number the MCP server listens on |
-| `ALLOW_ALL_AGGREGATE` | No | When `true` (default), aggregate listing tools honor the `include_all_fields` parameter. When `false`, the parameter is silently forced to `False` for aggregate list operations. |
+| `ALLOW_ALL_AGGREGATE` | No | When `true`, aggregate listing tools honor the `include_all_fields` parameter. When `false` (default), the parameter is silently forced to `False` for aggregate list operations. |
 
 ## 📦 Installation & Local Development
 
@@ -53,7 +53,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 - **🔑 Auth** — Uses HTTP Basic Auth. The API key is a base64-encoded `username:app-password` string.
 - **📋 `include_all_fields`** — The `include_all_fields` parameter (available on all `get_*` and `list_*` tools) controls whether all available fields are included in responses. Defaults to `False` for performance; set to `True` only when additional fields are needed.
-- **🔒 `ALLOW_ALL_AGGREGATE`** — Controls whether aggregate listing tools respect the `include_all_fields` parameter. When set to `false`, all aggregate list operations silently return only default fields regardless of the caller's request. Defaults to `true`.
+- **🔒 `ALLOW_ALL_AGGREGATE`** — Controls whether aggregate listing tools respect the `include_all_fields` parameter. When set to `false` (default), all aggregate list operations silently return only default fields regardless of the caller's request.
 - **⚡ TOON Compression** — All bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption by 30-60%.
 - **📝 Required Fields & Defaults** — Each `create_*` tool requires specific key fields (e.g. `name` for notes). All other fields default to empty strings or reasonable values.
 
