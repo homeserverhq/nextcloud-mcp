@@ -93,7 +93,7 @@ The server implements 179 MCP tools organized into the following categories:
 - `get_upcoming_events` — Get upcoming events from calendars
 - `get_direct_download_url` — Get a direct download URL for a file
 
-### 📁 WebDAV Files (9 tools)
+### 📁 WebDAV Files (10 tools)
 - `get_folder_tree`
 - `webdav_list_directory` — List directory contents via WebDAV
 - `webdav_read_file` — Read a file via WebDAV
