@@ -1,6 +1,6 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **167 MCP tools** covering 23 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **167 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
@@ -58,8 +58,9 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 The server implements 167 MCP tools organized into the following categories:
 
-### ✅ Status (1 tool)
+### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
+- `get_capabilities` — Get server capabilities
 
 ### 👥 Users/Groups (4 tools)
 - `get_users` — List all users
@@ -109,9 +110,6 @@ The server implements 167 MCP tools organized into the following categories:
 ### 🔍 Search (2 tools)
 - `get_search_providers` — List available search providers
 - `search` — Search across all providers
-
-### 🌐 Capabilities (1 tool)
-- `get_capabilities` — Get server capabilities
 
 ### 📁 WebDAV Files (9 tools)
 - `webdav_list_directory` — List directory contents
