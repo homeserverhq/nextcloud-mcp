@@ -501,7 +501,7 @@ RESOURCE_TESTS = [
     (
         "Table", "create_table",
         {"title": make_name("Table"), "description": "Test table", "emoji": "📋"},
-        "list_tables", "get_table",
+        "list_all_tables", "get_table",
         "update_table", {"title": make_name("Table-upd")},
         "delete_table",
         [], "table_id", ["title", "description"],
@@ -509,7 +509,7 @@ RESOURCE_TESTS = [
     (
         "Board", "create_board",
         {"title": make_name("Board"), "color": "FF0000", "archived": False},
-        "list_boards", "get_board",
+        "list_all_boards", "get_board",
         "update_board", {"title": make_name("Board-upd"), "color": "00FF00"},
         "delete_board",
         [], "board_id", ["title", "color"],
@@ -517,7 +517,7 @@ RESOURCE_TESTS = [
     (
         "Calendar", "create_calendar",
         {"display_name": make_name("Cal"), "color": "#FF0000"},
-        "list_calendars", "get_calendar",
+        "list_all_calendars", "get_calendar",
         "update_calendar", {"display_name": make_name("Cal-upd"), "color": "#00FF00"},
         "delete_calendar",
         [], "calendar_uri", [],
@@ -525,7 +525,7 @@ RESOURCE_TESTS = [
     (
         "Addressbook", "create_addressbook",
         {"display_name": make_name("Addr"), "description": "Test addressbook"},
-        "list_addressbooks", "get_addressbook",
+        "list_all_addressbooks", "get_addressbook",
         "update_addressbook", {"display_name": make_name("Addr-upd")},
         "delete_addressbook",
         [], "addressbook_uri", [],
@@ -626,11 +626,11 @@ RESOURCE_TESTS = [
 # uri_prefix: if set, extract short-form URI from list item's href by stripping this prefix
 LIST_MATCH: dict[str, dict[str, Any]] = {
     "Note": {"list_tool": "list_all_notes", "value_key": "title", "list_match_field": "title"},
-    "Table": {"list_tool": "list_tables", "value_key": "title", "list_match_field": "title"},
-    "Board": {"list_tool": "list_boards", "value_key": "title", "list_match_field": "title"},
-    "Calendar": {"list_tool": "list_calendars", "value_key": "display_name",
+    "Table": {"list_tool": "list_all_tables", "value_key": "title", "list_match_field": "title"},
+    "Board": {"list_tool": "list_all_boards", "value_key": "title", "list_match_field": "title"},
+    "Calendar": {"list_tool": "list_all_calendars", "value_key": "display_name",
                  "list_match_field": "displayname"},
-    "Addressbook": {"list_tool": "list_addressbooks", "value_key": "display_name",
+    "Addressbook": {"list_tool": "list_all_addressbooks", "value_key": "display_name",
                     "list_match_field": "displayname"},
     "Collective": {"list_tool": "collectives_list", "value_key": "name", "list_match_field": "name"},
     "Stack": {"list_tool": "list_stacks", "value_key": "title", "list_match_field": "title"},
@@ -673,18 +673,18 @@ DOMAIN_TESTS_READONLY = [
     ("get_folder_tree", "get_folder_tree", {"depth": 1}),
     ("get_search_providers", "get_search_providers", {}),
     ("get_capabilities", "get_capabilities", {}),
-    ("list_notifications", "list_notifications", {}),
+    ("list_all_notifications", "list_all_notifications", {}),
     ("get_activity", "get_activity", {"limit": 5}),
     ("get_activity_filters", "get_activity_filters", {}),
-    ("list_calendars", "list_calendars", {}),
-    ("list_addressbooks", "list_addressbooks", {}),
+    ("list_all_calendars", "list_all_calendars", {}),
+    ("list_all_addressbooks", "list_all_addressbooks", {}),
     ("list_all_notes", "list_all_notes", {}),
-    ("list_boards", "list_boards", {}),
-    ("list_tables", "list_tables", {}),
+    ("list_all_boards", "list_all_boards", {}),
+    ("list_all_tables", "list_all_tables", {}),
     ("collectives_list", "collectives_list", {}),
     ("collectives_list_trashed", "collectives_list_trashed", {}),
     ("webdav_list_favorites", "webdav_list_favorites", {"limit": 5}),
-    ("list_accounts", "list_accounts", {}),
+    ("list_all_accounts", "list_all_accounts", {}),
     ("list_all_shares", "list_all_shares", {}),
     # Read-only tools with required params
     ("get_user", "get_user", {"user_id": API_USER}),
@@ -936,7 +936,7 @@ def main():
                     try:
                         coll_name = data.get("name", "")
                         if coll_name:
-                            r = session.call_tool("list_circles")
+                            r = session.call_tool("list_all_circles")
                             cd = extract_content(r)
                             cl = get_list_items(cd)
                             for c in cl:
@@ -1499,7 +1499,7 @@ def main():
 
         # ---- Phase 5L: Mail Tests ----
         log("\n=== Phase 5L: Mail Tests ===")
-        result = session.call_tool("list_accounts")
+        result = session.call_tool("list_all_accounts")
         data = extract_content(result)
         accounts = get_list_items(data)
         if not accounts:
@@ -1509,16 +1509,16 @@ def main():
         err = is_error(result)
         if err:
             results.append({
-                "label": "5L list_accounts", "tool": "list_accounts",
+                "label": "5L list_all_accounts", "tool": "list_all_accounts",
                 "status": "FAILED", "reason": err
             })
-            log(f"  FAIL 5L list_accounts: {err}")
+            log(f"  FAIL 5L list_all_accounts: {err}")
         else:
             results.append({
-                "label": "5L list_accounts", "tool": "list_accounts",
+                "label": "5L list_all_accounts", "tool": "list_all_accounts",
                 "status": "PASSED", "data": data
             })
-            log("  PASS 5L list_accounts")
+            log("  PASS 5L list_all_accounts")
 
         mailboxes: list = []
         account_id: str | None = None

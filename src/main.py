@@ -924,7 +924,7 @@ async def webdav_list_favorites(
 
 
 @mcp.tool()
-async def list_notifications(
+async def list_all_notifications(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1023,7 +1023,7 @@ async def get_activity_filter(
 
 
 @mcp.tool()
-async def list_calendars(
+async def list_all_calendars(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1406,7 +1406,7 @@ async def search_todos(
 
 
 @mcp.tool()
-async def list_addressbooks(
+async def list_all_addressbooks(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1740,7 +1740,7 @@ async def get_attachment(
 
 
 @mcp.tool()
-async def list_boards(
+async def list_all_boards(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2126,7 +2126,7 @@ async def remove_user(
 
 
 @mcp.tool()
-async def list_accounts(
+async def list_all_accounts(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2313,7 +2313,7 @@ async def delete_chat_message(
 
 
 @mcp.tool()
-async def list_tables(
+async def list_all_tables(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2911,7 +2911,7 @@ async def collectives_remove_tag(
 
 
 @mcp.tool()
-async def list_circles(
+async def list_all_circles(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
