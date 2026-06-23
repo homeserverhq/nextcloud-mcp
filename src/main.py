@@ -278,7 +278,7 @@ async def get_users(
         search: Search term to filter users by.
         limit: Maximum results. Defaults to 100.
         offset: Pagination offset. Defaults to 0.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_users(get_user_token(), search, limit, offset, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -293,7 +293,7 @@ async def get_user(
     """Get a single user by ID.
     Args:
         user_id: ID of the user. Get this from get_users(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_user(user_id, get_user_token(), include_all_fields)
 
@@ -311,7 +311,7 @@ async def get_groups(
         limit: Maximum results. Defaults to 100.
         offset: Pagination offset. Defaults to 0.
         search: Search term to filter groups by.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_groups(get_user_token(), limit, offset, search, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -330,7 +330,7 @@ async def get_group_members(
         group_id: ID of the group. Get this from get_groups(). (required).
         limit: Maximum results. Defaults to 100.
         offset: Pagination offset. Defaults to 0.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_group_members(group_id, get_user_token(), limit, offset, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -343,7 +343,7 @@ async def list_all_shares(
 ) -> dict[str, Any]:
     """List all shares.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_shares(get_user_token(), False, "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -360,7 +360,7 @@ async def get_shares_by_path(
     Args:
         path: File path to filter by (required).
         shared_with_me: Set to True to only show shares received from others. Defaults to False.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_shares(get_user_token(), shared_with_me, path, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -375,7 +375,7 @@ async def get_share(
     """Get a single share by ID.
     Args:
         id: ID of the share. Get this from list_all_shares(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_share(id, get_user_token(), include_all_fields)
     if isinstance(data, list):
@@ -448,7 +448,7 @@ async def get_user_status(
 ) -> dict[str, Any]:
     """Get the current user's status.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_user_status(get_user_token(), include_all_fields)
 
@@ -509,7 +509,7 @@ async def get_predefined_statuses(
 ) -> dict[str, Any]:
     """List available predefined statuses.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_predefined_statuses(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -524,7 +524,7 @@ async def get_user_statuses(
     """List all user statuses.
     Args:
         limit: Maximum results. Defaults to 100.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_user_statuses(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -539,7 +539,7 @@ async def get_ooo(
     """Get out-of-office settings for a user.
     Args:
         user_id: ID of the user. Get this from get_users(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
 
@@ -592,7 +592,7 @@ async def get_upcoming_events(
     Args:
         location: Location to filter events by.
         limit: Maximum results. Defaults to 20.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_upcoming_events(get_user_token(), location, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -621,7 +621,7 @@ async def get_folder_tree(
     Args:
         depth: Maximum depth. Defaults to 3.
         path: Full DAV path: /remote.php/dav/files/{username}/... Root path to start from.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_folder_tree(get_user_token(), depth, path, include_all_fields)
     return {"tree": json_to_toon(data)}
@@ -636,7 +636,7 @@ async def collection_get_by_id(
     """Get collection details by ID.
     Args:
         id: Collection ID (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().list_collection(id, get_user_token(), include_all_fields)
 
@@ -652,7 +652,7 @@ async def collection_search(
     Args:
         search: Search term.
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().search_collections(search, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -682,7 +682,7 @@ async def collection_get_by_resource(
     Args:
         resource_type: Type of resource (required).
         resource_id: ID of resource (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_collections_by_resource(resource_type, resource_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -713,7 +713,7 @@ async def get_file_reminder(
     """Get the reminder for a file.
     Args:
         file_id: ID of the file. Get this from webdav_list_directory() (the oc:fileid field in PROPFIND response). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_file_reminder(file_id, get_user_token(), include_all_fields)
 
@@ -757,7 +757,7 @@ async def get_search_providers(
 ) -> dict[str, Any]:
     """List all search providers.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_search_providers(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -778,7 +778,7 @@ async def search(
         term: Search term (required).
         limit: Maximum results. Defaults to 50.
         cursor: Pagination cursor.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().search(provider_id, term, get_user_token(), limit, cursor, include_all_fields)
     return {"results": json_to_toon(data)}
@@ -791,7 +791,7 @@ async def get_capabilities(
 ) -> dict[str, Any]:
     """Get server capabilities.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_capabilities(get_user_token(), include_all_fields)
 
@@ -807,7 +807,7 @@ async def webdav_list_directory(
     Args:
         path: Full DAV path: /remote.php/dav/files/{username}/... (required).
         depth: Directory depth. Defaults to 1.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().webdav_list_directory(path, get_user_token(), depth, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -904,7 +904,7 @@ async def webdav_search_files(
         query: Search query (required).
         limit: Maximum results. Defaults to 50.
         mime_type: Filter by MIME type.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -919,7 +919,7 @@ async def webdav_list_favorites(
     """List favorite files.
     Args:
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -932,7 +932,7 @@ async def notification_list(
 ) -> dict[str, Any]:
     """List all notifications.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_notifications(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -947,7 +947,7 @@ async def notification_get(
     """Get a single notification by ID.
     Args:
         id: Notification ID. Get this from list_notifications(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_notification(id, get_user_token(), include_all_fields)
 
@@ -988,7 +988,7 @@ async def activity_get(
         sort: Sort order. e.g. 'date' (default), 'subject'.
         object_type: Filter by object type. e.g. 'files', 'deck_card', 'calendar'.
         object_id: Filter by object ID.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_activity(get_user_token(), limit, sort, object_type, object_id, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1001,7 +1001,7 @@ async def activity_get_filters(
 ) -> dict[str, Any]:
     """Get available activity filters.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_activity_filters(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1018,7 +1018,7 @@ async def activity_get_filter(
     Args:
         filter_name: Filter name. Get this from activity_get_filters() (e.g. "all", "self"). (required).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().get_activity_filter(filter_name, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1031,7 +1031,7 @@ async def list_all_calendars(
 ) -> dict[str, Any]:
     """List all calendars.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1090,7 +1090,7 @@ async def get_calendar(
     """Get a single calendar by URI.
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_calendar(calendar_uri, get_user_token(), include_all_fields)
 
@@ -1108,7 +1108,7 @@ async def list_all_events(
         from_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         to_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     all_cals = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_events = []
@@ -1138,7 +1138,7 @@ async def get_events_by_calendar(
         from_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         to_date: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_events(calendar_uri, get_user_token(), from_date, to_date, limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1155,7 +1155,7 @@ async def get_event(
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
         event_uid: UID of the event. Get this from get_events_by_calendar(calendar_uri). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_event(calendar_uri, event_uid, get_user_token(), include_all_fields)
 
@@ -1280,7 +1280,7 @@ async def todo_list(
 ) -> dict[str, Any]:
     """List TODO items from ALL calendars.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     all_cals = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_todos = []
@@ -1304,7 +1304,7 @@ async def todo_get_by_calendar(
     """List TODO items in a specific calendar.
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars() (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_todos(get_user_token(), calendar_uri, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1344,7 +1344,7 @@ async def todo_get(
     Args:
         todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_todo(todo_uid, calendar_uri, get_user_token(), include_all_fields)
 
@@ -1401,7 +1401,7 @@ async def todo_search(
         query: Search term (required).
         calendar_uri: Calendar URI to search in. Get this from list_calendars(). If omitted, uses default task calendar.
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().search_todos(query, get_user_token(), calendar_uri, limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1414,7 +1414,7 @@ async def list_all_addressbooks(
 ) -> dict[str, Any]:
     """List all address books.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_addressbooks(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1456,7 +1456,7 @@ async def get_addressbook(
     """Get a single address book by URI.
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_addressbook(addressbook_uri, get_user_token(), include_all_fields)
 
@@ -1487,7 +1487,7 @@ async def list_all_contacts(
     """List contacts from ALL address books.
     Args:
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_contacts = []
@@ -1513,7 +1513,7 @@ async def get_contacts_by_addressbook(
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks() (required).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_contacts(addressbook_uri, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1530,7 +1530,7 @@ async def get_contact(
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
         contact_uid: UID of the contact. Get this from get_contacts_by_addressbook(addressbook_uri). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_contact(addressbook_uri, contact_uid, get_user_token(), include_all_fields)
 
@@ -1604,7 +1604,7 @@ async def note_list(
 ) -> dict[str, Any]:
     """List all notes.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_notes(get_user_token(), "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1619,7 +1619,7 @@ async def note_get_by_category(
     """Get notes filtered by category.
     Args:
         category: Category to filter by (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_notes(get_user_token(), category, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1634,7 +1634,7 @@ async def note_get(
     """Get a single note by ID.
     Args:
         id: Note ID. Get this from note_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().get_note(id, get_user_token(), include_all_fields)
 
@@ -1717,7 +1717,7 @@ async def note_search(
     Args:
         query: Search term (required).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().list_notes(get_user_token(), "", include_all_fields)
     if isinstance(data, list):
@@ -1748,7 +1748,7 @@ async def deck_list(
 ) -> dict[str, Any]:
     """List all boards.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_boards(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -1763,7 +1763,7 @@ async def deck_get_board(
     """Get a single board by ID.
     Args:
         board_id: Board ID. Get this from deck_list_boards(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_board(board_id, get_user_token(), include_all_fields)
 
@@ -1819,7 +1819,7 @@ async def deck_list_stacks(
     """List stacks in a board.
     Args:
         board_id: Board ID. Get this from deck_list_boards(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_stacks(board_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1853,7 +1853,7 @@ async def deck_get_stack(
     Args:
         board_id: Board ID. Get this from deck_list_boards(). (required).
         stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
 
@@ -1892,7 +1892,7 @@ async def deck_list_cards(
     Args:
         board_id: Board ID. Get this from deck_list_boards(). (required).
         stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_cards(board_id, stack_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -1911,7 +1911,7 @@ async def deck_get_card(
         board_id: Board ID. Get this from deck_list_boards(). (required).
         stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_card(board_id, stack_id, card_id, get_user_token(), include_all_fields)
 
@@ -2049,7 +2049,7 @@ async def deck_list_labels(
     """List labels in a board.
     Args:
         board_id: Board ID. Get this from deck_list_boards(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_labels(board_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2134,7 +2134,7 @@ async def list_all_accounts(
 ) -> dict[str, Any]:
     """List mail accounts.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().mail_list_accounts(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -2149,7 +2149,7 @@ async def list_mailboxes(
     """List mailboxes in an account.
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().mail_list_mailboxes(account_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2168,7 +2168,7 @@ async def list_messages(
         account_id: Account ID. Get this from list_accounts(). (required).
         mailbox_db_id: Mailbox database ID (integer). Get this from list_mailboxes(account_id). (required).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().mail_list_messages(account_id, mailbox_db_id, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2185,7 +2185,7 @@ async def get_message(
     Args:
         account_id: Account ID. Get this from list_accounts(). (required).
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().mail_get_message(account_id, message_id, get_user_token(), include_all_fields)
 
@@ -2275,7 +2275,7 @@ async def talk_list_rooms(
     """List all Talk conversations available to the current user.
     Each room has a `token` field used to identify it in send/get/delete message tools.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().talk_list_rooms(get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2344,7 +2344,7 @@ async def talk_list_participants(
     """List participants in a Talk conversation room.
     Args:
         token: Room token. (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().talk_list_participants(token, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2407,7 +2407,7 @@ async def get_chat_messages(
         token: Conversation token. Get this from creating a Talk room. (required).
         limit: Maximum results. Defaults to 50.
         look_into_future: Wait for new messages (1) or not (0).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().talk_get_messages(token, get_user_token(), limit, look_into_future, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2434,7 +2434,7 @@ async def table_list(
 ) -> dict[str, Any]:
     """List all tables.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().tables_list_tables(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -2449,7 +2449,7 @@ async def table_get(
     """Get a single table by ID.
     Args:
         table_id: Table ID. Get this from table_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_table(table_id, get_user_token(), include_all_fields)
 
@@ -2511,7 +2511,7 @@ async def table_get_schema(
     """Get the schema of a table.
     Args:
         table_id: Table ID. Get this from table_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
 
@@ -2529,7 +2529,7 @@ async def table_list_rows(
         table_id: Table ID. Get this from table_list(). (required).
         limit: Maximum results. Defaults to 50.
         offset: Pagination offset. Defaults to 0.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().tables_list_rows(table_id, get_user_token(), limit, offset, include_all_fields)
     return {"rows": json_to_toon(data)}
@@ -2558,7 +2558,7 @@ async def table_get_row(
     """Get a single row from a table.
     Args:
         row_id: Row ID. Get this from table_list_rows(table_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
 
@@ -2596,7 +2596,7 @@ async def collectives_list(
 ) -> dict[str, Any]:
     """List all collectives.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().collectives_list(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -2626,7 +2626,7 @@ async def collectives_get_collective(
     """Get a single collective by ID.
     Args:
         id: Collective ID. Get this from collectives_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().collectives_get_collective(id, get_user_token(), include_all_fields)
 
@@ -2709,7 +2709,7 @@ async def collectives_list_trashed(
 ) -> dict[str, Any]:
     """List trashed collectives.
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().collectives_list_trashed(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -2724,7 +2724,7 @@ async def collectives_list_pages(
     """List pages in a collective.
     Args:
         collective_id: Collective ID. Get this from collectives_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().collectives_list_pages(collective_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2741,7 +2741,7 @@ async def collectives_get_page(
     Args:
         collective_id: Collective ID. Get this from collectives_list(). (required).
         page_id: Page ID. Get this from collectives_list_pages(collective_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().collectives_get_page(collective_id, page_id, get_user_token(), include_all_fields)
 
@@ -2904,7 +2904,7 @@ async def collectives_search_pages(
         collective_id: Collective ID. Get this from collectives_list(). (required).
         query: Search query (required).
         limit: Maximum results. Defaults to 50.
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().collectives_search_pages(collective_id, query, get_user_token(), limit, include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2919,7 +2919,7 @@ async def collectives_list_tags(
     """List tags in a collective.
     Args:
         collective_id: Collective ID. Get this from collectives_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().collectives_list_tags(collective_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
@@ -2936,7 +2936,7 @@ async def collectives_get_tag(
     Args:
         collective_id: Collective ID. Get this from collectives_list(). (required).
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     return await get_client().collectives_get_tag(collective_id, tag_id, get_user_token(), include_all_fields)
 
@@ -3032,7 +3032,7 @@ async def circle_list(
 ) -> dict[str, Any]:
     """List all Circles (Teams).
     Args:
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().circles_list(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
@@ -3130,7 +3130,7 @@ async def circle_list_members(
     """List all members of a Circle (Team).
     Args:
         circle_id: Circle ID. Get this from circle_list(). (required).
-        include_all_fields: Set to True to retrieve all available fields.
+        include_all_fields: When False (default), returns only commonly used fields. Set to True to retrieve all available fields.
     """
     data = await get_client().circles_list_members(circle_id, get_user_token(),
                                                      include_all_fields)
