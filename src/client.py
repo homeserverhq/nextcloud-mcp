@@ -2033,5 +2033,26 @@ class NextcloudClient:
     async def circles_delete(self, circle_id: str, api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/circles/circles/{circle_id}", api_key)
 
+    async def circles_add_member(self, circle_id: str, ident: str, member_type: int = 1,
+                                  api_key: str = None) -> Any:
+        return await self.post(f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/multi",
+                               api_key, json={"members": [{"id": ident, "type": member_type}]})
+
+    async def circles_remove_member(self, circle_id: str, member_id: str,
+                                     api_key: str = None) -> Any:
+        return await self.delete(
+            f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/{member_id}", api_key)
+
+    async def circles_list_members(self, circle_id: str, api_key: str = None,
+                                    include_all_fields: bool = False) -> Any:
+        data = await self.get(f"/ocs/v2.php/apps/circles/circles/{circle_id}/members", api_key)
+        return self._filter_fields(data, "circle", include_all_fields)
+
+    async def circles_update_member_level(self, circle_id: str, member_id: str, level: int,
+                                           api_key: str = None) -> Any:
+        return await self.put(
+            f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/{member_id}/level",
+            api_key, json={"level": level})
+
     async def patch(self, path: str, api_key: Optional[str] = None, **kwargs: Any) -> Any:
         return await self.request("PATCH", path, api_key, **kwargs)

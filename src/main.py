@@ -2979,6 +2979,69 @@ async def circle_delete(
 
 
 @mcp.tool()
+async def circle_add_member(
+    circle_id: str,
+    user_id: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Add a user to a Circle (Team).
+    Args:
+        circle_id: Circle ID. Get this from circle_list(). (required).
+        user_id: User ID to add to the circle (required).
+    """
+    result = await get_client().circles_add_member(circle_id, user_id, api_key=get_user_token())
+    return {"success": True, "data": result}
+
+
+@mcp.tool()
+async def circle_remove_member(
+    circle_id: str,
+    member_id: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Remove a member from a Circle (Team).
+    Args:
+        circle_id: Circle ID. Get this from circle_list(). (required).
+        member_id: Member ID to remove. Get this from circle_list_members(). (required).
+    """
+    result = await get_client().circles_remove_member(circle_id, member_id, get_user_token())
+    return {"success": True, "data": result}
+
+
+@mcp.tool()
+async def circle_list_members(
+    circle_id: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List all members of a Circle (Team).
+    Args:
+        circle_id: Circle ID. Get this from circle_list(). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().circles_list_members(circle_id, get_user_token(),
+                                                     include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def circle_update_member_level(
+    circle_id: str,
+    member_id: str,
+    level: int,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Change a member's level in a Circle (Team).
+    Args:
+        circle_id: Circle ID. Get this from circle_list(). (required).
+        member_id: Member ID. Get this from circle_list_members(). (required).
+        level: New level (1=Member, 4=Moderator, 8=Admin, 9=Owner) (required).
+    """
+    return await get_client().circles_update_member_level(circle_id, member_id, level,
+                                                           get_user_token())
+
+
+@mcp.tool()
 async def check_server_status(ctx: Context) -> dict[str, Any]:
     """Check connectivity to the Nextcloud backend."""
     try:

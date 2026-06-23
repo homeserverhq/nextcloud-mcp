@@ -2013,6 +2013,77 @@ def main():
         run_test(session, "5S delete_fixture", "webdav_delete_resource",
                 {"path": fixture_path})
 
+        # ---- Phase 6: Circle Member Management Tests ----
+        log("\n=== Phase 6: Circle Member Management Tests ===")
+
+        whoami = session.call_tool("get_user_status")
+        wd = extract_content(whoami)
+        current_user = wd.get("userId", "") if isinstance(wd, dict) else ""
+        log(f"  => Current user: {current_user}")
+
+        all_users = session.call_tool("get_users")
+        ud = extract_content(all_users)
+        user_list = get_list_items(ud)
+        second_user = ""
+        for u in user_list:
+            if isinstance(u, str) and u and u != current_user:
+                second_user = u
+                break
+            if isinstance(u, dict):
+                uid = u.get("id", "") or u.get("userId", "")
+                if uid and uid != current_user:
+                    second_user = uid
+                    break
+
+        circle_name = make_name("memberTest")
+        run_test(session, "6 create_circle", "circle_create", {"name": circle_name})
+        circle_id = ""
+        for r in reversed(results):
+            if r["label"] == "6 create_circle" and r["status"] == "PASSED":
+                cd = r.get("data", {})
+                if isinstance(cd, dict):
+                    circle_id = cd.get("id", "")
+                break
+
+        if circle_id:
+            log(f"  => Circle ID: {circle_id}")
+            run_test(session, "6 list_members", "circle_list_members",
+                    {"circle_id": circle_id, "include_all_fields": True})
+
+            if second_user:
+                log(f"  => Second user: {second_user}")
+                run_test(session, "6 add_member", "circle_add_member",
+                        {"circle_id": circle_id, "user_id": second_user})
+
+                mem_result = session.call_tool("circle_list_members",
+                    {"circle_id": circle_id, "include_all_fields": True})
+                mem_data = extract_content(mem_result)
+                mem_items = get_list_items(mem_data)
+                member_id = ""
+                for m in mem_items:
+                    if isinstance(m, dict) and m.get("userId") == second_user:
+                        member_id = m.get("id", "")
+                        break
+
+                if member_id:
+                    log(f"  => Member ID: {member_id}")
+                    run_test(session, "6 update_level", "circle_update_member_level",
+                            {"circle_id": circle_id, "member_id": member_id, "level": 4})
+                    run_test(session, "6 remove_member", "circle_remove_member",
+                            {"circle_id": circle_id, "member_id": member_id})
+                else:
+                    results.append({"label": "6 update_level", "tool": "circle_update_member_level",
+                                    "status": "FAILED", "reason": "No member_id for second user"})
+                    results.append({"label": "6 remove_member", "tool": "circle_remove_member",
+                                    "status": "FAILED", "reason": "No member_id for second user"})
+                    log("  FAIL 6: no member_id for second user")
+            else:
+                results.append({"label": "6 add_member", "tool": "circle_add_member",
+                                "status": "FAILED", "reason": "No second user available"})
+                log("  FAIL 6 add_member: only 1 user in system")
+
+            run_test(session, "6 delete_circle", "circle_delete", {"circle_id": circle_id})
+
         # ------------------------------------------------------------------
         # Phase 3D: Delete All Resources (REVERSE ORDER)
         # Only resources with a delete_tool set (and not handled by cleanup)

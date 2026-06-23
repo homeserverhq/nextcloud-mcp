@@ -1,14 +1,15 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **167 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **171 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 167 tools mapped to Nextcloud API endpoints across 23 resource domains.
+- **📊 Full Nextcloud Coverage** — 171 tools mapped to Nextcloud API endpoints across 22 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
+- **🧪 Comprehensive Testing** — 260+ automated tests covering all tool domains, run via the test runner pipeline.
 
 ## 🔧 Environment Variables
 
@@ -56,7 +57,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 167 MCP tools organized into the following categories:
+The server implements 171 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
@@ -93,7 +94,18 @@ The server implements 167 MCP tools organized into the following categories:
 - `get_direct_download_url` — Get a direct download URL for a file
 
 ### 📂 Folder Tree (1 tool)
-- `get_folder_tree` — Get the folder tree structure
+- `get_folder_tree`
+
+### 📁 WebDAV Files (9 tools)
+- `webdav_list_directory` — List directory contents via WebDAV
+- `webdav_read_file` — Read a file via WebDAV
+- `webdav_write_file` — Write a file via WebDAV
+- `webdav_create_directory` — Create a directory via WebDAV
+- `webdav_delete_resource` — Delete a resource via WebDAV
+- `webdav_move_resource` — Move a resource via WebDAV
+- `webdav_copy_resource` — Copy a resource via WebDAV
+- `webdav_search_files` — Search files via WebDAV
+- `webdav_list_favorites` — List favorite files via WebDAV
 
 ### 🗂️ Collections (5 tools)
 - `collection_get_by_id` — Get a collection by ID
@@ -101,6 +113,15 @@ The server implements 167 MCP tools organized into the following categories:
 - `collection_search_raw` — Search collections with raw query
 - `collection_get_by_resource` — Get collections for a resource
 - `collection_create` — Create a new collection
+
+### ⏰ File Reminders (3 tools)
+- `get_file_reminder` — Get a file reminder
+- `set_file_reminder` — Set a file reminder
+- `delete_file_reminder` — Delete a file reminder
+
+### 🔍 Search (2 tools)
+- `get_search_providers` — List search providers
+- `search` — Search across providers
 
 ### 🔔 Notifications (4 tools)
 - `notification_list` — List all notifications
@@ -242,9 +263,13 @@ The server implements 167 MCP tools organized into the following categories:
 - `collectives_assign_tag` — Assign a tag to a page
 - `collectives_remove_tag` — Remove a tag from a page
 
-### 🔵 Circles (5 tools)
+### 🔵 Circles (9 tools)
 - `circle_list` — List all circles
 - `circle_get` — Get a circle by ID
 - `circle_create` — Create a new circle
 - `circle_update` — Update an existing circle
 - `circle_delete` — Delete a circle by ID
+- `circle_add_member` — Add a user to a circle
+- `circle_remove_member` — Remove a member from a circle
+- `circle_list_members` — List members of a circle
+- `circle_update_member_level` — Update a member's level in a circle
