@@ -12,6 +12,8 @@ from .client import NextcloudClient
 
 _current_user_token: ContextVar[Optional[str]] = ContextVar("current_user_token", default=None)
 
+ALLOW_ALL_AGGREGATE = os.getenv("ALLOW_ALL_AGGREGATE", "false").lower() in ("true", "1", "yes")
+
 
 class AuthMiddleware:
     def __init__(self, app):
@@ -278,7 +280,7 @@ async def get_users(
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_users(get_user_token(), search, limit, offset, include_all_fields)
+    data = await get_client().get_users(get_user_token(), search, limit, offset, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -311,7 +313,7 @@ async def get_groups(
         search: Search term to filter groups by.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_groups(get_user_token(), limit, offset, search, include_all_fields)
+    data = await get_client().get_groups(get_user_token(), limit, offset, search, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -343,7 +345,7 @@ async def list_all_shares(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().list_shares(get_user_token(), False, "", include_all_fields)
+    data = await get_client().list_shares(get_user_token(), False, "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -509,7 +511,7 @@ async def get_predefined_statuses(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_predefined_statuses(get_user_token(), include_all_fields)
+    data = await get_client().get_predefined_statuses(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -524,7 +526,7 @@ async def get_user_statuses(
         limit: Maximum results. Defaults to 100.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_user_statuses(get_user_token(), limit, include_all_fields)
+    data = await get_client().get_user_statuses(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -592,7 +594,7 @@ async def get_upcoming_events(
         limit: Maximum results. Defaults to 20.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_upcoming_events(get_user_token(), location, limit, include_all_fields)
+    data = await get_client().get_upcoming_events(get_user_token(), location, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -652,7 +654,7 @@ async def search_collections(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().search_collections(search, get_user_token(), limit, include_all_fields)
+    data = await get_client().search_collections(search, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -757,7 +759,7 @@ async def get_search_providers(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_search_providers(get_user_token(), include_all_fields)
+    data = await get_client().get_search_providers(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -919,7 +921,7 @@ async def webdav_list_favorites(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields)
+    data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -932,7 +934,7 @@ async def list_all_notifications(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().list_notifications(get_user_token(), include_all_fields)
+    data = await get_client().list_notifications(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -988,7 +990,7 @@ async def get_activity(
         object_id: Filter by object ID.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_activity(get_user_token(), limit, sort, object_type, object_id, include_all_fields)
+    data = await get_client().get_activity(get_user_token(), limit, sort, object_type, object_id, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1001,7 +1003,7 @@ async def get_activity_filters(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().get_activity_filters(get_user_token(), include_all_fields)
+    data = await get_client().get_activity_filters(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1031,7 +1033,7 @@ async def list_all_calendars(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().list_calendars(get_user_token(), include_all_fields)
+    data = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1108,7 +1110,7 @@ async def list_all_events(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
+    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_events = []
     for cal in all_cals:
         href = cal.get("href", "")
@@ -1116,7 +1118,7 @@ async def list_all_events(
             uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
         else:
             continue
-        events = await get_client().list_events(uri, get_user_token(), from_date, to_date, limit, include_all_fields)
+        events = await get_client().list_events(uri, get_user_token(), from_date, to_date, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
         all_events.extend(events)
     return {"items": json_to_toon(all_events[:limit])}
 
@@ -1280,7 +1282,7 @@ async def list_all_todos(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields)
+    all_cals = await get_client().list_calendars(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_todos = []
     for cal in all_cals:
         href = cal.get("href", "")
@@ -1288,7 +1290,7 @@ async def list_all_todos(
             uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
         else:
             continue
-        todos = await get_client().list_todos(get_user_token(), uri, include_all_fields)
+        todos = await get_client().list_todos(get_user_token(), uri, include_all_fields if ALLOW_ALL_AGGREGATE else False)
         all_todos.extend(todos)
     return {"items": json_to_toon(all_todos)}
 
@@ -1414,7 +1416,7 @@ async def list_all_addressbooks(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().list_addressbooks(get_user_token(), include_all_fields)
+    data = await get_client().list_addressbooks(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1487,7 +1489,7 @@ async def list_all_contacts(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Set to True to retrieve all available fields.
     """
-    all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields)
+    all_abooks = await get_client().list_addressbooks(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     all_contacts = []
     for abook in all_abooks:
         href = abook.get("href", "")
@@ -1495,7 +1497,7 @@ async def list_all_contacts(
             uri = href.split("/remote.php/dav/addressbooks/", 1)[1].rstrip("/")
         else:
             continue
-        contacts = await get_client().list_contacts(uri, get_user_token(), limit, include_all_fields)
+        contacts = await get_client().list_contacts(uri, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
         all_contacts.extend(contacts)
     return {"items": json_to_toon(all_contacts[:limit])}
 
@@ -1604,7 +1606,7 @@ async def list_all_notes(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().list_notes(get_user_token(), "", include_all_fields)
+    data = await get_client().list_notes(get_user_token(), "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1748,7 +1750,7 @@ async def list_all_boards(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().deck_list_boards(get_user_token(), include_all_fields)
+    data = await get_client().deck_list_boards(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2134,7 +2136,7 @@ async def list_all_accounts(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().mail_list_accounts(get_user_token(), include_all_fields)
+    data = await get_client().mail_list_accounts(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2321,7 +2323,7 @@ async def list_all_tables(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().tables_list_tables(get_user_token(), include_all_fields)
+    data = await get_client().tables_list_tables(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2483,7 +2485,7 @@ async def collectives_list(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().collectives_list(get_user_token(), include_all_fields)
+    data = await get_client().collectives_list(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2596,7 +2598,7 @@ async def collectives_list_trashed(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().collectives_list_trashed(get_user_token(), include_all_fields)
+    data = await get_client().collectives_list_trashed(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2919,7 +2921,7 @@ async def list_all_circles(
     Args:
         include_all_fields: Set to True to retrieve all available fields.
     """
-    data = await get_client().circles_list(get_user_token(), include_all_fields)
+    data = await get_client().circles_list(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
