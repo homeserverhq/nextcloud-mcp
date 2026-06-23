@@ -1,6 +1,6 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **171 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **171 MCP tools** covering 21 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
@@ -93,10 +93,8 @@ The server implements 171 MCP tools organized into the following categories:
 - `get_upcoming_events` — Get upcoming events from calendars
 - `get_direct_download_url` — Get a direct download URL for a file
 
-### 📂 Folder Tree (1 tool)
-- `get_folder_tree`
-
 ### 📁 WebDAV Files (9 tools)
+- `get_folder_tree`
 - `webdav_list_directory` — List directory contents via WebDAV
 - `webdav_read_file` — Read a file via WebDAV
 - `webdav_write_file` — Write a file via WebDAV
