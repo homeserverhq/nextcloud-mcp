@@ -49,7 +49,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## ⚠️ Important Notes
 
-- **🔑 Auth** — Uses HTTP Basic Auth. The API key is a base64-encoded `username:app-password` string.
+- **🔑 Auth** — Uses HTTP Basic Auth. The API key is a base64-encoded `username:app-password` string (e.g. `echo -n "username:app-password" | base64`).
 - **📋 `include_all_fields`** — The `include_all_fields` parameter (available on all `get_*` and `list_*` tools) controls whether all available fields are included in responses. Defaults to `False` for performance; set to `True` only when additional fields are needed.
 - **🔒 `ALLOW_ALL_AGGREGATE`** — Controls whether aggregate listing tools respect the `include_all_fields` parameter. When set to `false` (default), all aggregate list operations silently return only default fields regardless of the caller's request.
 - **⚡ TOON Compression** — All bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption by 30-60%.
