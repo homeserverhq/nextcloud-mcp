@@ -806,7 +806,7 @@ DOMAIN_TESTS_BACKEND_BROKEN = []
 DOMAIN_TESTS_CLEANUP = [
     ("CollectiveDelete", "collectives_delete",
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
-    ("CircleDelete", "delete_circle",
+    ("CircleDelete", "circle_delete",
      lambda s, r: {"circle_id": s.get("circle_id", "")},
      ["Collective"]),
 ]
@@ -936,7 +936,7 @@ def main():
                     try:
                         coll_name = data.get("name", "")
                         if coll_name:
-                            r = session.call_tool("list_all_circles")
+                            r = session.call_tool("circle_list")
                             cd = extract_content(r)
                             cl = get_list_items(cd)
                             for c in cl:

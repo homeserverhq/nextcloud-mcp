@@ -263,8 +263,8 @@ The server implements 167 MCP tools organized into the following categories:
 - `collectives_remove_tag` — Remove a tag from a page
 
 ### 🔵 Circles (5 tools)
-- `list_all_circles` — List all circles
-- `get_circle` — Get a circle by ID
-- `create_circle` — Create a new circle
-- `update_circle` — Update an existing circle
-- `delete_circle` — Delete a circle by ID
+- `circle_list` — List all circles
+- `circle_get` — Get a circle by ID
+- `circle_create` — Create a new circle
+- `circle_update` — Update an existing circle
+- `circle_delete` — Delete a circle by ID

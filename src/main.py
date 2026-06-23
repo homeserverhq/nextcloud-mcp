@@ -2913,7 +2913,7 @@ async def collectives_remove_tag(
 
 
 @mcp.tool()
-async def list_all_circles(
+async def circle_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2926,7 +2926,7 @@ async def list_all_circles(
 
 
 @mcp.tool()
-async def get_circle(
+async def circle_get(
     circle_id: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2938,7 +2938,7 @@ async def get_circle(
 
 
 @mcp.tool()
-async def create_circle(
+async def circle_create(
     name: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2950,7 +2950,7 @@ async def create_circle(
 
 
 @mcp.tool()
-async def update_circle(
+async def circle_update(
     circle_id: str,
     name: str = None,
     description: str = None,
@@ -2966,7 +2966,7 @@ async def update_circle(
 
 
 @mcp.tool()
-async def delete_circle(
+async def circle_delete(
     circle_id: str,
     ctx: Context = None
 ) -> dict[str, Any]:
