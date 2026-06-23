@@ -29,8 +29,8 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
     ```
 3. Run the server:
     ```bash
-    export NEXTCLOUD_BASE_URL=http://localhost:8060
-    export MCP_SERVER_PORT=6080
+    export NEXTCLOUD_BASE_URL=http://nextcloud-web:80
+    export MCP_SERVER_PORT=80
     python -m src.main
     ```
 
