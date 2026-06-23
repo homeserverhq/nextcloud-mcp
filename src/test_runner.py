@@ -808,6 +808,7 @@ DOMAIN_TESTS_READONLY = [
     ("webdav_list_favorites", "webdav_list_favorites", {"limit": 5}),
     ("list_all_accounts", "list_all_accounts", {}),
     ("list_all_shares", "list_all_shares", {}),
+    ("talk_list_rooms", "talk_list_rooms", {}),
     # Read-only tools with required params
     ("get_user", "get_user", {"user_id": API_USER}),
     ("get_group_members", "get_group_members", lambda s, r: {"group_id": s.get("discovered_group_id", "admin")}),
@@ -1817,19 +1818,21 @@ def main():
         # ---- Phase 5M: Chat Tests ----
         log("\n=== Phase 5M: Chat Tests ===")
         token = None
-        try:
-            room_data = direct_api_request("POST",
-                "/ocs/v2.php/apps/spreed/api/v4/room",
-                {"roomType": 3, "roomName": f"t{rid}-test"})
-            if isinstance(room_data, dict):
-                token = room_data.get("token")
-            if token:
-                store["chat_token"] = token
-                log(f"  => Chat room token: {token}")
-            else:
-                log(f"  Could not create Talk room: {room_data}")
-        except Exception as e:
-            log(f"  Chat room creation failed: {e}")
+        room_type = 3
+        room_name = f"t{rid}-chat"
+        run_test(session, "5M create_room", "talk_create_room",
+                {"room_type": room_type, "room_name": room_name})
+        for r in reversed(results):
+            if r["label"] == "5M create_room" and r["status"] == "PASSED":
+                rd = r.get("data", {})
+                if isinstance(rd, dict):
+                    token = rd.get("token")
+                break
+        if token:
+            store["chat_token"] = token
+            log(f"  => Chat room token: {token}")
+        else:
+            log("  Could not create Talk room")
 
         run_test(session, "5M send_chat_message", "send_chat_message",
                 {"token": token or "", "message": "Hello from MCP test"})
@@ -1856,11 +1859,9 @@ def main():
             log("  FAIL 5M delete_chat_message: no messages to delete")
         # Delete the Talk room
         if token:
-            try:
-                direct_api_request("DELETE", f"/ocs/v2.php/apps/spreed/api/v4/room/{token}")
-                log(f"  => Deleted Talk room: {token}")
-            except Exception as er:
-                log(f"  Could not delete Talk room: {er}")
+            run_test(session, "5M delete_room", "talk_delete_room",
+                    {"token": token})
+            log(f"  => Deleted Talk room: {token}")
 
         # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")

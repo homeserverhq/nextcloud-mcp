@@ -74,6 +74,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "mailbox":          {"databaseId", "id", "name", "displayName", "unseen", "total", "specialUse"},
     "mail_message":     {"databaseId", "uid", "subject", "from", "to", "dateInt", "flags", "previewText"},
     "talk_message":     {"id", "actorDisplayName", "timestamp", "message", "messageType"},
+    "talk_room":        {"token", "displayName", "type", "participantType", "name"},
     "table":            {"id", "title", "emoji", "description"},
     "table_schema":     {"title", "emoji", "columns", "description"},
     "row":              None,
@@ -1751,12 +1752,28 @@ class NextcloudClient:
                              api_key, params=params)
         return self._filter_fields(data, "talk_message", include_all_fields)
 
+    async def talk_list_rooms(self, api_key: str = None,
+                               include_all_fields: bool = False) -> Any:
+        data = await self.get("/ocs/v2.php/apps/spreed/api/v4/room", api_key)
+        return self._filter_fields(data, "talk_room", include_all_fields)
+
+    async def talk_create_room(self, room_type: int, room_name: str,
+                                api_key: str = None) -> Any:
+        return await self.post("/ocs/v2.php/apps/spreed/api/v4/room",
+                              api_key, json={"roomType": room_type, "roomName": room_name})
+
+    async def talk_delete_room(self, token: str,
+                                api_key: str = None) -> Any:
+        result = await self.delete(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}", api_key)
+        return result if isinstance(result, dict) else {"success": True, "data": result}
+
     async def talk_delete_message(self, token: str, message_id: int,
-                                  api_key: str = None) -> Any:
+                                   api_key: str = None) -> Any:
         try:
             return await self.delete(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}/{message_id}", api_key)
         except Exception as e:
             return {"error": str(e)}
+
 
     # =========================================================================
     # Domain: Tables (OCS)

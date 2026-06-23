@@ -2268,6 +2268,46 @@ async def move_message(
 
 
 @mcp.tool()
+async def talk_list_rooms(
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List all Talk conversations available to the current user.
+    Each room has a `token` field used to identify it in send/get/delete message tools.
+    Args:
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().talk_list_rooms(get_user_token(), include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def talk_create_room(
+    room_type: int,
+    room_name: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a new Talk conversation room.
+    Args:
+        room_type: Room type. 1=one-to-one, 2=group, 3=public. (required).
+        room_name: Name for the room. (required).
+    """
+    return await get_client().talk_create_room(room_type, room_name, get_user_token())
+
+
+@mcp.tool()
+async def talk_delete_room(
+    token: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a Talk conversation room.
+    Args:
+        token: Room token to delete. (required).
+    """
+    return await get_client().talk_delete_room(token, get_user_token())
+
+
+@mcp.tool()
 async def send_chat_message(
     token: str,
     message: str,
