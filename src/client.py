@@ -75,6 +75,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "mail_message":     {"databaseId", "uid", "subject", "from", "to", "dateInt", "flags", "previewText"},
     "talk_message":     {"id", "actorDisplayName", "timestamp", "message", "messageType"},
     "talk_room":        {"token", "displayName", "type", "participantType", "name"},
+    "talk_participant": {"attendeeId", "displayName", "participantType", "actorType", "actorId"},
     "table":            {"id", "title", "emoji", "description"},
     "table_schema":     {"title", "emoji", "columns", "description"},
     "row":              None,
@@ -1766,6 +1767,33 @@ class NextcloudClient:
                                 api_key: str = None) -> Any:
         result = await self.delete(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}", api_key)
         return result if isinstance(result, dict) else {"success": True, "data": result}
+
+    async def talk_update_room(self, token: str, room_name: str,
+                                api_key: str = None) -> Any:
+        return await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}",
+                             api_key, json={"roomName": room_name})
+
+    async def talk_set_description(self, token: str, description: str,
+                                    api_key: str = None) -> Any:
+        return await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/description",
+                             api_key, json={"description": description})
+
+    async def talk_add_participant(self, token: str, new_participant: str,
+                                    source: str = "users", api_key: str = None) -> Any:
+        result = await self.post(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/participants",
+                                api_key, json={"newParticipant": new_participant, "source": source})
+        return result if isinstance(result, dict) else {"success": True, "data": result}
+
+    async def talk_remove_participant(self, token: str, attendee_id: int,
+                                       api_key: str = None) -> Any:
+        result = await self.delete(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/attendees",
+                                  api_key, params={"attendeeId": attendee_id})
+        return result if isinstance(result, dict) else {"success": True, "data": result}
+
+    async def talk_list_participants(self, token: str, api_key: str = None,
+                                      include_all_fields: bool = False) -> Any:
+        data = await self.get(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/participants", api_key)
+        return self._filter_fields(data, "talk_participant", include_all_fields)
 
     async def talk_delete_message(self, token: str, message_id: int,
                                    api_key: str = None) -> Any:

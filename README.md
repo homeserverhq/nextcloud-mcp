@@ -1,12 +1,12 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **174 MCP tools** covering 21 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **179 MCP tools** covering 21 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 174 tools mapped to Nextcloud API endpoints across 21 resource domains.
+- **📊 Full Nextcloud Coverage** — 179 tools mapped to Nextcloud API endpoints across 21 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
 - **🧪 Comprehensive Testing** — 260+ automated tests covering all tool domains, run via the test runner pipeline.
@@ -214,9 +214,14 @@ The server implements 174 MCP tools organized into the following categories:
 - `set_message_flags` — Set message flags
 - `move_message` — Move a message to another mailbox
 
-### 💬 Talk (6 tools)
+### 💬 Talk (11 tools)
 - `talk_list_rooms` — List all Talk conversations
 - `talk_create_room` — Create a new Talk conversation room
+- `talk_update_room` — Rename a Talk conversation room
+- `talk_set_description` — Set the description of a Talk conversation room
+- `talk_list_participants` — List participants in a Talk conversation room
+- `talk_add_participant` — Add a participant to a Talk conversation room
+- `talk_remove_participant` — Remove a participant from a Talk conversation room
 - `talk_delete_room` — Delete a Talk conversation room
 - `send_chat_message` — Send a chat message
 - `get_chat_messages` — Get chat messages from a room

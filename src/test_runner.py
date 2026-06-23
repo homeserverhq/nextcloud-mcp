@@ -1834,6 +1834,51 @@ def main():
         else:
             log("  Could not create Talk room")
 
+        # Rename room and set description
+        if token:
+            run_test(session, "5M rename_room", "talk_update_room",
+                    {"token": token, "room_name": f"t{rid}-renamed"})
+            run_test(session, "5M set_description", "talk_set_description",
+                    {"token": token, "description": "Test room description"})
+            # Add participant
+            second_user = None
+            users_result = session.call_tool("get_users")
+            users_data = extract_content(users_result)
+            all_users = get_list_items(users_data)
+            current_user = store.get("current_user", "")
+            if all_users:
+                for u in all_users:
+                    uid = u if isinstance(u, str) else (u.get("id") if isinstance(u, dict) else "")
+                    if uid and uid != current_user:
+                        second_user = uid
+                        break
+            if second_user:
+                log(f"  => Second user: {second_user}")
+                run_test(session, "5M add_participant", "talk_add_participant",
+                        {"token": token, "new_participant": second_user})
+                run_test(session, "5M list_participants", "talk_list_participants",
+                        {"token": token})
+                # Extract attendee_id of the second user
+                attendee_id = None
+                for r in reversed(results):
+                    if r["label"] == "5M list_participants" and r["status"] == "PASSED":
+                        pdata = r.get("data", {})
+                        plist = get_list_items(pdata)
+                        for p in plist:
+                            if isinstance(p, dict) and p.get("actorId") == second_user:
+                                attendee_id = p.get("attendeeId")
+                                break
+                        break
+                if attendee_id:
+                    run_test(session, "5M remove_participant", "talk_remove_participant",
+                            {"token": token, "attendee_id": attendee_id})
+                else:
+                    results.append({"label": "5M remove_participant", "tool": "talk_remove_participant",
+                                   "status": "FAILED", "reason": "Could not find attendee_id"})
+                    log("  FAIL 5M remove_participant: no attendee_id found")
+            else:
+                log("  No second user found, skipping participant tests")
+
         run_test(session, "5M send_chat_message", "send_chat_message",
                 {"token": token or "", "message": "Hello from MCP test"})
         run_test(session, "5M get_chat_messages", "get_chat_messages",

@@ -2308,6 +2308,79 @@ async def talk_delete_room(
 
 
 @mcp.tool()
+async def talk_update_room(
+    token: str,
+    room_name: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Rename a Talk conversation room.
+    Args:
+        token: Room token to rename. (required).
+        room_name: New name for the room (up to 255 characters). (required).
+    """
+    return await get_client().talk_update_room(token, room_name, get_user_token())
+
+
+@mcp.tool()
+async def talk_set_description(
+    token: str,
+    description: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Set the description of a Talk conversation room.
+    Args:
+        token: Room token. (required).
+        description: Description text. (required).
+    """
+    return await get_client().talk_set_description(token, description, get_user_token())
+
+
+@mcp.tool()
+async def talk_list_participants(
+    token: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List participants in a Talk conversation room.
+    Args:
+        token: Room token. (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    data = await get_client().talk_list_participants(token, get_user_token(), include_all_fields)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def talk_add_participant(
+    token: str,
+    new_participant: str,
+    source: str = "users",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Add a participant to a Talk conversation room.
+    Args:
+        token: Room token. (required).
+        new_participant: User, group, email, or circle to add. (required).
+        source: Source type. Defaults to 'users'. Options: users, groups, emails, circles.
+    """
+    return await get_client().talk_add_participant(token, new_participant, source, get_user_token())
+
+
+@mcp.tool()
+async def talk_remove_participant(
+    token: str,
+    attendee_id: int,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Remove a participant from a Talk conversation room by attendee ID.
+    Args:
+        token: Room token. (required).
+        attendee_id: Attendee ID to remove. Get this from talk_list_participants(token). (required).
+    """
+    return await get_client().talk_remove_participant(token, attendee_id, get_user_token())
+
+
+@mcp.tool()
 async def send_chat_message(
     token: str,
     message: str,
