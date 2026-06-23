@@ -43,7 +43,6 @@ docker build -t nextcloud-mcp:latest .
 docker run -d --name nextcloud-mcp \
     -e NEXTCLOUD_BASE_URL="http://nextcloud-web:80" \
     -e MCP_SERVER_PORT=80 \
-    -p 6080:80 \
     nextcloud-mcp:latest
 ```
 
