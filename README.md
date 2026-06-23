@@ -57,7 +57,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 174 MCP tools organized into the following categories:
+The server implements 179 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
