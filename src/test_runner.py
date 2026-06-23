@@ -507,11 +507,11 @@ RESOURCE_TESTS = [
         [], "table_id", ["title", "description"],
     ),
     (
-        "Board", "create_board",
+        "Board", "deck_create_board",
         {"title": make_name("Board"), "color": "FF0000", "archived": False},
-        "list_all_boards", "get_board",
-        "update_board", {"title": make_name("Board-upd"), "color": "00FF00"},
-        "delete_board",
+        "list_all_boards", "deck_get_board",
+        "deck_update_board", {"title": make_name("Board-upd"), "color": "00FF00"},
+        "deck_delete_board",
         [], "board_id", ["title", "color"],
     ),
     (
@@ -540,21 +540,21 @@ RESOURCE_TESTS = [
     ),
     # ---- Depends on Board ----
     (
-        "Stack", "create_stack",
+        "Stack", "deck_create_stack",
         lambda s, r: {"board_id": s["Board"]["id"], "title": make_name("Stack"), "order": 1},
-        "list_stacks", "get_stack",
-        "update_stack", {"title": make_name("Stack-upd")},
-        "delete_stack",
+        "deck_list_stacks", "deck_get_stack",
+        "deck_update_stack", {"title": make_name("Stack-upd")},
+        "deck_delete_stack",
         ["Board"], "stack_id", ["title"],
     ),
     # ---- Depends on Stack (and transitively Board) ----
     (
-        "Card", "create_card",
+        "Card", "deck_create_card",
         lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
                       "title": make_name("Card"), "description": "Test card", "order": 1},
-        "list_cards", "get_card",
-        "update_card", {"title": make_name("Card-upd"), "description": "Updated"},
-        "delete_card",
+        "deck_list_cards", "deck_get_card",
+        "deck_update_card", {"title": make_name("Card-upd"), "description": "Updated"},
+        "deck_delete_card",
         ["Board", "Stack"], "card_id", ["title", "description"],
     ),
     # ---- Depends on Calendar ----
@@ -633,8 +633,8 @@ LIST_MATCH: dict[str, dict[str, Any]] = {
     "Addressbook": {"list_tool": "list_all_addressbooks", "value_key": "display_name",
                     "list_match_field": "displayname"},
     "Collective": {"list_tool": "collectives_list", "value_key": "name", "list_match_field": "name"},
-    "Stack": {"list_tool": "list_stacks", "value_key": "title", "list_match_field": "title"},
-    "Card": {"list_tool": "list_cards", "value_key": "title", "list_match_field": "title"},
+    "Stack": {"list_tool": "deck_list_stacks", "value_key": "title", "list_match_field": "title"},
+    "Card": {"list_tool": "deck_list_cards", "value_key": "title", "list_match_field": "title"},
     "Event": {"list_tool": "get_events_by_calendar", "value_key": "summary", "list_match_field": "summary"},
     "Todo": {"list_tool": "get_todos_by_calendar", "value_key": "summary", "list_match_field": "summary"},
     "Contact": {"list_tool": "get_contacts_by_addressbook", "value_key": "fn", "list_match_field": "fn"},
@@ -651,10 +651,10 @@ LIST_MATCH: dict[str, dict[str, Any]] = {
 
 
 DOMAIN_TESTS_CREATE = [
-    ("CardArchive", "archive_card", lambda s, r: {
+    ("CardArchive", "deck_archive_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"], "card_id": s["Card"]["id"]
     }, ["Card"]),
-    ("CardUnarchive", "unarchive_card", lambda s, r: {
+    ("CardUnarchive", "deck_unarchive_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"], "card_id": s["Card"]["id"]
     }, ["Card"]),
     ("PageTrash", "collectives_trash_page",
@@ -694,9 +694,9 @@ DOMAIN_TESTS_READONLY = [
 
 # Domain tests that depend on resources created in Phase 3
 DOMAIN_TESTS_POST_CRUD = [
-    ("list_stacks", "list_stacks", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
-    ("list_cards", "list_cards", lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"]}, ["Stack"]),
-    ("list_labels", "list_labels", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
+    ("deck_list_stacks", "deck_list_stacks", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
+    ("deck_list_cards", "deck_list_cards", lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"]}, ["Stack"]),
+    ("deck_list_labels", "deck_list_labels", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
     ("get_events_by_calendar", "get_events_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
     ("get_contacts_by_addressbook", "get_contacts_by_addressbook", lambda s, r: {"addressbook_uri": s["Addressbook"]["addressbook_uri"]}, ["Addressbook"]),
     ("get_todos_by_calendar", "get_todos_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
@@ -753,23 +753,23 @@ def _check_readback(label: str, tool: str, result_data: Any,
 # =============================================================================
 
 DOMAIN_TESTS_DECK_LABEL_USER = [
-    ("assign_label", "assign_label", lambda s, r: {
+    ("deck_assign_label", "deck_assign_label", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "label_id": s["deck_first_label_id"]
     }, ["Card"]),
-    ("remove_label", "remove_label", lambda s, r: {
+    ("deck_remove_label", "deck_remove_label", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "label_id": s["deck_first_label_id"]
     }, ["Card"]),
-    ("assign_user", "assign_user", lambda s, r: {
+    ("deck_assign_user", "deck_assign_user", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "user_id": API_USER
     }, ["Card"]),
-    ("remove_user", "remove_user", lambda s, r: {
+    ("deck_remove_user", "deck_remove_user", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "user_id": API_USER
     }, ["Card"]),
-    ("update_card", "update_card", lambda s, r: {
+    ("deck_update_card", "deck_update_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
         "card_id": s["Card"]["id"], "title": "update test"
     }, ["Card"]),
@@ -1705,7 +1705,7 @@ def main():
                 log(f"  => Created label ID: {label_id}")
         except Exception as e:
             log(f"  Could not create deck label: {e}")
-        result = session.call_tool("list_labels", {"board_id": created.get("Board", 0)})
+        result = session.call_tool("deck_list_labels", {"board_id": created.get("Board", 0)})
         data = extract_content(result)
         labels = data.get("items", []) if isinstance(data, dict) else []
         if isinstance(data, list):

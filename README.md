@@ -183,27 +183,27 @@ The server implements 167 MCP tools organized into the following categories:
 
 ### 🎯 Deck (22 tools)
 - `list_all_boards` — List all boards
-- `get_board` — Get a board by ID
-- `create_board` — Create a new board
-- `update_board` — Update an existing board
-- `delete_board` — Delete a board by ID
-- `list_stacks` — List stacks in a board
-- `get_stack` — Get a stack by ID
-- `create_stack` — Create a new stack
-- `update_stack` — Update an existing stack
-- `delete_stack` — Delete a stack by ID
-- `list_cards` — List cards in a stack
-- `get_card` — Get a card by ID
-- `create_card` — Create a new card
-- `update_card` — Update an existing card
-- `delete_card` — Delete a card by ID
-- `archive_card` — Archive a card
-- `unarchive_card` — Unarchive a card
-- `list_labels` — List labels in a board
-- `assign_label` — Assign a label to a card
-- `remove_label` — Remove a label from a card
-- `assign_user` — Assign a user to a card
-- `remove_user` — Remove a user from a card
+- `deck_get_board` — Get a board by ID
+- `deck_create_board` — Create a new board
+- `deck_update_board` — Update an existing board
+- `deck_delete_board` — Delete a board by ID
+- `deck_list_stacks` — List stacks in a board
+- `deck_get_stack` — Get a stack by ID
+- `deck_create_stack` — Create a new stack
+- `deck_update_stack` — Update an existing stack
+- `deck_delete_stack` — Delete a stack by ID
+- `deck_list_cards` — List cards in a stack
+- `deck_get_card` — Get a card by ID
+- `deck_create_card` — Create a new card
+- `deck_update_card` — Update an existing card
+- `deck_delete_card` — Delete a card by ID
+- `deck_archive_card` — Archive a card
+- `deck_unarchive_card` — Unarchive a card
+- `deck_list_labels` — List labels in a board
+- `deck_assign_label` — Assign a label to a card
+- `deck_remove_label` — Remove a label from a card
+- `deck_assign_user` — Assign a user to a card
+- `deck_remove_user` — Remove a user from a card
 
 ### 📧 Mail (8 tools)
 - `list_all_accounts` — List all mail accounts

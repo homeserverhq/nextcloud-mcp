@@ -1755,21 +1755,21 @@ async def list_all_boards(
 
 
 @mcp.tool()
-async def get_board(
+async def deck_get_board(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single board by ID.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_board(board_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def create_board(
+async def deck_create_board(
     title: str,
     color: str = "",
     archived: bool = False,
@@ -1786,7 +1786,7 @@ async def create_board(
 
 
 @mcp.tool()
-async def update_board(
+async def deck_update_board(
     board_id: int,
     title: Optional[str] = None,
     color: Optional[str] = None,
@@ -1795,7 +1795,7 @@ async def update_board(
 ) -> dict[str, Any]:
     """Update a board.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
         title: New title.
         color: New display color in #RRGGBB format (e.g. #FF0000 for red).
         archived: Whether the board is archived.
@@ -1811,14 +1811,14 @@ async def update_board(
 
 
 @mcp.tool()
-async def list_stacks(
+async def deck_list_stacks(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """List stacks in a board.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_stacks(board_id, get_user_token(), include_all_fields)
@@ -1826,7 +1826,7 @@ async def list_stacks(
 
 
 @mcp.tool()
-async def create_stack(
+async def deck_create_stack(
     board_id: int,
     title: str,
     order: int = 0,
@@ -1834,7 +1834,7 @@ async def create_stack(
 ) -> dict[str, Any]:
     """Create a new stack in a board.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
         title: Stack title (required).
         order: Display order. Defaults to 0.
     """
@@ -1843,7 +1843,7 @@ async def create_stack(
 
 
 @mcp.tool()
-async def get_stack(
+async def deck_get_stack(
     board_id: int,
     stack_id: int,
     include_all_fields: bool = False,
@@ -1851,15 +1851,15 @@ async def get_stack(
 ) -> dict[str, Any]:
     """Get a single stack by ID.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def update_stack(
+async def deck_update_stack(
     board_id: int,
     stack_id: int,
     title: Optional[str] = None,
@@ -1868,8 +1868,8 @@ async def update_stack(
 ) -> dict[str, Any]:
     """Update a stack.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
         title: New title.
         order: New display order.
     """
@@ -1882,7 +1882,7 @@ async def update_stack(
 
 
 @mcp.tool()
-async def list_cards(
+async def deck_list_cards(
     board_id: int,
     stack_id: int,
     include_all_fields: bool = False,
@@ -1890,8 +1890,8 @@ async def list_cards(
 ) -> dict[str, Any]:
     """List cards in a stack.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_cards(board_id, stack_id, get_user_token(), include_all_fields)
@@ -1899,7 +1899,7 @@ async def list_cards(
 
 
 @mcp.tool()
-async def get_card(
+async def deck_get_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -1908,16 +1908,16 @@ async def get_card(
 ) -> dict[str, Any]:
     """Get a single card by ID.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().deck_get_card(board_id, stack_id, card_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def create_card(
+async def deck_create_card(
     board_id: int,
     stack_id: int,
     title: str,
@@ -1928,8 +1928,8 @@ async def create_card(
 ) -> dict[str, Any]:
     """Create a new card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
         title: Card title (required).
         description: Card description (required).
         duedate: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
@@ -1941,7 +1941,7 @@ async def create_card(
 
 
 @mcp.tool()
-async def update_card(
+async def deck_update_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -1953,9 +1953,9 @@ async def update_card(
 ) -> dict[str, Any]:
     """Update a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
         title: New title.
         description: New description.
         duedate: Use ISO 8601 format with explicit UTC offset (2026-06-22T15:00:00-04:00).
@@ -1967,19 +1967,19 @@ async def update_card(
 
 
 @mcp.tool()
-async def delete_board(
+async def deck_delete_board(
     board_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a board by ID.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
     """
     return await get_client().deck_delete_board(board_id, get_user_token())
 
 
 @mcp.tool()
-async def delete_stack(
+async def deck_delete_stack(
     board_id: int,
     stack_id: int,
     ctx: Context = None
@@ -1987,13 +1987,13 @@ async def delete_stack(
     """Delete a stack by ID.
     Args:
         board_id: Board ID the stack belongs to. (required).
-        stack_id: Stack ID to delete. Get this from list_stacks(board_id). (required).
+        stack_id: Stack ID to delete. Get this from deck_list_stacks(board_id). (required).
     """
     return await get_client().deck_delete_stack(board_id, stack_id, get_user_token())
 
 
 @mcp.tool()
-async def delete_card(
+async def deck_delete_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2001,15 +2001,15 @@ async def delete_card(
 ) -> dict[str, Any]:
     """Delete a card by ID.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID to delete. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID to delete. Get this from deck_list_cards(board_id, stack_id). (required).
     """
     return await get_client().deck_delete_card(board_id, stack_id, card_id, get_user_token())
 
 
 @mcp.tool()
-async def archive_card(
+async def deck_archive_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2017,15 +2017,15 @@ async def archive_card(
 ) -> dict[str, Any]:
     """Archive a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
     """
     return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token())
 
 
 @mcp.tool()
-async def unarchive_card(
+async def deck_unarchive_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2033,22 +2033,22 @@ async def unarchive_card(
 ) -> dict[str, Any]:
     """Unarchive a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
     """
     return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token())
 
 
 @mcp.tool()
-async def list_labels(
+async def deck_list_labels(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """List labels in a board.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     data = await get_client().deck_list_labels(board_id, get_user_token(), include_all_fields)
@@ -2056,7 +2056,7 @@ async def list_labels(
 
 
 @mcp.tool()
-async def assign_label(
+async def deck_assign_label(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2065,16 +2065,16 @@ async def assign_label(
 ) -> dict[str, Any]:
     """Assign a label to a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
-        label_id: Label ID. Get this from list_labels(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
+        label_id: Label ID. Get this from deck_list_labels(board_id). (required).
     """
     return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token())
 
 
 @mcp.tool()
-async def remove_label(
+async def deck_remove_label(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2083,16 +2083,16 @@ async def remove_label(
 ) -> dict[str, Any]:
     """Remove a label from a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
-        label_id: Label ID. Get this from list_labels(board_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
+        label_id: Label ID. Get this from deck_list_labels(board_id). (required).
     """
     return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token())
 
 
 @mcp.tool()
-async def assign_user(
+async def deck_assign_user(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2101,16 +2101,16 @@ async def assign_user(
 ) -> dict[str, Any]:
     """Assign a user to a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
         user_id: User ID to assign (required).
     """
     return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token())
 
 
 @mcp.tool()
-async def remove_user(
+async def deck_remove_user(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2119,9 +2119,9 @@ async def remove_user(
 ) -> dict[str, Any]:
     """Remove a user from a card.
     Args:
-        board_id: Board ID. Get this from list_boards(). (required).
-        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
-        card_id: Card ID. Get this from list_cards(board_id, stack_id). (required).
+        board_id: Board ID. Get this from deck_list_boards(). (required).
+        stack_id: Stack ID. Get this from deck_list_stacks(board_id). (required).
+        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id). (required).
         user_id: User ID to remove (required).
     """
     return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token())
