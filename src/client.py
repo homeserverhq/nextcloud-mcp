@@ -78,7 +78,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "table_schema":     {"title", "emoji", "columns", "description"},
     "row":              None,
     "collective":       {"id", "name", "emoji", "pageCount", "trashed"},
-    "collective_page":  {"id", "title", "emoji", "parentId", "order", "lastModified"},
+    "collective_page":  {"id", "title", "emoji", "parentId", "order", "lastModified", "webdav_location"},
     "collective_tag":   {"id", "name", "color"},
     "collection":       {"id", "name", "resources"},
     "search_result":    {"id", "title", "subline", "link", "icon"},
@@ -1893,14 +1893,31 @@ class NextcloudClient:
                                      include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages", api_key)
         items = data.get("pages", data) if isinstance(data, dict) else data
+        username = self.extract_username(api_key)
+        if isinstance(items, list):
+            for pg in items:
+                if isinstance(pg, dict):
+                    cp = pg.get("collectivePath", "")
+                    fp = pg.get("filePath", "")
+                    fn = pg.get("fileName", "")
+                    pg["webdav_location"] = f"/remote.php/dav/files/{username}/{cp}/{fp}/{fn}".rstrip("/")
         return self._filter_fields(items, "collective_page", include_all_fields)
 
     async def collectives_get_page(self, collective_id: int, page_id: int,
-                                   api_key: str = None, include_all_fields: bool = False) -> Any:
+                                    api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}", api_key)
         if isinstance(data, dict) and "page" in data:
-            return self._filter_fields(data["page"], "collective_page", include_all_fields)
-        return self._filter_fields(data, "collective_page", include_all_fields)
+            page_data = data["page"]
+        else:
+            page_data = data
+        username = self.extract_username(api_key)
+        cp = page_data.get("collectivePath", "") if isinstance(page_data, dict) else ""
+        fp = page_data.get("filePath", "") if isinstance(page_data, dict) else ""
+        fn = page_data.get("fileName", "") if isinstance(page_data, dict) else ""
+        webdav_path = f"/remote.php/dav/files/{username}/{cp}/{fp}/{fn}".rstrip("/")
+        if isinstance(page_data, dict):
+            page_data["webdav_location"] = webdav_path
+        return self._filter_fields(page_data, "collective_page", include_all_fields)
 
     async def collectives_create_page(self, collective_id: int, parent_id: int,
                                       payload: dict[str, Any], api_key: str = None) -> Any:
