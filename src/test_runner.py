@@ -509,7 +509,7 @@ RESOURCE_TESTS = [
     (
         "Board", "deck_create_board",
         {"title": make_name("Board"), "color": "FF0000", "archived": False},
-        "list_all_boards", "deck_get_board",
+        "deck_list", "deck_get_board",
         "deck_update_board", {"title": make_name("Board-upd"), "color": "00FF00"},
         "deck_delete_board",
         [], "board_id", ["title", "color"],
@@ -627,7 +627,7 @@ RESOURCE_TESTS = [
 LIST_MATCH: dict[str, dict[str, Any]] = {
     "Note": {"list_tool": "list_all_notes", "value_key": "title", "list_match_field": "title"},
     "Table": {"list_tool": "list_all_tables", "value_key": "title", "list_match_field": "title"},
-    "Board": {"list_tool": "list_all_boards", "value_key": "title", "list_match_field": "title"},
+    "Board": {"list_tool": "deck_list", "value_key": "title", "list_match_field": "title"},
     "Calendar": {"list_tool": "list_all_calendars", "value_key": "display_name",
                  "list_match_field": "displayname"},
     "Addressbook": {"list_tool": "list_all_addressbooks", "value_key": "display_name",
@@ -679,7 +679,7 @@ DOMAIN_TESTS_READONLY = [
     ("list_all_calendars", "list_all_calendars", {}),
     ("list_all_addressbooks", "list_all_addressbooks", {}),
     ("list_all_notes", "list_all_notes", {}),
-    ("list_all_boards", "list_all_boards", {}),
+    ("deck_list", "deck_list", {}),
     ("list_all_tables", "list_all_tables", {}),
     ("collectives_list", "collectives_list", {}),
     ("collectives_list_trashed", "collectives_list_trashed", {}),

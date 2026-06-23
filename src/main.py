@@ -1742,7 +1742,7 @@ async def get_attachment(
 
 
 @mcp.tool()
-async def list_all_boards(
+async def deck_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:

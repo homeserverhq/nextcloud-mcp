@@ -182,7 +182,7 @@ The server implements 167 MCP tools organized into the following categories:
 - `get_attachment` — Get a note attachment
 
 ### 🎯 Deck (22 tools)
-- `list_all_boards` — List all boards
+- `deck_list` — List all boards
 - `deck_get_board` — Get a board by ID
 - `deck_create_board` — Create a new board
 - `deck_update_board` — Update an existing board
