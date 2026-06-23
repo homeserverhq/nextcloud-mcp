@@ -9,8 +9,6 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 - **📊 Full Nextcloud Coverage** — 167 tools mapped to Nextcloud API endpoints across 23 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
-- **🔒 High Fidelity** — Every tool is mapped directly to a verified Nextcloud API endpoint.
-- **📝 Full Function Signatures** — Every `@mcp.tool()` exposes individual typed parameters with descriptive docstrings, not opaque Pydantic models.
 
 ## 🔧 Environment Variables
 
