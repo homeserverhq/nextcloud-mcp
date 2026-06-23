@@ -273,12 +273,23 @@ def run_verify_delete(
                     log(f"  FAIL {label}: {err}")
                     ok = False
             else:
-                results.append({
-                    "label": label, "tool": get_tool, "status": "FAILED",
-                    "reason": "Record still exists after delete"
-                })
-                log(f"  FAIL {label}: record still exists")
-                ok = False
+                data = extract_content(result)
+                if isinstance(data, dict) and (
+                    "deleted" in str(data.get("status", "")).lower() or
+                    "not found" in str(data.get("error", "")).lower()
+                ):
+                    results.append({
+                        "label": label, "tool": get_tool, "status": "PASSED",
+                        "data": {"verified": "deleted"}
+                    })
+                    log(f"  PASS {label} (confirmed deleted via response)")
+                else:
+                    results.append({
+                        "label": label, "tool": get_tool, "status": "FAILED",
+                        "reason": "Record still exists after delete"
+                    })
+                    log(f"  FAIL {label}: record still exists")
+                    ok = False
         except Exception as e:
             results.append({
                 "label": label, "tool": get_tool, "status": "FAILED",
@@ -379,6 +390,8 @@ def _build_list_params(label: str) -> dict[str, Any]:
         return {"calendar_uri": created.get("Calendar", "")}
     elif label == "Contact":
         return {"addressbook_uri": created.get("Addressbook", "")}
+    elif label == "Row":
+        return {"table_id": created.get("Table", 0)}
     return {}
 
 
@@ -497,14 +510,14 @@ RESOURCE_TESTS = [
         "Board", "create_board",
         {"title": make_name("Board"), "color": "FF0000", "archived": False},
         "list_boards", "get_board",
-        None, None,
+        "update_board", {"title": make_name("Board-upd"), "color": "00FF00"},
         "delete_board",
         [], "board_id", ["title", "color"],
     ),
     (
         "Calendar", "create_calendar",
         {"display_name": make_name("Cal"), "color": "#FF0000"},
-        "list_calendars", None,
+        "list_calendars", "get_calendar",
         "update_calendar", {"display_name": make_name("Cal-upd"), "color": "#00FF00"},
         "delete_calendar",
         [], "calendar_uri", [],
@@ -512,25 +525,25 @@ RESOURCE_TESTS = [
     (
         "Addressbook", "create_addressbook",
         {"display_name": make_name("Addr"), "description": "Test addressbook"},
-        "list_addressbooks", None,
-        None, None,
+        "list_addressbooks", "get_addressbook",
+        "update_addressbook", {"display_name": make_name("Addr-upd")},
         "delete_addressbook",
         [], "addressbook_uri", [],
     ),
     (
         "Collective", "collectives_create",
         {"name": make_name("Coll"), "emoji": "🌟"},
-        "collectives_list", None,  # no get_collective tool
-        None, None,
-        None,  # delete requires trash+delete sequence
+        "collectives_list", "collectives_get_collective",
+        "collectives_update_collective", {"emoji": "🌈"},
+        "collectives_trash",
         [], "id", ["name"],
     ),
     # ---- Depends on Board ----
     (
         "Stack", "create_stack",
         lambda s, r: {"board_id": s["Board"]["id"], "title": make_name("Stack"), "order": 1},
-        "list_stacks", None,  # no get_stack tool
-        None, None,
+        "list_stacks", "get_stack",
+        "update_stack", {"title": make_name("Stack-upd")},
         "delete_stack",
         ["Board"], "stack_id", ["title"],
     ),
@@ -540,7 +553,7 @@ RESOURCE_TESTS = [
         lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"],
                       "title": make_name("Card"), "description": "Test card", "order": 1},
         "list_cards", "get_card",
-        None, None,
+        "update_card", {"title": make_name("Card-upd"), "description": "Updated"},
         "delete_card",
         ["Board", "Stack"], "card_id", ["title", "description"],
     ),
@@ -560,7 +573,7 @@ RESOURCE_TESTS = [
         "Todo", "create_todo",
         lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"], "summary": make_name("Todo"),
                       "description": "Test todo", "due_date": DT, "priority": 1},
-        "get_todos_by_calendar", None,
+        "get_todos_by_calendar", "get_todo",
         "update_todo", {"summary": make_name("Todo-upd")},
         "delete_todo",
         ["Calendar"], "todo_uid", ["summary", "description"],
@@ -580,9 +593,9 @@ RESOURCE_TESTS = [
     (
         "Row", "create_row",
         lambda s, r: {"table_id": s["Table"]["id"], "data": '{"col1": "val1"}'},
-        None, None,
-        None, None,
-        None,
+        "list_rows", "get_row",
+        "update_row", {"data": '{"col1": "upd"}'},
+        "delete_row",
         ["Table"], "row_id", [],
     ),
     # ---- Depends on Collective ----
@@ -591,8 +604,8 @@ RESOURCE_TESTS = [
         lambda s, r: {"collective_id": s["Collective"]["id"],
                       "title": make_name("Page"), "parent_id": 0},
         "collectives_list_pages", "collectives_get_page",
-        None, None,
-        None,
+        "collectives_update_page", {"title": make_name("Page-upd")},
+        "collectives_delete_page",
         ["Collective"], "page_id", ["title"],
     ),
     # ---- Depends on Collective ----
@@ -600,7 +613,7 @@ RESOURCE_TESTS = [
         "Tag", "collectives_create_tag",
         lambda s, r: {"collective_id": s["Collective"]["id"],
                       "name": make_name("Tag"), "color": "FF0000"},
-        "collectives_list_tags", None,
+        "collectives_list_tags", "collectives_get_tag",
         "collectives_update_tag", {"name": make_name("Tag-upd"), "color": "00FF00"},
         "collectives_delete_tag",
         ["Collective"], "tag_id", ["name", "color"],
@@ -625,6 +638,7 @@ LIST_MATCH: dict[str, dict[str, Any]] = {
     "Event": {"list_tool": "get_events_by_calendar", "value_key": "summary", "list_match_field": "summary"},
     "Todo": {"list_tool": "get_todos_by_calendar", "value_key": "summary", "list_match_field": "summary"},
     "Contact": {"list_tool": "get_contacts_by_addressbook", "value_key": "fn", "list_match_field": "fn"},
+
     "Page": {"list_tool": "collectives_list_pages", "value_key": "title", "list_match_field": "title"},
     "Tag": {"list_tool": "collectives_list_tags", "value_key": "name", "list_match_field": "name"},
 }
@@ -643,7 +657,10 @@ DOMAIN_TESTS_CREATE = [
     ("CardUnarchive", "unarchive_card", lambda s, r: {
         "board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"], "card_id": s["Card"]["id"]
     }, ["Card"]),
-    ("PageTrashRestore", None, None, []),
+    ("PageTrash", "collectives_trash_page",
+     lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]}, ["Page", "Collective"]),
+    ("PageRestore", "collectives_restore_page",
+     lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]}, ["Page", "Collective"]),
 ]
 
 DOMAIN_TESTS_READONLY = [
@@ -705,7 +722,6 @@ DOMAIN_TESTS_MUTATE = [
     ("webdav_write_file", "webdav_write_file",
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir/testfile.txt", "content": "Hello World"}),
     ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}, ["Row"]),
-    ("delete_row", "delete_row", lambda s, r: {"row_id": s["Row"]["id"]}, ["Row"]),
 ]
 
 # =============================================================================
@@ -788,14 +804,6 @@ DOMAIN_TESTS_BACKEND_BROKEN = []
 
 
 DOMAIN_TESTS_CLEANUP = [
-    ("PageTrash", "collectives_trash_page",
-     lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]},
-     ["Page", "Collective"]),
-    ("PageDelete", "collectives_delete_page",
-     lambda s, r: {"collective_id": s["Collective"]["id"], "page_id": s["Page"]["id"]},
-     ["Page", "Collective"]),
-    ("CollectiveTrash", "collectives_trash",
-     lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
     ("CollectiveDelete", "collectives_delete",
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
     ("CircleDelete", "delete_circle",
@@ -1002,7 +1010,9 @@ def main():
             elif label == "Card":
                 get_params["board_id"] = created.get("Board", 0)
                 get_params["stack_id"] = created.get("Stack", 0)
-            elif label == "Page":
+            elif label == "Stack":
+                get_params["board_id"] = created.get("Board", 0)
+            elif label in ("Page", "Tag"):
                 get_params["collective_id"] = created.get("Collective", 0)
             ok = run_test(session, f"3B get_{label.lower()}",
                                 get_tool, get_params, prereqs)
@@ -1053,6 +1063,8 @@ def main():
             elif label == "Card":
                 params["board_id"] = created.get("Board", 0)
                 params["stack_id"] = created.get("Stack", 0)
+            elif label == "Stack":
+                params["board_id"] = created.get("Board", 0)
             elif label in ("Page", "Tag"):
                 params["collective_id"] = created.get("Collective", 0)
             run_test(session, f"3C update_{label.lower()}",
@@ -1363,31 +1375,61 @@ def main():
 
         # ---- Phase 5G: Collaboration Tests ----
         log("\n=== Phase 5G: Collaboration Tests ===")
-        run_test(session, "5G search_collections", "search_collections", {"search": "test"})
+        circle_id = store.get("circle_id", "")
+        csid = None
+        created_file_source = None
+        created_coll_id = None
+        if circle_id:
+            cs_params = {"path": rel_path, "share_type": 7,
+                         "share_with": circle_id, "permissions": 1}
+            run_test(session, "5G create_circle_share", "create_share", cs_params)
+            csid = None
+            for r in reversed(results):
+                if r["label"] == "5G create_circle_share" and r["status"] == "PASSED":
+                    csd = r.get("data", {})
+                    if isinstance(csd, dict):
+                        csid = csd.get("id")
+                    break
+        # Use list_all_shares to get file_source
         run_test(session, "5G list_all_shares", "list_all_shares", {})
         result = session.call_tool("list_all_shares")
         data = extract_content(result)
-        shares = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
-        coll_id = None
-        if shares:
-            share = shares[0] if isinstance(shares[0], dict) else {}
-            coll_id = share.get("collection_id") or share.get("collection") or share.get("uid")
-        if coll_id:
-            store["collection_id"] = str(coll_id)
-            log(f"  => Collection ID: {coll_id}")
-            run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": str(coll_id)})
+        shares = get_list_items(data)
+        for share in shares:
+            if isinstance(share, dict) and share.get("id") == csid:
+                created_file_source = share.get("file_source")
+                break
+        if created_file_source:
+            log(f"  => File source: {created_file_source}")
+            run_test(session, "5G create_collection", "create_collection",
+                    {"resource_type": "file", "resource_id": str(created_file_source), "name": "test-collection-5g"})
+            # Use search_collections_raw to get collection_id (avoids Toon format issues)
+            run_test(session, "5G search_collections", "search_collections", {"search": "test-collection-5g"})
+            result = session.call_tool("search_collections_raw", {"search": "test-collection-5g"})
+            data = extract_content(result)
+            colls = data.get("items", []) if isinstance(data, dict) else []
+            if colls:
+                last_coll = colls[-1] if isinstance(colls, list) else colls
+                if isinstance(last_coll, dict):
+                    created_coll_id = last_coll.get("id")
+        if created_coll_id:
+            store["collection_id"] = str(created_coll_id)
+            log(f"  => Collection ID: {created_coll_id}")
+            run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": str(created_coll_id)})
             run_test(session, "5G get_collections_by_resource", "get_collections_by_resource",
-                    {"resource_type": "files", "resource_id": str(coll_id)})
+                    {"resource_type": "file", "resource_id": str(created_file_source)})
         else:
             results.append({
                 "label": "5G get_collection_by_id", "tool": "get_collection_by_id",
-                "status": "FAILED", "reason": "No collections found from list_all_shares"
+                "status": "FAILED", "reason": "No collection found from search_collections"
             })
             results.append({
                 "label": "5G get_collections_by_resource", "tool": "get_collections_by_resource",
-                "status": "FAILED", "reason": "No collections found from list_all_shares"
+                "status": "FAILED", "reason": "No collection found from search_collections"
             })
-            log("  FAIL 5G: no collections found")
+            log("  FAIL 5G: no collection found")
+        if circle_id and csid:
+            run_test(session, "5G delete_circle_share", "delete_share", {"id": csid})
 
         # ---- Phase 5H: Reminder Tests ----
         log("\n=== Phase 5H: Reminder Tests ===")
@@ -1525,8 +1567,7 @@ def main():
             for mb in mailboxes:
                 if isinstance(mb, dict):
                     su = mb.get("specialUse", []) or []
-                    nm = mb.get("name", "")
-                    if "inbox" in su or nm == "INBOX":
+                    if "sent" in su:
                         mbox = mb
                         break
             if not mbox:
@@ -1548,7 +1589,7 @@ def main():
                             first = msg_items[0] if isinstance(msg_items[0], dict) else {}
                             msg_db_id = first.get("databaseId") or first.get("id")
                         break
-                # Fallback discovery (no test entries — just raw calls)
+                # Fallback: try all other mailboxes if nothing in Sent
                 if not msg_db_id:
                     for fallback_mb in mailboxes:
                         if isinstance(fallback_mb, dict) and fallback_mb.get("databaseId") != mbox_db_id:
@@ -1625,14 +1666,16 @@ def main():
                 {"token": token or "", "message": "Hello from MCP test"})
         run_test(session, "5M get_chat_messages", "get_chat_messages",
                 {"token": token or "", "limit": 5})
-        # Try to find message_id for delete
-        result = session.call_tool("get_chat_messages", {"token": token or "", "limit": 1})
+        # Try to find message_id for delete (skip system messages)
+        result = session.call_tool("get_chat_messages", {"token": token or "", "limit": 5})
         msg_data = extract_content(result)
-        msgs = msg_data.get("items", []) if isinstance(msg_data, dict) else (msg_data if isinstance(msg_data, list) else [])
+        msgs = get_list_items(msg_data)
         msg_id = None
         if msgs:
-            first_msg = msgs[0] if isinstance(msgs[0], dict) else {}
-            msg_id = first_msg.get("id")
+            for m in msgs:
+                if isinstance(m, dict) and m.get("messageType") != "system":
+                    msg_id = m.get("id")
+                    break
         if msg_id:
             run_test(session, "5M delete_chat_message", "delete_chat_message",
                     {"token": token, "message_id": msg_id})
@@ -1884,6 +1927,10 @@ def main():
             elif label == "Card":
                 get_params["board_id"] = created.get("Board", 0)
                 get_params["stack_id"] = created.get("Stack", 0)
+            elif label == "Stack":
+                get_params["board_id"] = created.get("Board", 0)
+            elif label in ("Page", "Tag"):
+                get_params["collective_id"] = created.get("Collective", 0)
             # Build list verification params
             l_params = _build_list_params(label)
             l_tool = list_tool

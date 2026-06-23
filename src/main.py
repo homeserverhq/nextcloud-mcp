@@ -657,6 +657,19 @@ async def search_collections(
 
 
 @mcp.tool()
+async def search_collections_raw(
+    search: str = "",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Search collections (returns raw JSON). Use this for data extraction.
+    Args:
+        search: Search term.
+    """
+    data = await get_client().search_collections(search, get_user_token())
+    return {"items": data}
+
+
+@mcp.tool()
 async def get_collections_by_resource(
     resource_type: str,
     resource_id: str,
@@ -671,6 +684,22 @@ async def get_collections_by_resource(
     """
     data = await get_client().get_collections_by_resource(resource_type, resource_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def create_collection(
+    resource_type: str = "file",
+    resource_id: str = "",
+    name: str = "",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a collection on a resource.
+    Args:
+        resource_type: Type of resource (default: "file") (required).
+        resource_id: ID of resource (required).
+        name: Collection name (required).
+    """
+    return await get_client().create_collection_on_resource(resource_type, resource_id, name, get_user_token())
 
 
 @mcp.tool()
@@ -1051,6 +1080,20 @@ async def delete_calendar(
 
 
 @mcp.tool()
+async def get_calendar(
+    calendar_uri: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single calendar by URI.
+    Args:
+        calendar_uri: URI of the calendar. Get this from list_calendars(). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().get_calendar(calendar_uri, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
 async def list_all_events(
     from_date: str = "",
     to_date: str = "",
@@ -1289,6 +1332,22 @@ async def create_todo(
 
 
 @mcp.tool()
+async def get_todo(
+    todo_uid: str,
+    calendar_uri: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single TODO item by UID.
+    Args:
+        todo_uid: UID of the todo. Get this from get_todos_by_calendar(calendar_uri). (required).
+        calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().get_todo(todo_uid, calendar_uri, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
 async def update_todo(
     todo_uid: str,
     calendar_uri: str,
@@ -1384,6 +1443,37 @@ async def delete_addressbook(
         addressbook_uri: URI of the address book to delete. Get this from list_addressbooks(). (required).
     """
     return await get_client().delete_addressbook(addressbook_uri, get_user_token())
+
+
+@mcp.tool()
+async def get_addressbook(
+    addressbook_uri: str,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single address book by URI.
+    Args:
+        addressbook_uri: URI of the address book. Get this from list_addressbooks(). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().get_addressbook(addressbook_uri, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
+async def update_addressbook(
+    addressbook_uri: str,
+    display_name: str,
+    description: Optional[str] = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update an address book's properties.
+    Args:
+        addressbook_uri: URI of the address book to update. Get this from list_addressbooks(). (required).
+        display_name: New display name (required).
+        description: New description.
+    """
+    result = await get_client().update_addressbook(addressbook_uri, display_name, description, get_user_token())
+    return {"status": "updated", "result": result}
 
 
 @mcp.tool()
@@ -1694,6 +1784,31 @@ async def create_board(
 
 
 @mcp.tool()
+async def update_board(
+    board_id: int,
+    title: Optional[str] = None,
+    color: Optional[str] = None,
+    archived: Optional[bool] = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update a board.
+    Args:
+        board_id: Board ID. Get this from list_boards(). (required).
+        title: New title.
+        color: New display color in #RRGGBB format (e.g. #FF0000 for red).
+        archived: Whether the board is archived.
+    """
+    payload = {}
+    if title is not None:
+        payload["title"] = title
+    if color is not None:
+        payload["color"] = color
+    if archived is not None:
+        payload["archived"] = archived
+    return await get_client().deck_update_board(board_id, payload, get_user_token())
+
+
+@mcp.tool()
 async def list_stacks(
     board_id: int,
     include_all_fields: bool = False,
@@ -1723,6 +1838,45 @@ async def create_stack(
     """
     params = CreateStackParam(board_id=board_id, title=title, order=order)
     return await get_client().deck_create_stack(board_id, params.model_dump(exclude_unset=True), get_user_token())
+
+
+@mcp.tool()
+async def get_stack(
+    board_id: int,
+    stack_id: int,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single stack by ID.
+    Args:
+        board_id: Board ID. Get this from list_boards(). (required).
+        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
+async def update_stack(
+    board_id: int,
+    stack_id: int,
+    title: Optional[str] = None,
+    order: Optional[int] = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update a stack.
+    Args:
+        board_id: Board ID. Get this from list_boards(). (required).
+        stack_id: Stack ID. Get this from list_stacks(board_id). (required).
+        title: New title.
+        order: New display order.
+    """
+    payload = {}
+    if title is not None:
+        payload["title"] = title
+    if order is not None:
+        payload["order"] = order
+    return await get_client().deck_update_stack(board_id, stack_id, payload, get_user_token())
 
 
 @mcp.tool()
@@ -2281,6 +2435,20 @@ async def create_row(
 
 
 @mcp.tool()
+async def get_row(
+    row_id: int,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single row from a table.
+    Args:
+        row_id: Row ID. Get this from list_rows(table_id). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
 async def update_row(
     row_id: int,
     data: Optional[str] = None,
@@ -2332,6 +2500,41 @@ async def collectives_create(
     """
     params = CreateCollectiveParam(name=name, emoji=emoji)
     return await get_client().collectives_create(params.model_dump(exclude_unset=True), get_user_token())
+
+
+@mcp.tool()
+async def collectives_get_collective(
+    id: int,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single collective by ID.
+    Args:
+        id: Collective ID. Get this from collectives_list(). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().collectives_get_collective(id, get_user_token(), include_all_fields)
+
+
+@mcp.tool()
+async def collectives_update_collective(
+    id: int,
+    name: Optional[str] = None,
+    emoji: Optional[str] = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update a collective's properties.
+    Args:
+        id: Collective ID. Get this from collectives_list(). (required).
+        name: New name.
+        emoji: New emoji.
+    """
+    payload = {}
+    if name is not None:
+        payload["name"] = name
+    if emoji is not None:
+        payload["emoji"] = emoji
+    return await get_client().collectives_update_collective(id, payload, get_user_token())
 
 
 @mcp.tool()
@@ -2543,6 +2746,37 @@ async def collectives_set_page_full_width(
 
 
 @mcp.tool()
+async def collectives_update_page(
+    collective_id: int,
+    page_id: int,
+    title: Optional[str] = None,
+    emoji: Optional[str] = None,
+    is_full_width: Optional[bool] = None,
+    parent_id: Optional[int] = None,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Update a page's properties.
+    Args:
+        collective_id: Collective ID. Get this from collectives_list(). (required).
+        page_id: Page ID. Get this from collectives_list_pages(collective_id). (required).
+        title: New title.
+        emoji: New emoji.
+        is_full_width: Whether page should display full-width.
+        parent_id: New parent page ID for moving.
+    """
+    payload = {}
+    if title is not None:
+        payload["title"] = title
+    if emoji is not None:
+        payload["emoji"] = emoji
+    if is_full_width is not None:
+        payload["fullWidth"] = is_full_width
+    if parent_id is not None:
+        payload["parentId"] = parent_id
+    return await get_client().collectives_update_page(collective_id, page_id, payload, get_user_token())
+
+
+@mcp.tool()
 async def collectives_search_pages(
     collective_id: int,
     query: str,
@@ -2574,6 +2808,22 @@ async def collectives_list_tags(
     """
     data = await get_client().collectives_list_tags(collective_id, get_user_token(), include_all_fields)
     return {"items": json_to_toon(data)}
+
+
+@mcp.tool()
+async def collectives_get_tag(
+    collective_id: int,
+    tag_id: int,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Get a single tag by ID.
+    Args:
+        collective_id: Collective ID. Get this from collectives_list(). (required).
+        tag_id: Tag ID. Get this from collectives_list_tags(collective_id). (required).
+        include_all_fields: Set to True to retrieve all available fields.
+    """
+    return await get_client().collectives_get_tag(collective_id, tag_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
