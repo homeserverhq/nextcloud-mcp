@@ -1274,7 +1274,7 @@ async def find_availability(
 
 
 @mcp.tool()
-async def list_all_todos(
+async def todo_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1296,7 +1296,7 @@ async def list_all_todos(
 
 
 @mcp.tool()
-async def get_todos_by_calendar(
+async def todo_get_by_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1311,7 +1311,7 @@ async def get_todos_by_calendar(
 
 
 @mcp.tool()
-async def create_todo(
+async def todo_create(
     summary: str,
     description: str,
     due_date: str,
@@ -1334,7 +1334,7 @@ async def create_todo(
 
 
 @mcp.tool()
-async def get_todo(
+async def todo_get(
     todo_uid: str,
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1342,7 +1342,7 @@ async def get_todo(
 ) -> dict[str, Any]:
     """Get a single TODO item by UID.
     Args:
-        todo_uid: UID of the todo. Get this from get_todos_by_calendar(calendar_uri). (required).
+        todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
@@ -1350,7 +1350,7 @@ async def get_todo(
 
 
 @mcp.tool()
-async def update_todo(
+async def todo_update(
     todo_uid: str,
     calendar_uri: str,
     summary: Optional[str] = None,
@@ -1362,7 +1362,7 @@ async def update_todo(
 ) -> dict[str, Any]:
     """Update a TODO item.
     Args:
-        todo_uid: UID of the todo. Get this from get_todos_by_calendar(calendar_uri). (required).
+        todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
         summary: New title.
         description: New description.
@@ -1375,21 +1375,21 @@ async def update_todo(
 
 
 @mcp.tool()
-async def delete_todo(
+async def todo_delete(
     todo_uid: str,
     calendar_uri: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a TODO item.
     Args:
-        todo_uid: UID of the todo to delete. Get this from get_todos_by_calendar(calendar_uri). (required).
+        todo_uid: UID of the todo to delete. Get this from todo_get_by_calendar(calendar_uri). (required).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars(). (required).
     """
     return await get_client().delete_todo(todo_uid, calendar_uri, get_user_token())
 
 
 @mcp.tool()
-async def search_todos(
+async def todo_search(
     query: str,
     calendar_uri: str = "",
     limit: int = 50,
@@ -1598,7 +1598,7 @@ async def delete_contact(
 
 
 @mcp.tool()
-async def list_all_notes(
+async def note_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1611,7 +1611,7 @@ async def list_all_notes(
 
 
 @mcp.tool()
-async def get_notes_by_category(
+async def note_get_by_category(
     category: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1626,21 +1626,21 @@ async def get_notes_by_category(
 
 
 @mcp.tool()
-async def get_note(
+async def note_get(
     id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single note by ID.
     Args:
-        id: Note ID. Get this from list_all_notes(). (required).
+        id: Note ID. Get this from note_list(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().get_note(id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def create_note(
+async def note_create(
     title: str,
     content: str,
     category: str = "",
@@ -1657,7 +1657,7 @@ async def create_note(
 
 
 @mcp.tool()
-async def update_note(
+async def note_update(
     id: int,
     title: Optional[str] = None,
     content: Optional[str] = None,
@@ -1667,7 +1667,7 @@ async def update_note(
 ) -> dict[str, Any]:
     """Update a note.
     Args:
-        id: Note ID. Get this from list_all_notes(). (required).
+        id: Note ID. Get this from note_list(). (required).
         title: New title.
         content: New content.
         category: New category.
@@ -1678,27 +1678,27 @@ async def update_note(
 
 
 @mcp.tool()
-async def delete_note(
+async def note_delete(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a note by ID.
     Args:
-        id: Note ID to delete. Get this from list_all_notes(). (required).
+        id: Note ID to delete. Get this from note_list(). (required).
     """
     await get_client().delete_note(id, get_user_token())
     return {"status": "deleted", "id": id}
 
 
 @mcp.tool()
-async def append_content(
+async def note_append_content(
     id: int,
     content: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Append content to an existing note.
     Args:
-        id: Note ID. Get this from list_all_notes(). (required).
+        id: Note ID. Get this from note_list(). (required).
         content: Content to append (required).
     """
     existing = await get_client().get_note(id, get_user_token())
@@ -1707,7 +1707,7 @@ async def append_content(
 
 
 @mcp.tool()
-async def search_notes(
+async def note_search(
     query: str,
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1728,7 +1728,7 @@ async def search_notes(
 
 
 @mcp.tool()
-async def get_attachment(
+async def note_get_attachment(
     note_id: int,
     path: str,
     ctx: Context = None
@@ -2315,7 +2315,7 @@ async def delete_chat_message(
 
 
 @mcp.tool()
-async def list_all_tables(
+async def table_list(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2328,21 +2328,21 @@ async def list_all_tables(
 
 
 @mcp.tool()
-async def get_table(
+async def table_get(
     table_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single table by ID.
     Args:
-        table_id: Table ID. Get this from list_tables(). (required).
+        table_id: Table ID. Get this from table_list(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_table(table_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def create_table(
+async def table_create(
     title: str,
     description: str,
     emoji: str = "",
@@ -2359,7 +2359,7 @@ async def create_table(
 
 
 @mcp.tool()
-async def update_table(
+async def table_update(
     table_id: int,
     title: Optional[str] = None,
     description: Optional[str] = None,
@@ -2368,7 +2368,7 @@ async def update_table(
 ) -> dict[str, Any]:
     """Update a table.
     Args:
-        table_id: Table ID. Get this from list_tables(). (required).
+        table_id: Table ID. Get this from table_list(). (required).
         title: New title.
         description: New description.
         emoji: New emoji.
@@ -2378,33 +2378,33 @@ async def update_table(
 
 
 @mcp.tool()
-async def delete_table(
+async def table_delete(
     table_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a table by ID.
     Args:
-        table_id: Table ID to delete. Get this from list_tables(). (required).
+        table_id: Table ID to delete. Get this from table_list(). (required).
     """
     return await get_client().tables_delete_table(table_id, get_user_token())
 
 
 @mcp.tool()
-async def get_schema(
+async def table_get_schema(
     table_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the schema of a table.
     Args:
-        table_id: Table ID. Get this from list_tables(). (required).
+        table_id: Table ID. Get this from table_list(). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def list_rows(
+async def table_list_rows(
     table_id: int,
     limit: int = 50,
     offset: int = 0,
@@ -2413,7 +2413,7 @@ async def list_rows(
 ) -> dict[str, Any]:
     """List rows in a table.
     Args:
-        table_id: Table ID. Get this from list_tables(). (required).
+        table_id: Table ID. Get this from table_list(). (required).
         limit: Maximum results. Defaults to 50.
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Set to True to retrieve all available fields.
@@ -2423,55 +2423,55 @@ async def list_rows(
 
 
 @mcp.tool()
-async def create_row(
+async def table_create_row(
     table_id: int,
     data: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Insert a new row in a table.
     Args:
-        table_id: Table ID. Get this from list_tables(). (required).
+        table_id: Table ID. Get this from table_list(). (required).
         data: JSON string of column data (required).
     """
     return await get_client().tables_create_row(table_id, data, get_user_token())
 
 
 @mcp.tool()
-async def get_row(
+async def table_get_row(
     row_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single row from a table.
     Args:
-        row_id: Row ID. Get this from list_rows(table_id). (required).
+        row_id: Row ID. Get this from table_list_rows(table_id). (required).
         include_all_fields: Set to True to retrieve all available fields.
     """
     return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
 
 
 @mcp.tool()
-async def update_row(
+async def table_update_row(
     row_id: int,
     data: Optional[str] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update an existing row in a table.
     Args:
-        row_id: Row ID. Get this from list_rows(table_id). (required).
+        row_id: Row ID. Get this from table_list_rows(table_id). (required).
         data: JSON string of updated column data.
     """
     return await get_client().tables_update_row(row_id, data, get_user_token())
 
 
 @mcp.tool()
-async def delete_row(
+async def table_delete_row(
     row_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a row from a table.
     Args:
-        row_id: Row ID to delete. Get this from list_rows(table_id). (required).
+        row_id: Row ID to delete. Get this from table_list_rows(table_id). (required).
     """
     return await get_client().tables_delete_row(row_id, get_user_token())
 

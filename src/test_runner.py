@@ -491,19 +491,19 @@ DT = "2026-12-31T23:59:00+00:00"
 RESOURCE_TESTS = [
     # ---- Independent resources (no prereqs) ----
     (
-        "Note", "create_note",
+        "Note", "note_create",
         {"title": make_name("Note"), "content": "Hello world", "category": "test"},
-        "list_all_notes", "get_note",
-        "update_note", {"title": make_name("Note-upd"), "content": "Updated"},
-        "delete_note",
+        "note_list", "note_get",
+        "note_update", {"title": make_name("Note-upd"), "content": "Updated"},
+        "note_delete",
         [], "id", ["title", "content", "category"],
     ),
     (
-        "Table", "create_table",
+        "Table", "table_create",
         {"title": make_name("Table"), "description": "Test table", "emoji": "📋"},
-        "list_all_tables", "get_table",
-        "update_table", {"title": make_name("Table-upd")},
-        "delete_table",
+        "table_list", "table_get",
+        "table_update", {"title": make_name("Table-upd")},
+        "table_delete",
         [], "table_id", ["title", "description"],
     ),
     (
@@ -570,12 +570,12 @@ RESOURCE_TESTS = [
     ),
     # ---- Depends on Calendar ----
     (
-        "Todo", "create_todo",
+        "Todo", "todo_create",
         lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"], "summary": make_name("Todo"),
                       "description": "Test todo", "due_date": DT, "priority": 1},
-        "get_todos_by_calendar", "get_todo",
-        "update_todo", {"summary": make_name("Todo-upd")},
-        "delete_todo",
+        "todo_get_by_calendar", "todo_get",
+        "todo_update", {"summary": make_name("Todo-upd")},
+        "todo_delete",
         ["Calendar"], "todo_uid", ["summary", "description"],
     ),
     # ---- Depends on Addressbook ----
@@ -591,11 +591,11 @@ RESOURCE_TESTS = [
     ),
     # ---- Depends on Table ----
     (
-        "Row", "create_row",
+        "Row", "table_create_row",
         lambda s, r: {"table_id": s["Table"]["id"], "data": '{"col1": "val1"}'},
-        "list_rows", "get_row",
-        "update_row", {"data": '{"col1": "upd"}'},
-        "delete_row",
+        "table_list_rows", "table_get_row",
+        "table_update_row", {"data": '{"col1": "upd"}'},
+        "table_delete_row",
         ["Table"], "row_id", [],
     ),
     # ---- Depends on Collective ----
@@ -625,8 +625,8 @@ RESOURCE_TESTS = [
 # list_match_field: field in list item response to match against
 # uri_prefix: if set, extract short-form URI from list item's href by stripping this prefix
 LIST_MATCH: dict[str, dict[str, Any]] = {
-    "Note": {"list_tool": "list_all_notes", "value_key": "title", "list_match_field": "title"},
-    "Table": {"list_tool": "list_all_tables", "value_key": "title", "list_match_field": "title"},
+    "Note": {"list_tool": "note_list", "value_key": "title", "list_match_field": "title"},
+    "Table": {"list_tool": "table_list", "value_key": "title", "list_match_field": "title"},
     "Board": {"list_tool": "deck_list", "value_key": "title", "list_match_field": "title"},
     "Calendar": {"list_tool": "list_all_calendars", "value_key": "display_name",
                  "list_match_field": "displayname"},
@@ -636,7 +636,7 @@ LIST_MATCH: dict[str, dict[str, Any]] = {
     "Stack": {"list_tool": "deck_list_stacks", "value_key": "title", "list_match_field": "title"},
     "Card": {"list_tool": "deck_list_cards", "value_key": "title", "list_match_field": "title"},
     "Event": {"list_tool": "get_events_by_calendar", "value_key": "summary", "list_match_field": "summary"},
-    "Todo": {"list_tool": "get_todos_by_calendar", "value_key": "summary", "list_match_field": "summary"},
+    "Todo": {"list_tool": "todo_get_by_calendar", "value_key": "summary", "list_match_field": "summary"},
     "Contact": {"list_tool": "get_contacts_by_addressbook", "value_key": "fn", "list_match_field": "fn"},
 
     "Page": {"list_tool": "collectives_list_pages", "value_key": "title", "list_match_field": "title"},
@@ -678,9 +678,9 @@ DOMAIN_TESTS_READONLY = [
     ("get_activity_filters", "get_activity_filters", {}),
     ("list_all_calendars", "list_all_calendars", {}),
     ("list_all_addressbooks", "list_all_addressbooks", {}),
-    ("list_all_notes", "list_all_notes", {}),
+    ("note_list", "note_list", {}),
     ("deck_list", "deck_list", {}),
-    ("list_all_tables", "list_all_tables", {}),
+    ("table_list", "table_list", {}),
     ("collectives_list", "collectives_list", {}),
     ("collectives_list_trashed", "collectives_list_trashed", {}),
     ("webdav_list_favorites", "webdav_list_favorites", {"limit": 5}),
@@ -699,21 +699,21 @@ DOMAIN_TESTS_POST_CRUD = [
     ("deck_list_labels", "deck_list_labels", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
     ("get_events_by_calendar", "get_events_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
     ("get_contacts_by_addressbook", "get_contacts_by_addressbook", lambda s, r: {"addressbook_uri": s["Addressbook"]["addressbook_uri"]}, ["Addressbook"]),
-    ("get_todos_by_calendar", "get_todos_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
-    ("get_notes_by_category", "get_notes_by_category", lambda s, r: {"category": "test"}, ["Note"]),
+    ("todo_get_by_calendar", "todo_get_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
+    ("note_get_by_category", "note_get_by_category", lambda s, r: {"category": "test"}, ["Note"]),
     ("collectives_list_pages", "collectives_list_pages", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
     ("collectives_list_tags", "collectives_list_tags", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
-    ("get_schema", "get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("list_rows", "list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("table_get_schema", "table_get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("table_list_rows", "table_list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
 ]
 
 DOMAIN_TESTS_MUTATE = [
     ("set_status", "set_status", {"status_type": "online"}),
     ("clear_message", "clear_message", {}),
-    ("append_content", "append_content", lambda s, r: {
+    ("note_append_content", "note_append_content", lambda s, r: {
         "id": s["Note"]["id"], "content": "Appended line"
     }, ["Note"]),
-    ("search_notes", "search_notes", {"query": "Hello"}),
+    ("note_search", "note_search", {"query": "Hello"}),
     ("search", "search", lambda s, r: {"provider_id": s.get("discovered_provider_id", "files"), "term": "test"}),
     ("webdav_search_files", "webdav_search_files", {"query": "test"}),
     # WebDAV basic operations (move/copy/delete handled inline with verification)
@@ -721,7 +721,7 @@ DOMAIN_TESTS_MUTATE = [
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir"}),
     ("webdav_write_file", "webdav_write_file",
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir/testfile.txt", "content": "Hello World"}),
-    ("update_row", "update_row", lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}, ["Row"]),
+    ("table_update_row", "table_update_row", lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}, ["Row"]),
 ]
 
 # =============================================================================
@@ -1249,18 +1249,18 @@ def main():
         log("\n=== Phase 5D: Read-back Verification ===")
         # Verify append_content via get_note
         get_params = {"id": created.get("Note", 0)}
-        result = session.call_tool("get_note", get_params)
+        result = session.call_tool("note_get", get_params)
         data = extract_content(result)
         note_content = data.get("content", "") if isinstance(data, dict) else ""
         if "Appended line" in note_content:
             results.append({
-                "label": "5D verify_append_content", "tool": "get_note",
+                "label": "5D verify_append_content", "tool": "note_get",
                 "status": "PASSED", "data": data
             })
             log(f"  PASS 5D verify_append_content")
         else:
             results.append({
-                "label": "5D verify_append_content", "tool": "get_note",
+                "label": "5D verify_append_content", "tool": "note_get",
                 "status": "FAILED", "reason": f"Content missing appended text: {note_content!r}"
             })
             log(f"  FAIL 5D verify_append_content")
@@ -1812,7 +1812,7 @@ def main():
                  "attendees": "test@example.com",
                  "description": "Test meeting",
                  "calendar_uri": cal_uri})
-        run_test(session, "5R search_todos", "search_todos",
+        run_test(session, "5R search_todos", "todo_search",
                 {"query": make_name("Todo"), "calendar_uri": cal_uri})
         run_test(session, "5R get_activity_filter", "get_activity_filter",
                 {"filter_name": store.get("discovered_filter_name", "all"), "limit": 5})
@@ -1820,8 +1820,8 @@ def main():
         run_test(session, "5R list_all_events", "list_all_events", {})
         run_test(session, "5R get_events_by_calendar", "get_events_by_calendar",
                 {"calendar_uri": cal_uri})
-        run_test(session, "5R list_all_todos", "list_all_todos", {})
-        run_test(session, "5R get_todos_by_calendar", "get_todos_by_calendar",
+        run_test(session, "5R list_all_todos", "todo_list", {})
+        run_test(session, "5R get_todos_by_calendar", "todo_get_by_calendar",
                 {"calendar_uri": cal_uri})
         attach_filename = f"t{rid}-attach.txt"
         attach_webdav_path = f"/remote.php/dav/files/{API_USER}/Notes/test/{attach_filename}"
@@ -1831,7 +1831,7 @@ def main():
                      headers=attach_headers, content=b"test attachment content", timeout=15.0)
         except Exception:
             pass
-        run_test(session, "5R get_attachment", "get_attachment",
+        run_test(session, "5R get_attachment", "note_get_attachment",
                 {"note_id": created.get("Note", 0), "path": attach_filename})
         try:
             httpx.delete(f"http://localhost:8060{attach_webdav_path}",

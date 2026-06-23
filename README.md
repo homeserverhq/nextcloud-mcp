@@ -149,13 +149,13 @@ The server implements 167 MCP tools organized into the following categories:
 - `find_availability` — Find available time slots
 
 ### ✅ Todos (7 tools)
-- `list_all_todos` — List all todos across calendars
-- `get_todos_by_calendar` — List todos in a calendar
-- `get_todo` — Get a todo by UID
-- `create_todo` — Create a new todo
-- `update_todo` — Update an existing todo
-- `delete_todo` — Delete a todo by UID
-- `search_todos` — Search across todos
+- `todo_list` — List all todos across calendars
+- `todo_get_by_calendar` — List todos in a calendar
+- `todo_get` — Get a todo by UID
+- `todo_create` — Create a new todo
+- `todo_update` — Update an existing todo
+- `todo_delete` — Delete a todo by UID
+- `todo_search` — Search across todos
 
 ### 👤 Contacts (11 tools)
 - `list_all_addressbooks` — List all address books
@@ -171,15 +171,15 @@ The server implements 167 MCP tools organized into the following categories:
 - `delete_contact` — Delete a contact by UID
 
 ### 📝 Notes (9 tools)
-- `list_all_notes` — List all notes
-- `get_notes_by_category` — List notes by category
-- `get_note` — Get a note by ID
-- `create_note` — Create a new note
-- `update_note` — Update an existing note
-- `delete_note` — Delete a note by ID
-- `append_content` — Append content to a note
-- `search_notes` — Search notes by content
-- `get_attachment` — Get a note attachment
+- `note_list` — List all notes
+- `note_get_by_category` — List notes by category
+- `note_get` — Get a note by ID
+- `note_create` — Create a new note
+- `note_update` — Update an existing note
+- `note_delete` — Delete a note by ID
+- `note_append_content` — Append content to a note
+- `note_search` — Search notes by content
+- `note_get_attachment` — Get a note attachment
 
 ### 🎯 Deck (22 tools)
 - `deck_list` — List all boards
@@ -221,17 +221,17 @@ The server implements 167 MCP tools organized into the following categories:
 - `delete_chat_message` — Delete a chat message
 
 ### 📊 Tables (11 tools)
-- `list_all_tables` — List all tables
-- `get_table` — Get a table by ID
-- `create_table` — Create a new table
-- `update_table` — Update an existing table
-- `delete_table` — Delete a table by ID
-- `get_schema` — Get the schema of a table
-- `list_rows` — List rows in a table
-- `get_row` — Get a row by ID
-- `create_row` — Create a new row
-- `update_row` — Update an existing row
-- `delete_row` — Delete a row by ID
+- `table_list` — List all tables
+- `table_get` — Get a table by ID
+- `table_create` — Create a new table
+- `table_update` — Update an existing table
+- `table_delete` — Delete a table by ID
+- `table_get_schema` — Get the schema of a table
+- `table_list_rows` — List rows in a table
+- `table_get_row` — Get a row by ID
+- `table_create_row` — Create a new row
+- `table_update_row` — Update an existing row
+- `table_delete_row` — Delete a row by ID
 
 ### 📚 Collectives (27 tools)
 - `collectives_list` — List all collectives
