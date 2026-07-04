@@ -23,11 +23,7 @@ API_CREDS = base64.b64decode(API_KEY).decode("utf-8")
 API_USER = API_CREDS.split(":")[0]
 MCP_URL = f"http://localhost:{MCP_SERVER_PORT}/mcp"
 
-# HARDCODED FALLBACKS — external services that require runtime data discovery
-# These cause the relevant tool calls to FAIL rather than crash the runner.
-# TODO: Replace with proper runtime extraction. Do NOT add to this list
-# without explicit user approval.
-MCP_HARDCODED_CHAT_MSG_ID = 0
+# No hardcoded fallbacks — all IDs are discovered at runtime.
 
 MCP_HEADERS = {
     "Authorization": f"Bearer {API_KEY}",
@@ -544,8 +540,8 @@ def main():
         store["attendee_id"] = toon_to_json(results[-1]["data"]["items"])[1]["attendeeId"]
         run_test(session, "5M remove_participant", "talk_remove_participant", {"token": store["chat_token"], "attendee_id": store["attendee_id"]})
         run_test(session, "5M send_chat_message", "send_chat_message", {"token": store["chat_token"], "message": "Hello from MCP test"})
+        store["chat_msg_id"] = results[-1]["data"]["id"]
         run_test(session, "5M get_chat_messages", "get_chat_messages", {"token": store["chat_token"], "limit": 5})
-        store["chat_msg_id"] = MCP_HARDCODED_CHAT_MSG_ID
         run_test(session, "5M delete_chat_message", "delete_chat_message", {"token": store["chat_token"], "message_id": store["chat_msg_id"]})
         run_test(session, "5M delete_room", "talk_delete_room", {"token": store["chat_token"]})
 
