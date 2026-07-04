@@ -961,7 +961,10 @@ async def notification_delete(
     Args:
         id: Notification ID to delete. Get this from list_notifications(). (required).
     """
-    return await get_client().delete_notification(id, get_user_token())
+    result = await get_client().delete_notification(id, get_user_token())
+    if isinstance(result, list):
+        return {"success": True, "deleted": True}
+    return result
 
 
 @mcp.tool()
@@ -971,6 +974,22 @@ async def notification_delete_all(ctx: Context) -> dict[str, Any]:
     if isinstance(result, list):
         return {"success": True, "deleted": True}
     return result
+
+
+@mcp.tool()
+async def notification_create(
+    user_id: str,
+    subject: str,
+    message: str = "",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a notification for a user (admin only).
+    Args:
+        user_id: ID of the user to notify (required).
+        subject: Subject of the notification, max 255 chars (required).
+        message: Message of the notification, max 4000 chars.
+    """
+    return await get_client().create_notification(user_id, subject, message, get_user_token())
 
 
 @mcp.tool()

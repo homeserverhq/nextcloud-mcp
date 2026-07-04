@@ -794,6 +794,9 @@ class NextcloudClient:
     async def delete_all_notifications(self, api_key: str = None) -> Any:
         return await self.delete("/ocs/v2.php/apps/notifications/api/v2/notifications", api_key)
 
+    async def create_notification(self, user_id: str, subject: str, message: str = "", api_key: str = None) -> Any:
+        return await self.post(f"/ocs/v2.php/apps/notifications/api/v3/admin_notifications/{user_id}", api_key, params={"subject": subject, "message": message})
+
     # =========================================================================
     # Domain: Activity
     # =========================================================================

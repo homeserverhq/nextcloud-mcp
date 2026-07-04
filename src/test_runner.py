@@ -569,9 +569,11 @@ def main():
 
         # ---- Phase 5Q: Notification Tests ----
         log("\n=== Phase 5Q: Notification Tests ===")
+        run_test(session, "5Q create_notification", "notification_create", {"user_id": API_USER, "subject": f"MCP test {rid}", "message": "Notification test"})
+        store["notification_id"] = results[-1]["data"]["id"]
         run_test(session, "5Q list_notifications", "notification_list", {})
-        run_test(session, "5Q get_notification", "notification_get", {"id": 0})
-        run_test(session, "5Q delete_notification", "notification_delete", {"id": 0})
+        run_test(session, "5Q get_notification", "notification_get", {"id": store["notification_id"]})
+        run_test(session, "5Q delete_notification", "notification_delete", {"id": store["notification_id"]})
         run_test(session, "5Q delete_all_notifications", "notification_delete_all", {})
 
         # ---- Phase 5R: Misc Tests ----
@@ -586,11 +588,15 @@ def main():
         run_test(session, "5R get_events_by_calendar", "get_events_by_calendar", {"calendar_uri": cal_uri})
         run_test(session, "5R list_all_todos", "todo_list", {})
         run_test(session, "5R get_todos_by_calendar", "todo_get_by_calendar", {"calendar_uri": cal_uri})
-        run_test(session, "5R get_attachment", "note_get_attachment", {"note_id": store["Note"]["id"], "path": f"t{rid}-attach.txt"})
+        attach_note_dir = f"/remote.php/dav/files/{API_USER}/Notes/test/"
+        attach_filename = f"t{rid}-attach.txt"
+        run_test(session, "5R create_attachment", "webdav_write_file", {"path": f"{attach_note_dir}{attach_filename}", "content": "MCP attachment test"})
+        run_test(session, "5R get_attachment", "note_get_attachment", {"note_id": store["Note"]["id"], "path": attach_filename})
 
         # ---- Phase 5S: WebDAV Fixture Cleanup ----
         log("\n=== Phase 5S: WebDAV Fixture Cleanup ===")
         run_test(session, "5S delete_fixture", "webdav_delete_resource", {"path": fixture_path})
+        run_test(session, "5S delete_attach", "webdav_delete_resource", {"path": f"/remote.php/dav/files/{API_USER}/Notes/test/t{rid}-attach.txt"})
 
         # ---- Phase 6: Circle Member Management Tests ----
         log("\n=== Phase 6: Circle Member Management Tests ===")
