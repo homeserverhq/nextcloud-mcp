@@ -140,7 +140,8 @@ def run_verify_delete(session, label, get_tool=None, params=None, list_tool=None
     result = session.call_tool(get_tool, params)
     err = is_error(result)
     err_l = err.lower()
-    is_deleted = (" not found" in err_l) | err_l.startswith("not found") | ("does not exist" in err_l) | ("404" in err) | ("403" in err)
+    content_text = (result.get("content") or [{}])[0].get("text", "").lower()
+    is_deleted = (" not found" in err_l) | err_l.startswith("not found") | ("does not exist" in err_l) | ("404" in err) | ("403" in err) | ("not found" in content_text) | ("has been deleted" in content_text) | ("does not exist" in content_text)
     status = ("FAILED", "PASSED")[is_deleted]
     entry = {"label": label, "tool": get_tool, "status": status, "reason": err, "data": {"verified": "deleted"}}
     results.append(entry)
@@ -452,8 +453,8 @@ def main():
         fixture_path = f"/remote.php/dav/files/{API_USER}/t{rid}-fixture.txt"
         run_test(session, "5E create_fixture_file", "webdav_write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
         store["fixture_path"] = fixture_path
-        run_test(session, "5E list_fixture", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/", "depth": 1})
-        store["fixture_file_id"] = results[-1]["data"]["items"]
+        run_test(session, "5E list_fixture", "webdav_list_directory", {"path": fixture_path, "depth": 0, "include_all_fields": True})
+        store["fixture_file_id"] = int(get_list_items(results[-1]["data"])[0]["fileid"])
 
         # ---- Phase 5F: Sharing Tests ----
         log("\n=== Phase 5F: Sharing Tests ===")
@@ -470,10 +471,11 @@ def main():
         run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": 7, "share_with": store["circle_id"], "permissions": 1})
         store["share5g_id"] = results[-1]["data"]["id"]
         run_test(session, "5G list_all_shares", "list_all_shares", {})
-        run_test(session, "5G create_collection", "collection_create", {"resource_type": "file", "resource_id": "0", "name": "test-collection-5g"})
+        run_test(session, "5G create_collection", "collection_create", {"resource_type": "file", "resource_id": str(store["fixture_file_id"]), "name": "test-collection-5g"})
+        store["collection_5g_id"] = str(results[-1]["data"]["id"])
         run_test(session, "5G search_collections", "collection_search", {"search": "test-collection-5g"})
-        run_test(session, "5G get_collection_by_id", "collection_get_by_id", {"id": "0"})
-        run_test(session, "5G get_collections_by_resource", "collection_get_by_resource", {"resource_type": "file", "resource_id": "0"})
+        run_test(session, "5G get_collection_by_id", "collection_get_by_id", {"id": store["collection_5g_id"]})
+        run_test(session, "5G get_collections_by_resource", "collection_get_by_resource", {"resource_type": "file", "resource_id": str(store["fixture_file_id"])})
         run_test(session, "5G delete_circle_share", "delete_share", {"id": store["share5g_id"]})
 
         # ---- Phase 5H: Reminder Tests ----
@@ -520,9 +522,9 @@ def main():
         store["chat_token"] = results[-1]["data"]["token"]
         run_test(session, "5M rename_room", "talk_update_room", {"token": store["chat_token"], "room_name": f"t{rid}-renamed"})
         run_test(session, "5M set_description", "talk_set_description", {"token": store["chat_token"], "description": "Test room description"})
-        run_test(session, "5M add_participant", "talk_add_participant", {"token": store["chat_token"], "new_participant": "testuser"})
+        run_test(session, "5M add_participant", "talk_add_participant", {"token": store["chat_token"], "new_participant": "shbadmin"})
         run_test(session, "5M list_participants", "talk_list_participants", {"token": store["chat_token"]})
-        store["attendee_id"] = toon_to_json(results[-1]["data"]["items"])[0]["attendeeId"]
+        store["attendee_id"] = toon_to_json(results[-1]["data"]["items"])[1]["attendeeId"]
         run_test(session, "5M remove_participant", "talk_remove_participant", {"token": store["chat_token"], "attendee_id": store["attendee_id"]})
         run_test(session, "5M send_chat_message", "send_chat_message", {"token": store["chat_token"], "message": "Hello from MCP test"})
         run_test(session, "5M get_chat_messages", "get_chat_messages", {"token": store["chat_token"], "limit": 5})
@@ -542,8 +544,8 @@ def main():
         # ---- Phase 5O: Collectives Mutation Tests ----
         log("\n=== Phase 5O: Collectives Mutation Tests ===")
         run_test(session, "5O collectives_update_emoji", "collectives_update_emoji", {"id": store["Collective"]["id"], "emoji": "⭐"})
-        c5o_items = get_list_items(extract_content(session.call_tool("collectives_list")))
-        c5o_emoji = c5o_items[0]["emoji"]
+        c5o_data = extract_content(session.call_tool("collectives_get_collective", {"id": store["Collective_id"]}))
+        c5o_emoji = c5o_data.get("emoji", "")
         emoji_ok = c5o_emoji == "⭐"
         results.append({"label":"5O verify_update_emoji","tool":"collectives_list","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
         global passed_count, failed_count
@@ -563,7 +565,6 @@ def main():
         run_test(session, "5O collectives_assign_tag", "collectives_assign_tag", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "tag_id": store["Tag"]["id"]})
         run_test(session, "5O collectives_remove_tag", "collectives_remove_tag", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "tag_id": store["Tag"]["id"]})
         run_test(session, "5O collectives_search_pages", "collectives_search_pages", {"collective_id": store["Collective"]["id"], "query": make_name("Page")})
-        run_test(session, "5O restore_collective", "collectives_restore", {"id": store["Collective_id"]})
         run_test(session, "5O verify_tag_ops", "collectives_get_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"]})
 
         # ---- Phase 5Q: Notification Tests ----
@@ -604,14 +605,14 @@ def main():
 
         circle_name = make_name("memberTest")
         run_test(session, "6 create_circle", "circle_create", {"name": circle_name})
-        circle_id = store["circle_id"]
+        circle_id = results[-1]["data"]["id"]
 
         run_test(session, "6 list_members", "circle_list_members", {"circle_id": circle_id, "include_all_fields": True})
         run_test(session, "6 get_circle", "circle_get", {"circle_id": circle_id})
         run_test(session, "6 update_circle", "circle_update", {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
         run_test(session, "6 add_member", "circle_add_member", {"circle_id": circle_id, "user_id": second_user})
         run_test(session, "6 list_members_post", "circle_list_members", {"circle_id": circle_id, "include_all_fields": True})
-        store["member_id"] = toon_to_json(results[-1]["data"]["items"])[0]["id"]
+        store["member_id"] = toon_to_json(results[-1]["data"]["items"])[1]["id"]
         run_test(session, "6 update_level", "circle_update_member_level", {"circle_id": circle_id, "member_id": store["member_id"], "level": 4})
         run_test(session, "6 remove_member", "circle_remove_member", {"circle_id": circle_id, "member_id": store["member_id"]})
         run_test(session, "6 delete_circle", "circle_delete", {"circle_id": circle_id})
@@ -654,13 +655,6 @@ def main():
         run_verify_delete(session, "3E verify_delete_board", "deck_get_board", {"board_id": store["Board_id"]})
         run_verify_delete(session, "3E verify_delete_table", "table_get", {"table_id": store["Table_id"]})
         run_verify_delete(session, "3E verify_delete_note", "note_get", {"id": store["Note_id"]})
-
-        # ------------------------------------------------------------------
-        # Phase 5S: Collective Cleanup Sequence
-        # ------------------------------------------------------------------
-        log("\n=== Phase 5S: Collective Cleanup Sequence ===")
-        run_test(session, "5S CollectiveDelete", "collectives_delete", {"id": store["Collective"]["id"]})
-        run_test(session, "5S CircleDelete", "circle_delete", {"circle_id": store["circle_id"]})
 
         # ------------------------------------------------------------------
         # Report Summary

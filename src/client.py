@@ -58,7 +58,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "addressbook":      {"href", "displayname", "resourcetype"},
     "contact":          {"fn", "email", "telephone", "organization"},
     "note":             {"id", "title", "category", "modified", "favorite", "content"},
-    "file":             {"href", "displayname", "getcontenttype", "getcontentlength", "getlastmodified", "resourcetype"},
+    "file":             {"href", "displayname", "getcontenttype", "getcontentlength", "getlastmodified", "resourcetype", "fileid"},
     "share":            {"id", "share_type", "path", "uid_owner", "displayname_owner", "uid_shared_with", "permissions", "expiration", "collection_id", "file_source"},
     "notification":     {"notification_id", "app", "subject", "message", "datetime", "link"},
     "activity":         {"activity_id", "type", "user", "subject", "object_type", "datetime"},
