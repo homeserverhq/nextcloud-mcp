@@ -266,7 +266,7 @@ class MovePageParam(BaseModel):
     destination_parent_id: int = 0
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_users(
     search: str = "",
     limit: int = 100,
@@ -285,7 +285,7 @@ async def get_users(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_user(
     user_id: str,
     include_all_fields: bool = False,
@@ -299,7 +299,7 @@ async def get_user(
     return await get_client().get_user(user_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_groups(
     limit: int = 100,
     offset: int = 0,
@@ -318,7 +318,7 @@ async def get_groups(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_group_members(
     group_id: str,
     limit: int = 100,
@@ -337,7 +337,7 @@ async def get_group_members(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def list_all_shares(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -350,7 +350,7 @@ async def list_all_shares(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def get_shares_by_path(
     path: str,
     shared_with_me: bool = False,
@@ -367,7 +367,7 @@ async def get_shares_by_path(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def get_share(
     id: int,
     include_all_fields: bool = False,
@@ -384,7 +384,7 @@ async def get_share(
     return data
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def create_share(
     path: str,
     share_type: int,
@@ -408,7 +408,7 @@ async def create_share(
     return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def update_share(
     id: int,
     permissions: Optional[int] = None,
@@ -427,7 +427,7 @@ async def update_share(
     return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def delete_share(
     id: int,
     ctx: Context = None
@@ -442,7 +442,7 @@ async def delete_share(
     return data
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_user_status(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -454,7 +454,7 @@ async def get_user_status(
     return await get_client().get_user_status(get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def set_status(
     status_type: str,
     ctx: Context = None
@@ -466,7 +466,7 @@ async def set_status(
     return await get_client().set_status(status_type, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def set_predefined_message(
     message_id: str,
     clear_at: str = "",
@@ -480,7 +480,7 @@ async def set_predefined_message(
     return await get_client().set_predefined_message(message_id, get_user_token(), clear_at)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def set_custom_message(
     message: str,
     status_icon: str,
@@ -496,14 +496,14 @@ async def set_custom_message(
     return await get_client().set_custom_message(message, status_icon, get_user_token(), clear_at)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def clear_message(ctx: Context) -> dict[str, Any]:
     """Clear the current status message."""
     result = await get_client().clear_message(get_user_token())
     return {"status": "cleared", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_predefined_statuses(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -516,7 +516,7 @@ async def get_predefined_statuses(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_user_statuses(
     limit: int = 100,
     include_all_fields: bool = False,
@@ -531,7 +531,7 @@ async def get_user_statuses(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_ooo(
     user_id: str,
     include_all_fields: bool = False,
@@ -545,7 +545,7 @@ async def get_ooo(
     return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def set_ooo(
     first_day: str,
     last_day: str,
@@ -569,7 +569,7 @@ async def set_ooo(
     return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def clear_ooo(
     user_id: str,
     ctx: Context = None
@@ -582,7 +582,7 @@ async def clear_ooo(
     return {"success": True, "data": data}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_upcoming_events(
     location: str = "",
     limit: int = 20,
@@ -599,7 +599,7 @@ async def get_upcoming_events(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def get_direct_download_url(
     file_id: int,
     ctx: Context = None
@@ -611,7 +611,7 @@ async def get_direct_download_url(
     return await get_client().get_direct_download_url(file_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def get_folder_tree(
     depth: int = 3,
     path: str = "",
@@ -628,7 +628,7 @@ async def get_folder_tree(
     return {"tree": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def collection_get_by_id(
     id: str,
     include_all_fields: bool = False,
@@ -642,7 +642,7 @@ async def collection_get_by_id(
     return await get_client().list_collection(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def collection_search(
     search: str = "",
     limit: int = 50,
@@ -659,7 +659,7 @@ async def collection_search(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def collection_search_raw(
     search: str = "",
     ctx: Context = None
@@ -672,7 +672,7 @@ async def collection_search_raw(
     return {"items": data}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def collection_get_by_resource(
     resource_type: str,
     resource_id: str,
@@ -689,7 +689,7 @@ async def collection_get_by_resource(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collection_create(
     resource_type: str = "file",
     resource_id: str = "",
@@ -705,7 +705,7 @@ async def collection_create(
     return await get_client().create_collection_on_resource(resource_type, resource_id, name, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_file_reminder(
     file_id: int,
     include_all_fields: bool = False,
@@ -719,7 +719,7 @@ async def get_file_reminder(
     return await get_client().get_file_reminder(file_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def set_file_reminder(
     file_id: int,
     due_date: str,
@@ -736,7 +736,7 @@ async def set_file_reminder(
     return result
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def delete_file_reminder(
     file_id: int,
     ctx: Context = None
@@ -751,7 +751,7 @@ async def delete_file_reminder(
     return result
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_search_providers(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -764,7 +764,7 @@ async def get_search_providers(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def search(
     provider_id: str,
     term: str,
@@ -785,7 +785,7 @@ async def search(
     return {"results": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_capabilities(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -797,7 +797,7 @@ async def get_capabilities(
     return await get_client().get_capabilities(get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def webdav_list_directory(
     path: str,
     depth: int = 1,
@@ -814,7 +814,7 @@ async def webdav_list_directory(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def webdav_read_file(
     path: str,
     ctx: Context = None
@@ -826,7 +826,7 @@ async def webdav_read_file(
     return {"content": await get_client().webdav_read_file(path, get_user_token())}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def webdav_write_file(
     path: str,
     content: str,
@@ -840,7 +840,7 @@ async def webdav_write_file(
     return await get_client().webdav_write_file(path, content, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def webdav_create_directory(
     path: str,
     ctx: Context = None
@@ -852,7 +852,7 @@ async def webdav_create_directory(
     return await get_client().webdav_create_directory(path, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def webdav_delete_resource(
     path: str,
     ctx: Context = None
@@ -864,7 +864,7 @@ async def webdav_delete_resource(
     return await get_client().webdav_delete_resource(path, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def webdav_move_resource(
     source: str,
     destination: str,
@@ -878,7 +878,7 @@ async def webdav_move_resource(
     return await get_client().webdav_move_resource(source, destination, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "basic", "nextcloud"})
 async def webdav_copy_resource(
     source: str,
     destination: str,
@@ -892,7 +892,7 @@ async def webdav_copy_resource(
     return await get_client().webdav_copy_resource(source, destination, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def webdav_search_files(
     query: str,
     limit: int = 50,
@@ -911,7 +911,7 @@ async def webdav_search_files(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def webdav_list_favorites(
     limit: int = 50,
     include_all_fields: bool = False,
@@ -926,7 +926,7 @@ async def webdav_list_favorites(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def notification_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -939,7 +939,7 @@ async def notification_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def notification_get(
     id: int,
     include_all_fields: bool = False,
@@ -953,7 +953,7 @@ async def notification_get(
     return await get_client().get_notification(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def notification_delete(
     id: int,
     ctx: Context = None
@@ -968,7 +968,7 @@ async def notification_delete(
     return result
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def notification_delete_all(ctx: Context) -> dict[str, Any]:
     """Delete all notifications."""
     result = await get_client().delete_all_notifications(get_user_token())
@@ -977,7 +977,7 @@ async def notification_delete_all(ctx: Context) -> dict[str, Any]:
     return result
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def notification_create(
     user_id: str,
     subject: str,
@@ -993,7 +993,7 @@ async def notification_create(
     return await get_client().create_notification(user_id, subject, message, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def activity_get(
     limit: int = 50,
     sort: str = "",
@@ -1014,7 +1014,7 @@ async def activity_get(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def activity_get_filters(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1027,7 +1027,7 @@ async def activity_get_filters(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def activity_get_filter(
     filter_name: str,
     limit: int = 50,
@@ -1044,7 +1044,7 @@ async def activity_get_filter(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_all_calendars(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1057,7 +1057,7 @@ async def list_all_calendars(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_calendar(
     display_name: str,
     color: str = "",
@@ -1072,7 +1072,7 @@ async def create_calendar(
     return await get_client().create_calendar(params.display_name, params.color, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def update_calendar(
     calendar_uri: str,
     display_name: str,
@@ -1089,7 +1089,7 @@ async def update_calendar(
     return {"status": "updated", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def delete_calendar(
     calendar_uri: str,
     ctx: Context = None
@@ -1101,7 +1101,7 @@ async def delete_calendar(
     return await get_client().delete_calendar(calendar_uri, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1115,7 +1115,7 @@ async def get_calendar(
     return await get_client().get_calendar(calendar_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_all_events(
     from_date: str = "",
     to_date: str = "",
@@ -1143,7 +1143,7 @@ async def list_all_events(
     return {"items": json_to_toon(all_events[:limit])}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_events_by_calendar(
     calendar_uri: str,
     from_date: str = "",
@@ -1164,7 +1164,7 @@ async def get_events_by_calendar(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_event(
     calendar_uri: str,
     event_uid: str,
@@ -1180,7 +1180,7 @@ async def get_event(
     return await get_client().get_event(calendar_uri, event_uid, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_event(
     calendar_uri: str,
     summary: str,
@@ -1209,7 +1209,7 @@ async def create_event(
                                            description, location, rrule, timezone, get_user_token(), attendees=attendees)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def update_event(
     calendar_uri: str,
     event_uid: str,
@@ -1236,7 +1236,7 @@ async def update_event(
                                            dtend, description, location, get_user_token(), attendees=attendees or "")
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def delete_event(
     calendar_uri: str,
     event_uid: str,
@@ -1250,7 +1250,7 @@ async def delete_event(
     return await get_client().delete_event(calendar_uri, event_uid, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_meeting(
     summary: str,
     dtstart: str,
@@ -1275,7 +1275,7 @@ async def create_meeting(
                                              location, calendar_uri, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def find_availability(
     calendar_uris: str,
     from_date: str,
@@ -1293,7 +1293,7 @@ async def find_availability(
     return await get_client().find_availability(calendar_uris, from_date, to_date, timezone, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def todo_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1315,7 +1315,7 @@ async def todo_list(
     return {"items": json_to_toon(all_todos)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def todo_get_by_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1330,7 +1330,7 @@ async def todo_get_by_calendar(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def todo_create(
     summary: str,
     description: str,
@@ -1353,7 +1353,7 @@ async def todo_create(
                                           status, calendar_uri, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def todo_get(
     todo_uid: str,
     calendar_uri: str,
@@ -1369,7 +1369,7 @@ async def todo_get(
     return await get_client().get_todo(todo_uid, calendar_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def todo_update(
     todo_uid: str,
     calendar_uri: str,
@@ -1394,7 +1394,7 @@ async def todo_update(
                                           priority, due_date, status, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def todo_delete(
     todo_uid: str,
     calendar_uri: str,
@@ -1408,7 +1408,7 @@ async def todo_delete(
     return await get_client().delete_todo(todo_uid, calendar_uri, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def todo_search(
     query: str,
     calendar_uri: str = "",
@@ -1427,7 +1427,7 @@ async def todo_search(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_all_addressbooks(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1440,7 +1440,7 @@ async def list_all_addressbooks(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_addressbook(
     display_name: str,
     description: str,
@@ -1455,7 +1455,7 @@ async def create_addressbook(
     return await get_client().create_addressbook(params.display_name, params.description, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def delete_addressbook(
     addressbook_uri: str,
     ctx: Context = None
@@ -1467,7 +1467,7 @@ async def delete_addressbook(
     return await get_client().delete_addressbook(addressbook_uri, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_addressbook(
     addressbook_uri: str,
     include_all_fields: bool = False,
@@ -1481,7 +1481,7 @@ async def get_addressbook(
     return await get_client().get_addressbook(addressbook_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def update_addressbook(
     addressbook_uri: str,
     display_name: str,
@@ -1498,7 +1498,7 @@ async def update_addressbook(
     return {"status": "updated", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_all_contacts(
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1522,7 +1522,7 @@ async def list_all_contacts(
     return {"items": json_to_toon(all_contacts[:limit])}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_contacts_by_addressbook(
     addressbook_uri: str,
     limit: int = 50,
@@ -1539,7 +1539,7 @@ async def get_contacts_by_addressbook(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -1555,7 +1555,7 @@ async def get_contact(
     return await get_client().get_contact(addressbook_uri, contact_uid, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_contact(
     addressbook_uri: str,
     fn: str,
@@ -1578,7 +1578,7 @@ async def create_contact(
                                              organization, adr, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def update_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -1603,7 +1603,7 @@ async def update_contact(
                                              telephone, organization, adr, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def delete_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -1617,7 +1617,7 @@ async def delete_contact(
     return await get_client().delete_contact(addressbook_uri, contact_uid, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def note_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1630,7 +1630,7 @@ async def note_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def note_get_by_category(
     category: str,
     include_all_fields: bool = False,
@@ -1645,7 +1645,7 @@ async def note_get_by_category(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def note_get(
     id: int,
     include_all_fields: bool = False,
@@ -1659,7 +1659,7 @@ async def note_get(
     return await get_client().get_note(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def note_create(
     title: str,
     content: str,
@@ -1676,7 +1676,7 @@ async def note_create(
     return await get_client().create_note(params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def note_update(
     id: int,
     title: Optional[str] = None,
@@ -1697,7 +1697,7 @@ async def note_update(
     return await get_client().update_note(id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def note_delete(
     id: int,
     ctx: Context = None
@@ -1710,7 +1710,7 @@ async def note_delete(
     return {"status": "deleted", "id": id}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def note_append_content(
     id: int,
     content: str,
@@ -1726,7 +1726,7 @@ async def note_append_content(
     return await get_client().update_note(id, {"content": combined}, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def note_search(
     query: str,
     limit: int = 50,
@@ -1747,7 +1747,7 @@ async def note_search(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def note_get_attachment(
     note_id: int,
     path: str,
@@ -1761,7 +1761,7 @@ async def note_get_attachment(
     return await get_client().get_attachment(note_id, path, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1774,7 +1774,7 @@ async def deck_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_get_board(
     board_id: int,
     include_all_fields: bool = False,
@@ -1788,7 +1788,7 @@ async def deck_get_board(
     return await get_client().deck_get_board(board_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def deck_create_board(
     title: str,
     color: str = "",
@@ -1805,7 +1805,7 @@ async def deck_create_board(
     return await get_client().deck_create_board(params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_update_board(
     board_id: int,
     title: Optional[str] = None,
@@ -1830,7 +1830,7 @@ async def deck_update_board(
     return await get_client().deck_update_board(board_id, payload, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_list_stacks(
     board_id: int,
     include_all_fields: bool = False,
@@ -1845,7 +1845,7 @@ async def deck_list_stacks(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def deck_create_stack(
     board_id: int,
     title: str,
@@ -1862,7 +1862,7 @@ async def deck_create_stack(
     return await get_client().deck_create_stack(board_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_get_stack(
     board_id: int,
     stack_id: int,
@@ -1878,7 +1878,7 @@ async def deck_get_stack(
     return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_update_stack(
     board_id: int,
     stack_id: int,
@@ -1901,7 +1901,7 @@ async def deck_update_stack(
     return await get_client().deck_update_stack(board_id, stack_id, payload, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_list_cards(
     board_id: int,
     stack_id: int,
@@ -1918,7 +1918,7 @@ async def deck_list_cards(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_get_card(
     board_id: int,
     stack_id: int,
@@ -1936,7 +1936,7 @@ async def deck_get_card(
     return await get_client().deck_get_card(board_id, stack_id, card_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def deck_create_card(
     board_id: int,
     stack_id: int,
@@ -1960,7 +1960,7 @@ async def deck_create_card(
     return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def deck_update_card(
     board_id: int,
     stack_id: int,
@@ -1986,7 +1986,7 @@ async def deck_update_card(
     return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_delete_board(
     board_id: int,
     ctx: Context = None
@@ -1998,7 +1998,7 @@ async def deck_delete_board(
     return await get_client().deck_delete_board(board_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_delete_stack(
     board_id: int,
     stack_id: int,
@@ -2012,7 +2012,7 @@ async def deck_delete_stack(
     return await get_client().deck_delete_stack(board_id, stack_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def deck_delete_card(
     board_id: int,
     stack_id: int,
@@ -2028,7 +2028,7 @@ async def deck_delete_card(
     return await get_client().deck_delete_card(board_id, stack_id, card_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_archive_card(
     board_id: int,
     stack_id: int,
@@ -2044,7 +2044,7 @@ async def deck_archive_card(
     return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_unarchive_card(
     board_id: int,
     stack_id: int,
@@ -2060,7 +2060,7 @@ async def deck_unarchive_card(
     return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def deck_list_labels(
     board_id: int,
     include_all_fields: bool = False,
@@ -2075,7 +2075,7 @@ async def deck_list_labels(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_assign_label(
     board_id: int,
     stack_id: int,
@@ -2093,7 +2093,7 @@ async def deck_assign_label(
     return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_remove_label(
     board_id: int,
     stack_id: int,
@@ -2111,7 +2111,7 @@ async def deck_remove_label(
     return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_assign_user(
     board_id: int,
     stack_id: int,
@@ -2129,7 +2129,7 @@ async def deck_assign_user(
     return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def deck_remove_user(
     board_id: int,
     stack_id: int,
@@ -2147,7 +2147,7 @@ async def deck_remove_user(
     return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_all_accounts(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2160,7 +2160,7 @@ async def list_all_accounts(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_mailboxes(
     account_id: int,
     include_all_fields: bool = False,
@@ -2175,7 +2175,7 @@ async def list_mailboxes(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def list_messages(
     account_id: int,
     mailbox_db_id: int,
@@ -2194,7 +2194,7 @@ async def list_messages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_message(
     account_id: int,
     message_id: int,
@@ -2210,7 +2210,7 @@ async def get_message(
     return await get_client().mail_get_message(account_id, message_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_message_body(
     account_id: int,
     message_id: int,
@@ -2224,7 +2224,7 @@ async def get_message_body(
     return await get_client().mail_get_message_body(account_id, message_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def send_message(
     account_id: int,
     subject: str,
@@ -2250,7 +2250,7 @@ async def send_message(
         return {"status": "error", "error": str(e)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def create_email_draft(
     account_id: int,
     subject: str,
@@ -2273,7 +2273,7 @@ async def create_email_draft(
     return {"id": result.get("id") if isinstance(result, dict) else None, "status": "draft_created"}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def set_message_flags(
     account_id: int,
     message_id: int,
@@ -2293,7 +2293,7 @@ async def set_message_flags(
     return {"status": "ok", "flags": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def move_message(
     account_id: int,
     message_id: int,
@@ -2310,7 +2310,7 @@ async def move_message(
     return {"status": "moved", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def talk_list_rooms(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2323,7 +2323,7 @@ async def talk_list_rooms(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_create_room(
     room_type: int,
     room_name: str,
@@ -2337,7 +2337,7 @@ async def talk_create_room(
     return await get_client().talk_create_room(room_type, room_name, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def talk_delete_room(
     token: str,
     ctx: Context = None
@@ -2349,7 +2349,7 @@ async def talk_delete_room(
     return await get_client().talk_delete_room(token, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_update_room(
     token: str,
     room_name: str,
@@ -2363,7 +2363,7 @@ async def talk_update_room(
     return await get_client().talk_update_room(token, room_name, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_set_description(
     token: str,
     description: str,
@@ -2377,7 +2377,7 @@ async def talk_set_description(
     return await get_client().talk_set_description(token, description, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def talk_list_participants(
     token: str,
     include_all_fields: bool = False,
@@ -2392,7 +2392,7 @@ async def talk_list_participants(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_add_participant(
     token: str,
     new_participant: str,
@@ -2408,7 +2408,7 @@ async def talk_add_participant(
     return await get_client().talk_add_participant(token, new_participant, source, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_remove_participant(
     token: str,
     attendee_id: int,
@@ -2422,7 +2422,7 @@ async def talk_remove_participant(
     return await get_client().talk_remove_participant(token, attendee_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def send_chat_message(
     token: str,
     message: str,
@@ -2436,7 +2436,7 @@ async def send_chat_message(
     return await get_client().talk_send_message(token, message, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def get_chat_messages(
     token: str,
     limit: int = 50,
@@ -2455,7 +2455,7 @@ async def get_chat_messages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def delete_chat_message(
     token: str,
     message_id: int,
@@ -2469,7 +2469,7 @@ async def delete_chat_message(
     return await get_client().talk_delete_message(token, message_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def table_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2482,7 +2482,7 @@ async def table_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def table_get(
     table_id: int,
     include_all_fields: bool = False,
@@ -2496,7 +2496,7 @@ async def table_get(
     return await get_client().tables_get_table(table_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def table_create(
     title: str,
     description: str,
@@ -2513,7 +2513,7 @@ async def table_create(
     return await get_client().tables_create_table(params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def table_update(
     table_id: int,
     title: Optional[str] = None,
@@ -2532,7 +2532,7 @@ async def table_update(
     return await get_client().tables_update_table(table_id, params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def table_delete(
     table_id: int,
     ctx: Context = None
@@ -2544,7 +2544,7 @@ async def table_delete(
     return await get_client().tables_delete_table(table_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def table_get_schema(
     table_id: int,
     include_all_fields: bool = False,
@@ -2558,7 +2558,7 @@ async def table_get_schema(
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def table_list_rows(
     table_id: int,
     limit: int = 50,
@@ -2577,7 +2577,7 @@ async def table_list_rows(
     return {"rows": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def table_create_row(
     table_id: int,
     data: dict[str, Any],
@@ -2591,7 +2591,7 @@ async def table_create_row(
     return await get_client().tables_create_row(table_id, json.dumps(data), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def table_get_row(
     row_id: int,
     include_all_fields: bool = False,
@@ -2605,7 +2605,7 @@ async def table_get_row(
     return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def table_update_row(
     row_id: int,
     data: Optional[dict[str, Any]] = None,
@@ -2619,7 +2619,7 @@ async def table_update_row(
     return await get_client().tables_update_row(row_id, json.dumps(data) if data is not None else None, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def table_delete_row(
     row_id: int,
     ctx: Context = None
@@ -2631,7 +2631,7 @@ async def table_delete_row(
     return await get_client().tables_delete_row(row_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2644,7 +2644,7 @@ async def collectives_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_create(
     name: str,
     emoji: str = "",
@@ -2659,7 +2659,7 @@ async def collectives_create(
     return await get_client().collectives_create(params.model_dump(exclude_defaults=True), get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_get_collective(
     id: int,
     include_all_fields: bool = False,
@@ -2673,7 +2673,7 @@ async def collectives_get_collective(
     return await get_client().collectives_get_collective(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_update_collective(
     id: int,
     name: Optional[str] = None,
@@ -2694,7 +2694,7 @@ async def collectives_update_collective(
     return await get_client().collectives_update_collective(id, payload, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_update_emoji(
     id: int,
     emoji: str,
@@ -2708,7 +2708,7 @@ async def collectives_update_emoji(
     return await get_client().collectives_update_emoji(id, emoji, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_trash(
     id: int,
     ctx: Context = None
@@ -2720,7 +2720,7 @@ async def collectives_trash(
     return await get_client().collectives_trash(id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_restore(
     id: int,
     ctx: Context = None
@@ -2732,7 +2732,7 @@ async def collectives_restore(
     return await get_client().collectives_restore(id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_delete(
     id: int,
     ctx: Context = None
@@ -2744,7 +2744,7 @@ async def collectives_delete(
     return await get_client().collectives_delete(id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def collectives_list_trashed(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2757,7 +2757,7 @@ async def collectives_list_trashed(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_list_pages(
     collective_id: int,
     include_all_fields: bool = False,
@@ -2772,7 +2772,7 @@ async def collectives_list_pages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_get_page(
     collective_id: int,
     page_id: int,
@@ -2788,7 +2788,7 @@ async def collectives_get_page(
     return await get_client().collectives_get_page(collective_id, page_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def collectives_create_page(
     collective_id: int,
     title: str,
@@ -2805,7 +2805,7 @@ async def collectives_create_page(
                                                        {"title": title}, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_trash_page(
     collective_id: int,
     page_id: int,
@@ -2819,7 +2819,7 @@ async def collectives_trash_page(
     return await get_client().collectives_trash_page(collective_id, page_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_restore_page(
     collective_id: int,
     page_id: int,
@@ -2833,7 +2833,7 @@ async def collectives_restore_page(
     return await get_client().collectives_restore_page(collective_id, page_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_delete_page(
     collective_id: int,
     page_id: int,
@@ -2850,7 +2850,7 @@ async def collectives_delete_page(
     return result
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_move_page(
     collective_id: int,
     page_id: int,
@@ -2870,7 +2870,7 @@ async def collectives_move_page(
                                                      get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_set_page_emoji(
     collective_id: int,
     page_id: int,
@@ -2886,7 +2886,7 @@ async def collectives_set_page_emoji(
     return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_set_page_full_width(
     collective_id: int,
     page_id: int,
@@ -2902,7 +2902,7 @@ async def collectives_set_page_full_width(
     return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_update_page(
     collective_id: int,
     page_id: int,
@@ -2933,7 +2933,7 @@ async def collectives_update_page(
     return await get_client().collectives_update_page(collective_id, page_id, payload, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_search_pages(
     collective_id: int,
     query: str,
@@ -2952,7 +2952,7 @@ async def collectives_search_pages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_list_tags(
     collective_id: int,
     include_all_fields: bool = False,
@@ -2967,7 +2967,7 @@ async def collectives_list_tags(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def collectives_get_tag(
     collective_id: int,
     tag_id: int,
@@ -2983,7 +2983,7 @@ async def collectives_get_tag(
     return await get_client().collectives_get_tag(collective_id, tag_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def collectives_create_tag(
     collective_id: int,
     name: str,
@@ -3000,7 +3000,7 @@ async def collectives_create_tag(
     return await get_client().collectives_create_tag(collective_id, {"name": name, "color": color}, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_update_tag(
     collective_id: int,
     tag_id: int,
@@ -3020,7 +3020,7 @@ async def collectives_update_tag(
                                                       get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_delete_tag(
     collective_id: int,
     tag_id: int,
@@ -3035,7 +3035,7 @@ async def collectives_delete_tag(
     return {"status": "deleted", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_assign_tag(
     collective_id: int,
     page_id: int,
@@ -3051,7 +3051,7 @@ async def collectives_assign_tag(
     return await get_client().collectives_assign_tag(collective_id, page_id, tag_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def collectives_remove_tag(
     collective_id: int,
     page_id: int,
@@ -3067,7 +3067,7 @@ async def collectives_remove_tag(
     return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def circle_list(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3080,7 +3080,7 @@ async def circle_list(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def circle_get(
     circle_id: str,
     ctx: Context = None
@@ -3092,7 +3092,7 @@ async def circle_get(
     return await get_client().circles_get(circle_id, get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def circle_create(
     name: str,
     ctx: Context = None
@@ -3104,7 +3104,7 @@ async def circle_create(
     return await get_client().circles_create(name, circle_type=1, api_key=get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def circle_update(
     circle_id: str,
     name: Optional[str] = None,
@@ -3120,7 +3120,7 @@ async def circle_update(
     return await get_client().circles_update(circle_id, name=name, description=description, api_key=get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def circle_delete(
     circle_id: str,
     ctx: Context = None
@@ -3133,7 +3133,7 @@ async def circle_delete(
     return {"status": "deleted", "result": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "primary", "nextcloud"})
 async def circle_add_member(
     circle_id: str,
     user_id: str,
@@ -3148,7 +3148,7 @@ async def circle_add_member(
     return {"success": True, "data": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def circle_remove_member(
     circle_id: str,
     member_id: str,
@@ -3163,7 +3163,7 @@ async def circle_remove_member(
     return {"success": True, "data": result}
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "primary", "nextcloud"})
 async def circle_list_members(
     circle_id: str,
     include_all_fields: bool = False,
@@ -3179,7 +3179,7 @@ async def circle_list_members(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool()
+@mcp.tool(tags={"write", "advanced", "nextcloud"})
 async def circle_update_member_level(
     circle_id: str,
     member_id: str,
@@ -3196,7 +3196,7 @@ async def circle_update_member_level(
                                                            get_user_token())
 
 
-@mcp.tool()
+@mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def check_server_status(ctx: Context) -> dict[str, Any]:
     """Check connectivity to the Nextcloud backend."""
     try:
