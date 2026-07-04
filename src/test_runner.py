@@ -338,6 +338,11 @@ def main():
         run_test(session, "3C update_stack", "deck_update_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"], "title": make_name("Stack-upd")})
         run_test(session, "3C update_card", "deck_update_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"], "title": make_name("Card-upd")})
         run_test(session, "3C update_tag", "collectives_update_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"], "name": make_name("Tag-upd"), "color": "00FF00"})
+        run_test(session, "3C update_event", "update_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Event-upd")})
+        run_test(session, "3C update_todo", "todo_update", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Todo-upd")})
+        run_test(session, "3C update_contact", "update_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"], "fn": make_name("Contact-upd")})
+        run_test(session, "3C update_row", "table_update_row", {"row_id": store["Row_id"], "data": '{"col1": "upd"}'})
+        run_test(session, "3C update_page", "collectives_update_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"], "title": make_name("Page-upd")})
 
         # ------------------------------------------------------------------
         # Phase 3.5: Minimal-Params Create & Delete
@@ -537,7 +542,22 @@ def main():
         # ---- Phase 5O: Collectives Mutation Tests ----
         log("\n=== Phase 5O: Collectives Mutation Tests ===")
         run_test(session, "5O collectives_update_emoji", "collectives_update_emoji", {"id": store["Collective"]["id"], "emoji": "⭐"})
+        c5o_items = get_list_items(extract_content(session.call_tool("collectives_list")))
+        c5o_emoji = c5o_items[0]["emoji"]
+        emoji_ok = c5o_emoji == "⭐"
+        results.append({"label":"5O verify_update_emoji","tool":"collectives_list","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
+        global passed_count, failed_count
+        passed_count = passed_count + 1
+        failed_count = failed_count + (1, 0)[emoji_ok]
+        log(f"  {('FAILED','PASSED')[emoji_ok]} 5O verify_update_emoji")
         run_test(session, "5O collectives_set_page_emoji", "collectives_set_page_emoji", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "emoji": "👍"})
+        c5o_page_data = extract_content(session.call_tool("collectives_get_page",{"collective_id":store["Collective"]["id"],"page_id":store["Page"]["id"]}))
+        c5o_page_emoji = c5o_page_data["emoji"]
+        page_ok = c5o_page_emoji == "👍"
+        results.append({"label":"5O verify_set_page_emoji","tool":"collectives_get_page","status":("FAILED","PASSED")[page_ok],"reason":("",f"Emoji is {c5o_page_emoji!r}, expected 👍")[page_ok],"data":c5o_page_data})
+        passed_count = passed_count + 1
+        failed_count = failed_count + (1, 0)[page_ok]
+        log(f"  {('FAILED','PASSED')[page_ok]} 5O verify_set_page_emoji")
         run_test(session, "5O collectives_set_page_full_width", "collectives_set_page_full_width", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "is_full_width": True})
         run_test(session, "5O collectives_move_page", "collectives_move_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "destination_collective_id": store["Collective"]["id"]})
         run_test(session, "5O collectives_assign_tag", "collectives_assign_tag", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "tag_id": store["Tag"]["id"]})
