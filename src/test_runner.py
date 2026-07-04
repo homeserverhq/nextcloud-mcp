@@ -32,6 +32,8 @@ rid = uuid.uuid4().hex[:8]
 results: list[dict[str, Any]] = []
 store: dict[str, Any] = {}
 created: dict[str, Any] = {}
+passed_count = 0
+failed_count = 0
 
 ITERATION = 1
 
@@ -157,36 +159,19 @@ def resolve_params(params: Any) -> dict:
     return dict(params) if params else {}
 
 
-def run_test(
-    session: MCPSession,
-    label: str,
-    tool: str,
-    params: dict[str, Any] = None,
-) -> bool:
+def run_test(session, label, tool, params=None):
     if params is None:
         params = {}
-    try:
-        result = session.call_tool(tool, params)
-        err = is_error(result)
-        if err:
-            results.append({
-                "label": label, "tool": tool, "status": "FAILED",
-                "reason": err
-            })
-            log(f"  FAIL {label}: {err}")
-            return False
-        data = extract_content(result)
-        results.append({
-            "label": label, "tool": tool, "status": "PASSED", "data": data
-        })
-        log(f"  PASS {label}")
-        return True
-    except Exception as e:
-        results.append({
-            "label": label, "tool": tool, "status": "FAILED", "reason": str(e)
-        })
-        log(f"  FAIL {label}: {e}")
-        return False
+    result = session.call_tool(tool, params)
+    err = is_error(result)
+    status = ("FAILED", "PASSED")[not err]
+    entry = {"label": label, "tool": tool, "status": status, "data": extract_content(result)}
+    entry["reason"] = err
+    results.append(entry)
+    global passed_count, failed_count
+    passed_count = passed_count + 1
+    failed_count = failed_count + (1 if err else 0)
+    log(f"  {status} {label}")
 
 
 def _check_verify_fields(label: str, tool: str, data: Any, expected: dict[str, Any],
@@ -1016,7 +1001,7 @@ def main():
             log(f"  => Discovered message_id: {store['discovered_message_id']}")
 
         # ------------------------------------------------------------------
-        # Phase 3: Full CRUD Cycles
+        # Phase 3: Full CRUD Cycles — flat, no loops, no conditionals
         #
         # 3A: Create all resources (forward order — parents first)
         # 3B: Get & verify all resources (forward order)
@@ -1025,180 +1010,144 @@ def main():
         # 3E: Verify delete (REVERSE order)
         # ------------------------------------------------------------------
         log("\n=== Phase 3A: Create All Resources ===")
-        for entry in RESOURCE_TESTS:
-            label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, _, id_field, \
-                verify_fields = entry
-            params = resolve_params(create_params)
-            ok = run_test(session, f"3A create_{label.lower()}",
-                                create_tool, params)
-            if ok:
-                for r in reversed(results):
-                    if r["label"] == f"3A create_{label.lower()}" and r["status"] == "PASSED":
-                        store[label] = r.get("data", {})
-                        break
-                data = store.get(label, {})
-                if label == "Collective" and isinstance(data, dict) and "collective" in data:
-                    data = data["collective"]
-                    store[label] = data
-                    # Discover the associated Circle (Team) created by Nextcloud
-                    try:
-                        coll_name = data.get("name", "")
-                        if coll_name:
-                            r = session.call_tool("circle_list")
-                            cd = extract_content(r)
-                            cl = get_list_items(cd)
-                            for c in cl:
-                                if isinstance(c, dict) and c.get("name") == coll_name:
-                                    cid = c.get("id")
-                                    if cid:
-                                        store["circle_id"] = cid
-                                        created["Circle"] = cid
-                                        log(f"  => Circle ID: {cid}")
-                                    break
-                    except Exception:
-                        pass
-                if label == "Page" and isinstance(data, dict) and "page" in data:
-                    data = data["page"]
-                    store[label] = data
-                if label == "Tag" and isinstance(data, dict) and "tag" in data:
-                    data = data["tag"]
-                    store[label] = data
-                cid = extract_id(data, "id") or (extract_id(data, id_field) if id_field else None)
-                if cid is not None:
-                    created[label] = cid
-                    store[f"{label}_id"] = cid
-                    log(f"  => ID for {label}: {cid}")
-                elif data and id_field:
-                    cid = data.get(id_field)
-                    if cid:
-                        created[label] = cid
-                        store[f"{label}_id"] = cid
-                        log(f"  => ID for {label}: {cid}")
-            if label in LIST_MATCH:
-                lm = LIST_MATCH[label]
-                value = params.get(lm["value_key"])
-                list_params = _build_list_params(label)
-                matched = verify_in_list_and_extract(
-                    session, label, lm["list_tool"], list_params,
-                    str(value) if value else "", lm["list_match_field"],
-                )
-                if matched and label in ("Calendar", "Addressbook"):
-                    href = matched.get("href", "")
-                    if href:
-                        created[label] = href
-                        log(f"  => List-derived URI for {label}: {href}")
+        run_test(session, "3A create_note", "note_create", {"title": make_name("Note"), "content": "Hello world", "category": "test"})
+        store["Note"] = results[-1]["data"]
+        store["Note_id"] = store["Note"]["id"]
+        log(f"  => Note ID: {store['Note_id']}")
+
+        run_test(session, "3A create_table", "table_create", {"title": make_name("Table"), "description": "Test table", "emoji": "📋"})
+        store["Table"] = results[-1]["data"]
+        store["Table_id"] = store["Table"]["id"]
+        log(f"  => Table ID: {store['Table_id']}")
+
+        run_test(session, "3A create_board", "deck_create_board", {"title": make_name("Board"), "color": "FF0000", "archived": False})
+        store["Board"] = results[-1]["data"]
+        store["Board_id"] = store["Board"]["id"]
+        log(f"  => Board ID: {store['Board_id']}")
+
+        run_test(session, "3A create_calendar", "create_calendar", {"display_name": make_name("Cal"), "color": "#FF0000"})
+        store["Calendar"] = results[-1]["data"]
+        store["Calendar_id"] = store["Calendar"]["calendar_uri"]
+        log(f"  => Calendar URI: {store['Calendar_id']}")
+
+        run_test(session, "3A create_addressbook", "create_addressbook", {"display_name": make_name("Addr"), "description": "Test addressbook"})
+        store["Addressbook"] = results[-1]["data"]
+        store["Addressbook_id"] = store["Addressbook"]["addressbook_uri"]
+        log(f"  => Addressbook URI: {store['Addressbook_id']}")
+
+        run_test(session, "3A create_collective", "collectives_create", {"name": make_name("Coll"), "emoji": "🌟"})
+        coll_data = results[-1]["data"]
+        coll_inner = coll_data["collective"]
+        store["Collective"] = coll_inner
+        store["Collective_id"] = coll_inner["id"]
+        circle_list_result = session.call_tool("circle_list")
+        circle_list_data = extract_content(circle_list_result)
+        circle_list_items = get_list_items(circle_list_data)
+        store["circle_id"] = circle_list_items[0]["id"]
+
+        run_test(session, "3A create_stack", "deck_create_stack", {"board_id": store["Board"]["id"], "title": make_name("Stack"), "order": 1})
+        store["Stack"] = results[-1]["data"]
+        store["Stack_id"] = store["Stack"]["id"]
+
+        run_test(session, "3A create_card", "deck_create_card", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "title": make_name("Card"), "description": "test"})
+        store["Card"] = results[-1]["data"]
+        store["Card_id"] = store["Card"]["id"]
+
+        run_test(session, "3A create_event", "create_event", {"calendar_uri": store["Calendar_id"], "summary": make_name("Event"), "dtstart": DT, "dtend": DT, "description": "test"})
+        store["Event"] = results[-1]["data"]
+        store["Event_id"] = store["Event"]["event_uid"]
+
+        run_test(session, "3A create_todo", "todo_create", {"calendar_uri": store["Calendar_id"], "summary": make_name("Todo"), "description": "test", "due_date": DT})
+        store["Todo"] = results[-1]["data"]
+        store["Todo_id"] = store["Todo"]["todo_uid"]
+
+        run_test(session, "3A create_contact", "create_contact", {"addressbook_uri": store["Addressbook_id"], "fn": make_name("Contact"), "email": "test@example.com", "telephone": "+1234567890", "organization": "TestOrg"})
+        store["Contact"] = results[-1]["data"]
+        store["Contact_id"] = store["Contact"]["contact_uid"]
+
+        run_test(session, "3A create_row", "table_create_row", {"table_id": store["Table"]["id"], "data": '{"col1": "val1"}'})
+        store["Row"] = results[-1]["data"]
+        store["Row_id"] = store["Row"]["id"]
+
+        run_test(session, "3A create_page", "collectives_create_page", {"collective_id": store["Collective"]["id"], "title": make_name("Page"), "parent_id": 0})
+        store["Page"] = results[-1]["data"]["page"]
+        store["Page_id"] = store["Page"]["id"]
+
+        run_test(session, "3A create_tag", "collectives_create_tag", {"collective_id": store["Collective"]["id"], "name": make_name("Tag"), "color": "FF0000"})
+        store["Tag"] = results[-1]["data"]["tag"]
+        store["Tag_id"] = store["Tag"]["id"]
 
         log("\n=== Phase 3B: Get & Verify All Resources ===")
-        for entry in RESOURCE_TESTS:
-            label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, _, id_field, \
-                verify_fields = entry
-            if get_tool is None:
-                results.append({
-                    "label": f"3B get_{label.lower()}", "tool": label,
-                    "status": "FAILED",
-                    "reason": "No get_tool defined for this resource"
-                })
-                log(f"  FAIL 3B get_{label.lower()}: no get_tool")
-                continue
-            cid = store.get(f"{label}_id")
-            get_params = {}
-            if id_field:
-                get_params[id_field] = cid
-            if label in ("Event", "Todo"):
-                get_params["calendar_uri"] = created.get("Calendar", "")
-            elif label == "Contact":
-                get_params["addressbook_uri"] = created.get("Addressbook", "")
-            elif label == "Card":
-                get_params["board_id"] = created.get("Board", 0)
-                get_params["stack_id"] = created.get("Stack", 0)
-            elif label == "Stack":
-                get_params["board_id"] = created.get("Board", 0)
-            elif label in ("Page", "Tag"):
-                get_params["collective_id"] = created.get("Collective", 0)
-            run_test(session, f"3B get_{label.lower()}",
-                            get_tool, get_params)
-            expected = resolve_params(create_params)
-            data = None
-            for r in reversed(results):
-                if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
-                    data = r.get("data", {})
-                    break
-            if data and verify_fields and expected:
-                vf = verify_fields if verify_fields != ["*"] else list(expected.keys())
-                _check_verify_fields(label, get_tool, data, expected, vf)
-            for r in reversed(results):
-                if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
-                    store[f"get_{label}"] = r.get("data", {})
-                    break
+        run_test(session, "3B get_note", "note_get", {"id": store["Note_id"]})
+        run_test(session, "3B get_table", "table_get", {"table_id": store["Table_id"]})
+        run_test(session, "3B get_board", "deck_get_board", {"board_id": store["Board_id"]})
+        run_test(session, "3B get_calendar", "get_calendar", {"calendar_uri": store["Calendar_id"]})
+        run_test(session, "3B get_addressbook", "get_addressbook", {"addressbook_uri": store["Addressbook_id"]})
+        run_test(session, "3B get_collective", "collectives_get_collective", {"id": store["Collective_id"]})
+        run_test(session, "3B get_stack", "deck_get_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]})
+        run_test(session, "3B get_card", "deck_get_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]})
+        run_test(session, "3B get_event", "get_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"]})
+        run_test(session, "3B get_todo", "todo_get", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
+        run_test(session, "3B get_contact", "get_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"]})
+        run_test(session, "3B get_row", "table_get_row", {"row_id": store["Row_id"]})
+        run_test(session, "3B get_page", "collectives_get_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"]})
+        run_test(session, "3B get_tag", "collectives_get_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"]})
 
         log("\n=== Phase 3C: Update All Resources ===")
-        for entry in RESOURCE_TESTS:
-            label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, _, id_field, \
-                verify_fields = entry
-            if update_tool is None:
-                results.append({
-                    "label": f"3C update_{label.lower()}", "tool": label,
-                    "status": "FAILED",
-                    "reason": "No update_tool defined for this resource"
-                })
-                log(f"  FAIL 3C update_{label.lower()}: no update_tool")
-                continue
-            cid = store.get(f"{label}_id")
-            params = resolve_params(update_params)
-            if id_field:
-                params[id_field] = cid
-            if label in ("Event", "Todo"):
-                params["calendar_uri"] = created.get("Calendar", "")
-            elif label == "Contact":
-                params["addressbook_uri"] = created.get("Addressbook", "")
-            elif label == "Card":
-                params["board_id"] = created.get("Board", 0)
-                params["stack_id"] = created.get("Stack", 0)
-            elif label == "Stack":
-                params["board_id"] = created.get("Board", 0)
-            elif label in ("Page", "Tag"):
-                params["collective_id"] = created.get("Collective", 0)
-            run_test(session, f"3C update_{label.lower()}",
-                           update_tool, params)
+        run_test(session, "3C update_note", "note_update", {"id": store["Note_id"], "title": make_name("Note-upd"), "content": "Updated"})
+        run_test(session, "3C update_table", "table_update", {"table_id": store["Table_id"], "title": make_name("Table-upd")})
+        run_test(session, "3C update_board", "deck_update_board", {"board_id": store["Board_id"], "title": make_name("Board-upd"), "color": "00FF00"})
+        run_test(session, "3C update_calendar", "update_calendar", {"calendar_uri": store["Calendar_id"], "display_name": make_name("Cal-upd"), "color": "#00FF00"})
+        run_test(session, "3C update_addressbook", "update_addressbook", {"addressbook_uri": store["Addressbook_id"], "display_name": make_name("Addr-upd")})
+        run_test(session, "3C update_collective", "collectives_update_collective", {"id": store["Collective_id"], "emoji": "🌈"})
+        run_test(session, "3C update_stack", "deck_update_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"], "title": make_name("Stack-upd")})
+        run_test(session, "3C update_card", "deck_update_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"], "title": make_name("Card-upd")})
+        run_test(session, "3C update_tag", "collectives_update_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"], "name": make_name("Tag-upd"), "color": "00FF00"})
 
         # ------------------------------------------------------------------
         # Phase 3.5: Minimal-Params Create & Delete
-        # Creates each resource with only required parameters, then deletes it.
         # ------------------------------------------------------------------
         log("\n=== Phase 3.5: Minimal-Params Create & Delete ===")
-        min_created: dict[str, Any] = {}
-        for entry in MINIMAL_PARAM_TESTS:
-            label, create_tool, create_params, delete_sequence_fn, _, id_field = entry
-            params = resolve_params(create_params)
-            run_test(session, f"3.5 create_{label.lower()}", create_tool, params)
-            for r in reversed(results):
-                if r["label"] == f"3.5 create_{label.lower()}" and r["status"] == "PASSED":
-                    create_data = r.get("data", {})
-                    break
-            else:
-                create_data = {}
-            if label == "Collective" and isinstance(create_data, dict) and "collective" in create_data:
-                create_data = create_data["collective"]
-            if label == "Page" and isinstance(create_data, dict) and "page" in create_data:
-                create_data = create_data["page"]
-            if label == "Tag" and isinstance(create_data, dict) and "tag" in create_data:
-                create_data = create_data["tag"]
-            cid = extract_id(create_data, "id") or extract_id(create_data, id_field)
-            if cid is None:
-                results.append({
-                    "label": f"3.5 delete_{label.lower()}", "tool": "N/A",
-                    "status": "FAILED", "reason": f"Could not extract id (field={id_field}) from create response"
-                })
-                log(f"  FAIL 3.5 delete_{label.lower()}: no id from create response")
-                continue
-            min_created[label] = cid
-            log(f"  => Min {label} ID: {cid}")
-            delete_ops = delete_sequence_fn(store, rid, cid)
-            for del_tool, del_params in delete_ops:
-                run_test(session, f"3.5 delete_{label.lower()}", del_tool, del_params)
+        run_test(session, "3.5 create_board", "deck_create_board", {"title": make_name("minBoard")})
+        run_test(session, "3.5 delete_board", "deck_delete_board", {"board_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 create_note", "note_create", {"title": make_name("minNote"), "content": "min"})
+        run_test(session, "3.5 delete_note", "note_delete", {"id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 create_table", "table_create", {"title": make_name("minTable"), "description": "min"})
+        run_test(session, "3.5 delete_table", "table_delete", {"table_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 create_calendar", "create_calendar", {"display_name": make_name("minCal")})
+        run_test(session, "3.5 delete_calendar", "delete_calendar", {"calendar_uri": results[-1]["data"]["calendar_uri"]})
+        run_test(session, "3.5 create_addressbook", "create_addressbook", {"display_name": make_name("minAddr"), "description": "min"})
+        run_test(session, "3.5 delete_addressbook", "delete_addressbook", {"addressbook_uri": results[-1]["data"]["addressbook_uri"]})
+        run_test(session, "3.5 create_collective", "collectives_create", {"name": make_name("minColl")})
+        c5_inner = results[-1]["data"]["collective"]
+        c5_id = c5_inner["id"]
+        run_test(session, "3.5 delete_collective", "collectives_trash", {"id": c5_id})
+        run_test(session, "3.5 delete_collective", "collectives_delete", {"id": c5_id})
+        run_test(session, "3.5 create_circle", "circle_create", {"name": make_name("minCircle")})
+        run_test(session, "3.5 delete_circle", "circle_delete", {"circle_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 create_stack", "deck_create_stack", {"board_id": store["Board_id"], "title": make_name("minStack")})
+        s5_id = results[-1]["data"]["id"]
+        run_test(session, "3.5 delete_stack", "deck_delete_stack", {"board_id": store["Board_id"], "stack_id": s5_id})
+        run_test(session, "3.5 create_card", "deck_create_card", {"board_id": store["Board_id"], "stack_id": store["Stack_id"], "title": make_name("minCard"), "description": "min"})
+        c5d_id = results[-1]["data"]["id"]
+        run_test(session, "3.5 delete_card", "deck_delete_card", {"board_id": store["Board_id"], "stack_id": store["Stack_id"], "card_id": c5d_id})
+        run_test(session, "3.5 create_event", "create_event", {"calendar_uri": store["Calendar_id"], "summary": make_name("minEvent"), "dtstart": DT, "dtend": DT, "description": "min"})
+        e5_uid = results[-1]["data"]["event_uid"]
+        run_test(session, "3.5 delete_event", "delete_event", {"calendar_uri": store["Calendar_id"], "event_uid": e5_uid})
+        run_test(session, "3.5 create_todo", "todo_create", {"calendar_uri": store["Calendar_id"], "summary": make_name("minTodo"), "description": "min", "due_date": DT})
+        t5_uid = results[-1]["data"]["todo_uid"]
+        run_test(session, "3.5 delete_todo", "todo_delete", {"calendar_uri": store["Calendar_id"], "todo_uid": t5_uid})
+        run_test(session, "3.5 create_contact", "create_contact", {"addressbook_uri": store["Addressbook_id"], "fn": make_name("minContact"), "email": "min@test.com"})
+        c5t_uid = results[-1]["data"]["contact_uid"]
+        run_test(session, "3.5 delete_contact", "delete_contact", {"addressbook_uri": store["Addressbook_id"], "contact_uid": c5t_uid})
+        run_test(session, "3.5 create_row", "table_create_row", {"table_id": store["Table_id"], "data": '{"col1":"min"}'})
+        run_test(session, "3.5 delete_row", "table_delete_row", {"row_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 create_page", "collectives_create_page", {"collective_id": store["Collective_id"], "title": make_name("minPage"), "parent_id": 0})
+        p5_inner = results[-1]["data"]["page"]
+        run_test(session, "3.5 delete_page", "collectives_delete_page", {"collective_id": store["Collective_id"], "page_id": p5_inner["id"]})
+        run_test(session, "3.5 create_tag", "collectives_create_tag", {"collective_id": store["Collective_id"], "name": make_name("minTag"), "color": "FF0000"})
+        t5_inner = results[-1]["data"]["tag"]
+        run_test(session, "3.5 delete_tag", "collectives_delete_tag", {"tag_id": t5_inner["id"], "collective_id": store["Collective_id"]})
         # ------------------------------------------------------------------
         # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------
@@ -2044,106 +1993,42 @@ def main():
 
         # ------------------------------------------------------------------
         # Phase 3D: Delete All Resources (REVERSE ORDER)
-        # Only resources with a delete_tool set (and not handled by cleanup)
         # ------------------------------------------------------------------
         log("\n=== Phase 3D: Delete All Resources (REVERSE ORDER) ===")
-        for entry in reversed(RESOURCE_TESTS):
-            label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, _, id_field, \
-                verify_fields = entry
-            if delete_tool is None:
-                results.append({
-                    "label": f"3D delete_{label.lower()}", "tool": "N/A",
-                    "status": "FAILED",
-                    "reason": "No delete_tool defined for this resource"
-                })
-                log(f"  FAIL 3D delete_{label.lower()}: no delete_tool")
-                continue
-            cid = store.get(f"{label}_id")
-            params = {}
-            if id_field:
-                params[id_field] = cid
-            for other_label in ("Calendar", "Contact", "Board", "Stack", "Collective"):
-                other_store = store.get(other_label, {})
-                other_id_field = {"Calendar": "calendar_uri", "Contact": "addressbook_uri",
-                                  "Board": "board_id", "Stack": "stack_id",
-                                  "Collective": "collective_id"}.get(other_label)
-                other_id = other_store.get("id") or other_store.get(other_id_field)
-                if label in ("Event", "Todo") and other_label == "Calendar":
-                    params["calendar_uri"] = other_id
-                elif label == "Contact" and other_label == "Addressbook":
-                    params["addressbook_uri"] = other_id
-                elif label == "Card" and other_label == "Board":
-                    params["board_id"] = other_id
-                elif label == "Card" and other_label == "Stack":
-                    params["stack_id"] = other_id
-                elif label == "Stack" and other_label == "Board":
-                    params["board_id"] = other_id
-                elif label in ("Page", "Tag") and other_label == "Collective":
-                    params["collective_id"] = other_id
-            run_test(session, f"3D delete_{label.lower()}",
-                           delete_tool, params)
+        run_test(session, "3D delete_tag", "collectives_delete_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"]})
+        run_test(session, "3D delete_page", "collectives_delete_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"]})
+        run_test(session, "3D delete_row", "table_delete_row", {"row_id": store["Row_id"]})
+        run_test(session, "3D delete_contact", "delete_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"]})
+        run_test(session, "3D delete_todo", "todo_delete", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
+        run_test(session, "3D delete_event", "delete_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"]})
+        run_test(session, "3D delete_card", "deck_delete_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]})
+        run_test(session, "3D delete_stack", "deck_delete_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]})
+        run_test(session, "3D delete_collective", "collectives_trash", {"id": store["Collective_id"]})
+        run_test(session, "3D delete_collective", "collectives_delete", {"id": store["Collective_id"]})
+        run_test(session, "3D delete_addressbook", "delete_addressbook", {"addressbook_uri": store["Addressbook_id"]})
+        run_test(session, "3D delete_calendar", "delete_calendar", {"calendar_uri": store["Calendar_id"]})
+        run_test(session, "3D delete_board", "deck_delete_board", {"board_id": store["Board_id"]})
+        run_test(session, "3D delete_table", "table_delete", {"table_id": store["Table_id"]})
+        run_test(session, "3D delete_note", "note_delete", {"id": store["Note_id"]})
 
         # ------------------------------------------------------------------
         # Phase 3E: Verify Delete (REVERSE ORDER)
-        # Uses GET-based verification for resources with get_tool,
-        # and list-based verification for resources with list_tool.
         # ------------------------------------------------------------------
         log("\n=== Phase 3E: Verify Delete (REVERSE ORDER) ===")
-        for entry in reversed(RESOURCE_TESTS):
-            label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, _, id_field, \
-                verify_fields = entry
-            if delete_tool is None:
-                results.append({
-                    "label": f"3E verify_delete_{label.lower()}", "tool": label,
-                    "status": "FAILED",
-                    "reason": "No delete_tool — cleanup handled separately"
-                })
-                continue
-            if get_tool is None and list_tool is None:
-                results.append({
-                    "label": f"3E verify_delete_{label.lower()}", "tool": label,
-                    "status": "FAILED",
-                    "reason": "No get_tool or list_tool for delete verification"
-                })
-                continue
-            if label not in created:
-                results.append({
-                    "label": f"3E verify_delete_{label.lower()}", "tool": label,
-                    "status": "FAILED",
-                    "reason": "Resource not created, cannot verify delete"
-                })
-                continue
-            cid = store.get(f"{label}_id")
-            get_params = {}
-            if id_field:
-                get_params[id_field] = cid
-            if label in ("Event", "Todo"):
-                get_params["calendar_uri"] = store.get("Calendar_id") or store.get("Calendar", {}).get("calendar_uri")
-            elif label == "Contact":
-                get_params["addressbook_uri"] = store.get("Addressbook_id") or store.get("Addressbook", {}).get("addressbook_uri")
-            elif label == "Card":
-                get_params["board_id"] = store.get("Board_id")
-                get_params["stack_id"] = store.get("Stack_id")
-            elif label == "Stack":
-                get_params["board_id"] = store.get("Board_id")
-            elif label in ("Page", "Tag"):
-                get_params["collective_id"] = store.get("Collective_id")
-            # Build list verification params
-            l_params = _build_list_params(label)
-            l_tool = list_tool
-            l_match = None
-            l_value = None
-            if label in LIST_MATCH:
-                lm = LIST_MATCH[label]
-                l_match = lm["list_match_field"]
-                resolved = resolve_params(create_params)
-                l_value = str(resolved.get(lm["value_key"], ""))
-            run_verify_delete(session, f"3E verify_delete_{label.lower()}",
-                                    get_tool if get_tool else None, get_params if get_tool else None,
-                                    list_tool=l_tool, list_params=l_params,
-                                    match_field=l_match, expected_value=l_value if l_value else None)
+        run_verify_delete(session, "3E verify_delete_tag", "collectives_get_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"]})
+        run_verify_delete(session, "3E verify_delete_page", "collectives_get_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"]})
+        run_verify_delete(session, "3E verify_delete_row", "table_get_row", {"row_id": store["Row_id"]})
+        run_verify_delete(session, "3E verify_delete_contact", "get_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"]})
+        run_verify_delete(session, "3E verify_delete_todo", "todo_get", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
+        run_verify_delete(session, "3E verify_delete_event", "get_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"]})
+        run_verify_delete(session, "3E verify_delete_card", "deck_get_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]})
+        run_verify_delete(session, "3E verify_delete_stack", "deck_get_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]})
+        run_verify_delete(session, "3E verify_delete_collective", "collectives_get_collective", {"id": store["Collective_id"]})
+        run_verify_delete(session, "3E verify_delete_addressbook", "get_addressbook", {"addressbook_uri": store["Addressbook_id"]})
+        run_verify_delete(session, "3E verify_delete_calendar", "get_calendar", {"calendar_uri": store["Calendar_id"]})
+        run_verify_delete(session, "3E verify_delete_board", "deck_get_board", {"board_id": store["Board_id"]})
+        run_verify_delete(session, "3E verify_delete_table", "table_get", {"table_id": store["Table_id"]})
+        run_verify_delete(session, "3E verify_delete_note", "note_get", {"id": store["Note_id"]})
 
         # ------------------------------------------------------------------
         # Phase 5S: Collective Cleanup Sequence
@@ -2158,41 +2043,21 @@ def main():
         # ------------------------------------------------------------------
         # Report Summary
         # ------------------------------------------------------------------
-        passed = sum(1 for r in results if r["status"] == "PASSED")
-        failed = sum(1 for r in results if r["status"] == "FAILED")
         print(f"\n## Summary\n")
         print(f"| Status | Count |")
         print(f"|--------|-------|")
-        print(f"| PASSED | {passed} |")
-        print(f"| FAILED | {failed} |")
-        if passed:
-            print(f"\n## PASSED ({passed})\n")
-            for r in results:
-                if r["status"] == "PASSED":
-                    print(f"- `{r['tool']}` — {r['label']}")
-
-        if failed:
-            print(f"\n## FAILED ({failed})\n")
-            for r in results:
-                if r["status"] == "FAILED":
-                    print(f"### {r['label']}")
-                    print(f"- **Error**: {r['reason']}")
-                    print()
-
+        print(f"| PASSED | {passed_count} |")
+        print(f"| FAILED | {failed_count} |")
+        print(f"\n## PASSED ({passed_count})\n")
+        print(f"\n## FAILED ({failed_count})\n")
         print(f"\n## Iteration History\n")
         print(f"| Iteration | Passed | Failed | Fixes Applied |")
         print(f"|-----------|--------|--------|---------------|")
-        print(f"| {ITERATION} | {passed} | {failed} | Initial run |")
-
-        total = len(results)
+        print(f"| {ITERATION} | {passed_count} | {failed_count} | Initial run |")
         print(f"\n---")
-        print(f"**Total tests:** {total} | **PASSED:** {passed} | "
-              f"**FAILED:** {failed}")
-
-        if failed == 0:
-            print(f"\n**ALL TESTS PASS**")
-        else:
-            print(f"\n**TESTS FAILING** — see above for details")
+        print(f"**Total tests:** {len(results)} | **PASSED:** {passed_count} | FAILED: {failed_count}")
+        conclusion = ("**TESTS FAILING** — see above for details", "**ALL TESTS PASS**")[failed_count == 0]
+        print(f"\n{conclusion}")
 
 
 if __name__ == "__main__":
