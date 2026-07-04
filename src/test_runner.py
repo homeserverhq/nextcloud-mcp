@@ -914,9 +914,6 @@ DOMAIN_TESTS_COLLECTIVES_MUTATE = [
     }, ["Collective"]),
 ]
 
-DOMAIN_TESTS_BACKEND_BROKEN = []
-
-
 DOMAIN_TESTS_CLEANUP = [
     ("CollectiveDelete", "collectives_delete",
      lambda s, r: {"id": s["Collective"]["id"]}, ["Collective"]),
@@ -1067,14 +1064,16 @@ def main():
                 if label == "Tag" and isinstance(data, dict) and "tag" in data:
                     data = data["tag"]
                     store[label] = data
-                cid = extract_id(data, "id") or extract_id(data, id_field) if id_field else None
+                cid = extract_id(data, "id") or (extract_id(data, id_field) if id_field else None)
                 if cid is not None:
                     created[label] = cid
+                    store[f"{label}_id"] = cid
                     log(f"  => ID for {label}: {cid}")
                 elif data and id_field:
                     cid = data.get(id_field)
                     if cid:
                         created[label] = cid
+                        store[f"{label}_id"] = cid
                         log(f"  => ID for {label}: {cid}")
             if label in LIST_MATCH:
                 lm = LIST_MATCH[label]
@@ -1103,15 +1102,7 @@ def main():
                 })
                 log(f"  FAIL 3B get_{label.lower()}: no get_tool")
                 continue
-            if label not in created:
-                results.append({
-                    "label": f"3B get_{label.lower()}", "tool": get_tool,
-                    "status": "FAILED",
-                    "reason": f"No ID for {label} — prerequisite create failed"
-                })
-                log(f"  FAIL 3B get_{label.lower()}: no ID (create failed)")
-                continue
-            cid = created.get(label)
+            cid = store.get(f"{label}_id")
             get_params = {}
             if id_field:
                 get_params[id_field] = cid
@@ -1155,16 +1146,8 @@ def main():
                 })
                 log(f"  FAIL 3C update_{label.lower()}: no update_tool")
                 continue
-            if label not in created:
-                results.append({
-                    "label": f"3C update_{label.lower()}", "tool": update_tool,
-                    "status": "FAILED",
-                    "reason": f"No ID for {label} — create failed"
-                })
-                log(f"  FAIL 3C update_{label.lower()}: no ID (create failed)")
-                continue
+            cid = store.get(f"{label}_id")
             params = resolve_params(update_params)
-            cid = created.get(label)
             if id_field:
                 params[id_field] = cid
             if label in ("Event", "Todo"):
@@ -1790,11 +1773,11 @@ def main():
 
         # ---- Phase 5M: Chat Tests ----
         log("\n=== Phase 5M: Chat Tests ===")
-        token = None
         room_type = 3
         room_name = f"t{rid}-chat"
         run_test(session, "5M create_room", "talk_create_room",
                 {"room_type": room_type, "room_name": room_name})
+        token = None
         for r in reversed(results):
             if r["label"] == "5M create_room" and r["status"] == "PASSED":
                 rd = r.get("data", {})
@@ -1804,82 +1787,61 @@ def main():
         if token:
             store["chat_token"] = token
             log(f"  => Chat room token: {token}")
-        else:
-            log("  Could not create Talk room")
 
-        # Rename room and set description
-        if token:
-            run_test(session, "5M rename_room", "talk_update_room",
-                    {"token": token, "room_name": f"t{rid}-renamed"})
-            run_test(session, "5M set_description", "talk_set_description",
-                    {"token": token, "description": "Test room description"})
-            # Add participant
-            second_user = None
-            users_result = session.call_tool("get_users")
-            users_data = extract_content(users_result)
-            all_users = get_list_items(users_data)
-            current_user = store.get("current_user", "")
-            if all_users:
-                for u in all_users:
-                    uid = u if isinstance(u, str) else (u.get("id") if isinstance(u, dict) else "")
-                    if uid and uid != current_user:
-                        second_user = uid
-                        break
-            if second_user:
-                log(f"  => Second user: {second_user}")
-                run_test(session, "5M add_participant", "talk_add_participant",
-                        {"token": token, "new_participant": second_user})
-                run_test(session, "5M list_participants", "talk_list_participants",
-                        {"token": token})
-                # Extract attendee_id of the second user
-                attendee_id = None
-                for r in reversed(results):
-                    if r["label"] == "5M list_participants" and r["status"] == "PASSED":
-                        pdata = r.get("data", {})
-                        plist = get_list_items(pdata)
-                        for p in plist:
-                            if isinstance(p, dict) and p.get("actorId") == second_user:
-                                attendee_id = p.get("attendeeId")
-                                break
-                        break
-                if attendee_id:
-                    run_test(session, "5M remove_participant", "talk_remove_participant",
-                            {"token": token, "attendee_id": attendee_id})
-                else:
-                    results.append({"label": "5M remove_participant", "tool": "talk_remove_participant",
-                                   "status": "FAILED", "reason": "Could not find attendee_id"})
-                    log("  FAIL 5M remove_participant: no attendee_id found")
-            else:
-                log("  No second user found, skipping participant tests")
+        run_test(session, "5M rename_room", "talk_update_room",
+                {"token": token, "room_name": f"t{rid}-renamed"})
+        run_test(session, "5M set_description", "talk_set_description",
+                {"token": token, "description": "Test room description"})
+
+        users_result = session.call_tool("get_users")
+        users_data = extract_content(users_result)
+        all_users = get_list_items(users_data)
+        current_user = store.get("current_user", "")
+        second_user = None
+        for u in all_users:
+            uid = u if isinstance(u, str) else (u.get("id") if isinstance(u, dict) else "")
+            if uid and uid != current_user:
+                second_user = uid
+                break
+
+        run_test(session, "5M add_participant", "talk_add_participant",
+                {"token": token, "new_participant": second_user})
+        run_test(session, "5M list_participants", "talk_list_participants",
+                {"token": token})
+        list_cr = store.get("5M add_participant", {})
+        participant_list = get_list_items(list_cr) if isinstance(list_cr, dict) else []
+        if not participant_list:
+            p_data = None
+            for r in reversed(results):
+                if r["label"] == "5M list_participants" and r["status"] == "PASSED":
+                    p_data = get_list_items(r.get("data", {}))
+                    break
+            participant_list = p_data or []
+        attendee_id = None
+        for p in participant_list:
+            if isinstance(p, dict) and p.get("actorId") == second_user:
+                attendee_id = p.get("attendeeId")
+                break
+        run_test(session, "5M remove_participant", "talk_remove_participant",
+                {"token": token, "attendee_id": attendee_id})
 
         run_test(session, "5M send_chat_message", "send_chat_message",
-                {"token": token or "", "message": "Hello from MCP test"})
+                {"token": token, "message": "Hello from MCP test"})
         run_test(session, "5M get_chat_messages", "get_chat_messages",
-                {"token": token or "", "limit": 5})
-        # Try to find message_id for delete (skip system messages)
-        result = session.call_tool("get_chat_messages", {"token": token or "", "limit": 5})
-        msg_data = extract_content(result)
+                {"token": token, "limit": 5})
+
+        msg_result = session.call_tool("get_chat_messages", {"token": token, "limit": 5})
+        msg_data = extract_content(msg_result)
         msgs = get_list_items(msg_data)
         msg_id = None
-        if msgs:
-            for m in msgs:
-                if isinstance(m, dict) and m.get("messageType") != "system":
-                    msg_id = m.get("id")
-                    break
-        if msg_id:
-            run_test(session, "5M delete_chat_message", "delete_chat_message",
-                    {"token": token, "message_id": msg_id})
-        else:
-            results.append({
-                "label": "5M delete_chat_message", "tool": "delete_chat_message",
-                "status": "FAILED", "reason": "No chat messages to delete"
-            })
-            log("  FAIL 5M delete_chat_message: no messages to delete")
-        # Delete the Talk room
-        if token:
-            run_test(session, "5M delete_room", "talk_delete_room",
-                    {"token": token})
-            log(f"  => Deleted Talk room: {token}")
+        for m in msgs:
+            if isinstance(m, dict) and m.get("messageType") != "system":
+                msg_id = m.get("id")
+                break
+        run_test(session, "5M delete_chat_message", "delete_chat_message",
+                {"token": token, "message_id": msg_id})
+        run_test(session, "5M delete_room", "talk_delete_room",
+                {"token": token})
 
         # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")
@@ -1966,10 +1928,6 @@ def main():
         })
         log(f"  {tag_status} 5O verify_tag_ops" + (f": {tag_reason}" if tag_reason else ""))
 
-        # ---- Phase 5P: Backend-Broken Error Tests ----
-        log("\n=== Phase 5P: Backend-Broken Error Tests ===")
-        run_domain_tests(session, "5P", DOMAIN_TESTS_BACKEND_BROKEN)
-
         # ---- Phase 5Q: Notification Tests ----
         log("\n=== Phase 5Q: Notification Tests ===")
         notif_result = session.call_tool("list_notifications")
@@ -2050,56 +2008,39 @@ def main():
 
         circle_name = make_name("memberTest")
         run_test(session, "6 create_circle", "circle_create", {"name": circle_name})
-        circle_id = ""
+        circle_id = None
         for r in reversed(results):
             if r["label"] == "6 create_circle" and r["status"] == "PASSED":
                 cd = r.get("data", {})
                 if isinstance(cd, dict):
-                    circle_id = cd.get("id", "")
+                    circle_id = cd.get("id")
                 break
 
-        if circle_id:
-            log(f"  => Circle ID: {circle_id}")
-            run_test(session, "6 list_members", "circle_list_members",
-                    {"circle_id": circle_id, "include_all_fields": True})
-            run_test(session, "6 get_circle", "circle_get",
-                    {"circle_id": circle_id})
-            run_test(session, "6 update_circle", "circle_update",
-                    {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
+        run_test(session, "6 list_members", "circle_list_members",
+                {"circle_id": circle_id, "include_all_fields": True})
+        run_test(session, "6 get_circle", "circle_get",
+                {"circle_id": circle_id})
+        run_test(session, "6 update_circle", "circle_update",
+                {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
 
-            if second_user:
-                log(f"  => Second user: {second_user}")
-                run_test(session, "6 add_member", "circle_add_member",
-                        {"circle_id": circle_id, "user_id": second_user})
+        run_test(session, "6 add_member", "circle_add_member",
+                {"circle_id": circle_id, "user_id": second_user})
 
-                mem_result = session.call_tool("circle_list_members",
-                    {"circle_id": circle_id, "include_all_fields": True})
-                mem_data = extract_content(mem_result)
-                mem_items = get_list_items(mem_data)
-                member_id = ""
-                for m in mem_items:
-                    if isinstance(m, dict) and m.get("userId") == second_user:
-                        member_id = m.get("id", "")
-                        break
+        mem_result = session.call_tool("circle_list_members",
+            {"circle_id": circle_id, "include_all_fields": True})
+        mem_data = extract_content(mem_result)
+        mem_items = get_list_items(mem_data)
+        member_id = None
+        for m in mem_items:
+            if isinstance(m, dict) and m.get("userId") == second_user:
+                member_id = m.get("id")
+                break
 
-                if member_id:
-                    log(f"  => Member ID: {member_id}")
-                    run_test(session, "6 update_level", "circle_update_member_level",
-                            {"circle_id": circle_id, "member_id": member_id, "level": 4})
-                    run_test(session, "6 remove_member", "circle_remove_member",
-                            {"circle_id": circle_id, "member_id": member_id})
-                else:
-                    results.append({"label": "6 update_level", "tool": "circle_update_member_level",
-                                    "status": "FAILED", "reason": "No member_id for second user"})
-                    results.append({"label": "6 remove_member", "tool": "circle_remove_member",
-                                    "status": "FAILED", "reason": "No member_id for second user"})
-                    log("  FAIL 6: no member_id for second user")
-            else:
-                results.append({"label": "6 add_member", "tool": "circle_add_member",
-                                "status": "FAILED", "reason": "No second user available"})
-                log("  FAIL 6 add_member: only 1 user in system")
-
-            run_test(session, "6 delete_circle", "circle_delete", {"circle_id": circle_id})
+        run_test(session, "6 update_level", "circle_update_member_level",
+                {"circle_id": circle_id, "member_id": member_id, "level": 4})
+        run_test(session, "6 remove_member", "circle_remove_member",
+                {"circle_id": circle_id, "member_id": member_id})
+        run_test(session, "6 delete_circle", "circle_delete", {"circle_id": circle_id})
 
         # ------------------------------------------------------------------
         # Phase 3D: Delete All Resources (REVERSE ORDER)
@@ -2118,29 +2059,28 @@ def main():
                 })
                 log(f"  FAIL 3D delete_{label.lower()}: no delete_tool")
                 continue
-            if label not in created:
-                results.append({
-                    "label": f"3D delete_{label.lower()}", "tool": delete_tool,
-                    "status": "FAILED",
-                    "reason": f"No ID for {label} — create failed"
-                })
-                log(f"  FAIL 3D delete_{label.lower()}: no ID (create failed)")
-                continue
-            cid = created.get(label)
+            cid = store.get(f"{label}_id")
             params = {}
             if id_field:
                 params[id_field] = cid
-            if label in ("Event", "Todo"):
-                params["calendar_uri"] = created.get("Calendar", "")
-            elif label == "Contact":
-                params["addressbook_uri"] = created.get("Addressbook", "")
-            elif label == "Card":
-                params["board_id"] = created.get("Board", 0)
-                params["stack_id"] = created.get("Stack", 0)
-            elif label == "Stack":
-                params["board_id"] = created.get("Board", 0)
-            elif label in ("Page", "Tag"):
-                params["collective_id"] = created.get("Collective", 0)
+            for other_label in ("Calendar", "Contact", "Board", "Stack", "Collective"):
+                other_store = store.get(other_label, {})
+                other_id_field = {"Calendar": "calendar_uri", "Contact": "addressbook_uri",
+                                  "Board": "board_id", "Stack": "stack_id",
+                                  "Collective": "collective_id"}.get(other_label)
+                other_id = other_store.get("id") or other_store.get(other_id_field)
+                if label in ("Event", "Todo") and other_label == "Calendar":
+                    params["calendar_uri"] = other_id
+                elif label == "Contact" and other_label == "Addressbook":
+                    params["addressbook_uri"] = other_id
+                elif label == "Card" and other_label == "Board":
+                    params["board_id"] = other_id
+                elif label == "Card" and other_label == "Stack":
+                    params["stack_id"] = other_id
+                elif label == "Stack" and other_label == "Board":
+                    params["board_id"] = other_id
+                elif label in ("Page", "Tag") and other_label == "Collective":
+                    params["collective_id"] = other_id
             run_test(session, f"3D delete_{label.lower()}",
                            delete_tool, params)
 
@@ -2152,7 +2092,7 @@ def main():
         log("\n=== Phase 3E: Verify Delete (REVERSE ORDER) ===")
         for entry in reversed(RESOURCE_TESTS):
             label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, prereqs, id_field, \
+                update_tool, update_params, delete_tool, _, id_field, \
                 verify_fields = entry
             if delete_tool is None:
                 results.append({
@@ -2175,21 +2115,21 @@ def main():
                     "reason": "Resource not created, cannot verify delete"
                 })
                 continue
-            cid = created.get(label)
+            cid = store.get(f"{label}_id")
             get_params = {}
             if id_field:
                 get_params[id_field] = cid
             if label in ("Event", "Todo"):
-                get_params["calendar_uri"] = created.get("Calendar", "")
+                get_params["calendar_uri"] = store.get("Calendar_id") or store.get("Calendar", {}).get("calendar_uri")
             elif label == "Contact":
-                get_params["addressbook_uri"] = created.get("Addressbook", "")
+                get_params["addressbook_uri"] = store.get("Addressbook_id") or store.get("Addressbook", {}).get("addressbook_uri")
             elif label == "Card":
-                get_params["board_id"] = created.get("Board", 0)
-                get_params["stack_id"] = created.get("Stack", 0)
+                get_params["board_id"] = store.get("Board_id")
+                get_params["stack_id"] = store.get("Stack_id")
             elif label == "Stack":
-                get_params["board_id"] = created.get("Board", 0)
+                get_params["board_id"] = store.get("Board_id")
             elif label in ("Page", "Tag"):
-                get_params["collective_id"] = created.get("Collective", 0)
+                get_params["collective_id"] = store.get("Collective_id")
             # Build list verification params
             l_params = _build_list_params(label)
             l_tool = list_tool
