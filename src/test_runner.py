@@ -298,7 +298,7 @@ def main():
         store["Contact"] = results[-1]["data"]
         store["Contact_id"] = store["Contact"]["contact_uid"]
 
-        run_test(session, "3A create_row", "table_create_row", {"table_id": store["Table"]["id"], "data": '{"col1": "val1"}'})
+        run_test(session, "3A create_row", "table_create_row", {"table_id": store["Table"]["id"], "data": {"col1": "val1"}})
         store["Row"] = results[-1]["data"]
         store["Row_id"] = store["Row"]["id"]
 
@@ -353,7 +353,7 @@ def main():
         run_test(session, "3C update_event", "update_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Event-upd")})
         run_test(session, "3C update_todo", "todo_update", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Todo-upd")})
         run_test(session, "3C update_contact", "update_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"], "fn": make_name("Contact-upd")})
-        run_test(session, "3C update_row", "table_update_row", {"row_id": store["Row_id"], "data": '{"col1": "upd"}'})
+        run_test(session, "3C update_row", "table_update_row", {"row_id": store["Row_id"], "data": {"col1": "upd"}})
         run_test(session, "3C update_page", "collectives_update_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"], "title": make_name("Page-upd")})
 
         # ------------------------------------------------------------------
@@ -392,7 +392,7 @@ def main():
         run_test(session, "3.5 create_contact", "create_contact", {"addressbook_uri": store["Addressbook_id"], "fn": make_name("minContact"), "email": "min@test.com"})
         c5t_uid = results[-1]["data"]["contact_uid"]
         run_test(session, "3.5 delete_contact", "delete_contact", {"addressbook_uri": store["Addressbook_id"], "contact_uid": c5t_uid})
-        run_test(session, "3.5 create_row", "table_create_row", {"table_id": store["Table_id"], "data": '{"col1":"min"}'})
+        run_test(session, "3.5 create_row", "table_create_row", {"table_id": store["Table_id"], "data": {"col1": "min"}})
         run_test(session, "3.5 delete_row", "table_delete_row", {"row_id": results[-1]["data"]["id"]})
         run_test(session, "3.5 create_page", "collectives_create_page", {"collective_id": store["Collective_id"], "title": make_name("minPage"), "parent_id": 0})
         p5_inner = results[-1]["data"]["page"]
@@ -434,7 +434,7 @@ def main():
         run_test(session, "5B webdav_search_files", "webdav_search_files", {"query": "test"})
         run_test(session, "5B webdav_create_directory", "webdav_create_directory", {"path": f"/remote.php/dav/files/{API_USER}/t{rid}-testdir"})
         run_test(session, "5B webdav_write_file", "webdav_write_file", {"path": f"/remote.php/dav/files/{API_USER}/t{rid}-testdir/testfile.txt", "content": "Hello World"})
-        run_test(session, "5B table_update_row", "table_update_row", {"row_id": store["Row"]["id"], "data": '{}'})
+        run_test(session, "5B table_update_row", "table_update_row", {"row_id": store["Row"]["id"], "data": {}})
 
         # ---- Phase 5C: WebDAV Move/Copy/Delete with inline verification ----
         log("\n=== Phase 5C: WebDAV Move/Copy/Delete ===")
