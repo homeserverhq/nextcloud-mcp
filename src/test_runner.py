@@ -27,8 +27,6 @@ MCP_URL = f"http://localhost:{MCP_SERVER_PORT}/mcp"
 # These cause the relevant tool calls to FAIL rather than crash the runner.
 # TODO: Replace with proper runtime extraction. Do NOT add to this list
 # without explicit user approval.
-MCP_HARDCODED_MAILBOX_DB_ID = 0
-MCP_HARDCODED_MAIL_MSG_ID = 0
 MCP_HARDCODED_CHAT_MSG_ID = 0
 
 MCP_HEADERS = {
@@ -153,6 +151,23 @@ def run_verify_delete(session, label, get_tool=None, params=None, list_tool=None
 
 def get_list_items(data):
     return toon_to_json(data["items"])
+
+
+def find_mailbox_by_special(mailboxes_data, special_value):
+    items = get_list_items(mailboxes_data)
+    for m in items:
+        su = m.get("specialUse") or []
+        if isinstance(su, list) and special_value in su:
+            return m["databaseId"]
+    return items[0]["databaseId"] if items else 0
+
+
+def find_message_by_subject(messages_data, subject):
+    items = get_list_items(messages_data)
+    for m in items:
+        if m.get("subject") == subject:
+            return m["databaseId"]
+    return 0
 
 
 DT = "2026-12-31T23:59:00+00:00"
@@ -507,14 +522,16 @@ def main():
         run_test(session, "5L list_all_accounts", "list_all_accounts", {})
         store["mail_account_id"] = toon_to_json(results[-1]["data"]["items"])[0]["id"]
         run_test(session, "5L list_mailboxes", "list_mailboxes", {"account_id": store["mail_account_id"]})
-        store["mail_mailbox_db_id"] = MCP_HARDCODED_MAILBOX_DB_ID
-        run_test(session, "5L send_message", "send_message", {"account_id": store["mail_account_id"], "subject": "MCP Test", "body": "This is a test", "to": "test@example.com"})
-        run_test(session, "5L list_messages", "list_messages", {"account_id": store["mail_account_id"], "mailbox_db_id": store["mail_mailbox_db_id"], "limit": 5})
-        store["mail_message_id"] = MCP_HARDCODED_MAIL_MSG_ID
+        store["mail_drafts_db_id"] = find_mailbox_by_special(results[-1]["data"], "drafts")
+        store["mail_trash_db_id"] = find_mailbox_by_special(results[-1]["data"], "trash")
+        run_test(session, "5L send_message", "send_message", {"account_id": store["mail_account_id"], "subject": f"MCP Test {rid}", "body": "This is a test", "to": "test@example.com"})
+        run_test(session, "5L create_email_draft", "create_email_draft", {"account_id": store["mail_account_id"], "subject": f"MCP Draft {rid}", "body": "This is a test", "to": "test@example.com"})
+        store["mail_message_id"] = results[-1]["data"]["id"]
+        run_test(session, "5L list_messages", "list_messages", {"account_id": store["mail_account_id"], "mailbox_db_id": store["mail_drafts_db_id"], "limit": 5})
         run_test(session, "5L get_message", "get_message", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"]})
         run_test(session, "5L get_message_body", "get_message_body", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"]})
         run_test(session, "5L set_message_flags", "set_message_flags", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"], "seen": True})
-        run_test(session, "5L move_message", "move_message", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"], "mailbox_db_id": store["mail_mailbox_db_id"]})
+        run_test(session, "5L move_message", "move_message", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"], "mailbox_db_id": store["mail_trash_db_id"]})
 
         # ---- Phase 5M: Chat Tests ----
         log("\n=== Phase 5M: Chat Tests ===")

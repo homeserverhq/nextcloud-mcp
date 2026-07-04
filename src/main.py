@@ -2250,6 +2250,29 @@ async def send_message(
 
 
 @mcp.tool()
+async def create_email_draft(
+    account_id: int,
+    subject: str,
+    body: str,
+    to: str,
+    cc: str = "",
+    bcc: str = "",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a draft email saved to the IMAP Drafts folder.
+    Args:
+        account_id: Account ID. Get this from list_accounts(). (required).
+        subject: Email subject (required).
+        body: Email body (required).
+        to: Recipient email address (required).
+        cc: CC recipient email.
+        bcc: BCC recipient email.
+    """
+    result = await get_client().mail_save_draft(account_id, subject, body, to, cc, bcc, get_user_token())
+    return {"id": result.get("id") if isinstance(result, dict) else None, "status": "draft_created"}
+
+
+@mcp.tool()
 async def set_message_flags(
     account_id: int,
     message_id: int,

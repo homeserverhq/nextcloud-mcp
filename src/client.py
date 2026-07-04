@@ -1721,6 +1721,13 @@ class NextcloudClient:
                                    "cc": [{"email": cc, "label": cc}] if cc else [],
                                    "bcc": [{"email": bcc, "label": bcc}] if bcc else []})
 
+    async def mail_save_draft(self, account_id: int, subject: str, body: str,
+                              to: str, cc: str = "", bcc: str = "",
+                              api_key: str = None) -> Any:
+        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/draft",
+                              api_key, is_ocs=True, is_raw_json=True,
+                              json={"subject": subject, "body": body, "to": to, "cc": cc, "bcc": bcc})
+
     async def mail_set_message_flags(self, account_id: int, message_id: int,
                                      seen: bool = None, flagged: bool = None,
                                      api_key: str = None) -> Any:
