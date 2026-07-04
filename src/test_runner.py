@@ -157,32 +157,14 @@ def resolve_params(params: Any) -> dict:
     return dict(params) if params else {}
 
 
-def check_prereqs(prereqs: list[str]) -> Optional[str]:
-    """Returns None if all prereqs met, else the first missing one."""
-    for p in prereqs:
-        if p not in created:
-            return p
-    return None
-
-
 def run_test(
     session: MCPSession,
     label: str,
     tool: str,
     params: dict[str, Any] = None,
-    prereqs: list[str] = None,
 ) -> bool:
     if params is None:
         params = {}
-    if prereqs:
-        missing = check_prereqs(prereqs)
-        if missing:
-            results.append({
-                "label": label, "tool": tool, "status": "FAILED",
-                "reason": f"Missing prerequisite: {missing}"
-            })
-            log(f"  FAIL {label}: missing {missing}")
-            return False
     try:
         result = session.call_tool(tool, params)
         err = is_error(result)
@@ -259,7 +241,15 @@ def run_verify_delete(
             result = session.call_tool(get_tool, params)
             err = is_error(result)
             if err:
-                if "not found" in err.lower() or "404" in err or "403" in err:
+                err_lower = err.lower()
+                is_deleted = (
+                    " not found" in err_lower or
+                    err_lower.startswith("not found") or
+                    "does not exist" in err_lower or
+                    "404" in err or
+                    "403" in err
+                )
+                if is_deleted:
                     results.append({
                         "label": label, "tool": get_tool, "status": "PASSED",
                         "data": {"verified": "deleted"}
@@ -796,6 +786,7 @@ DOMAIN_TESTS_READONLY = [
     ("get_search_providers", "get_search_providers", {}),
     ("get_capabilities", "get_capabilities", {}),
     ("notification_list", "notification_list", {}),
+    ("circle_list", "circle_list", {}),
     ("activity_get", "activity_get", {"limit": 5}),
     ("activity_get_filters", "activity_get_filters", {}),
     ("list_all_calendars", "list_all_calendars", {}),
@@ -817,17 +808,17 @@ DOMAIN_TESTS_READONLY = [
 
 # Domain tests that depend on resources created in Phase 3
 DOMAIN_TESTS_POST_CRUD = [
-    ("deck_list_stacks", "deck_list_stacks", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
-    ("deck_list_cards", "deck_list_cards", lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"]}, ["Stack"]),
-    ("deck_list_labels", "deck_list_labels", lambda s, r: {"board_id": s["Board"]["id"]}, ["Board"]),
-    ("get_events_by_calendar", "get_events_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
-    ("get_contacts_by_addressbook", "get_contacts_by_addressbook", lambda s, r: {"addressbook_uri": s["Addressbook"]["addressbook_uri"]}, ["Addressbook"]),
-    ("todo_get_by_calendar", "todo_get_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}, ["Calendar"]),
-    ("note_get_by_category", "note_get_by_category", lambda s, r: {"category": "test"}, ["Note"]),
-    ("collectives_list_pages", "collectives_list_pages", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
-    ("collectives_list_tags", "collectives_list_tags", lambda s, r: {"collective_id": s["Collective"]["id"]}, ["Collective"]),
-    ("table_get_schema", "table_get_schema", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
-    ("table_list_rows", "table_list_rows", lambda s, r: {"table_id": s["Table"]["id"]}, ["Table"]),
+    ("deck_list_stacks", "deck_list_stacks", lambda s, r: {"board_id": s["Board"]["id"]}),
+    ("deck_list_cards", "deck_list_cards", lambda s, r: {"board_id": s["Board"]["id"], "stack_id": s["Stack"]["id"]}),
+    ("deck_list_labels", "deck_list_labels", lambda s, r: {"board_id": s["Board"]["id"]}),
+    ("get_events_by_calendar", "get_events_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}),
+    ("get_contacts_by_addressbook", "get_contacts_by_addressbook", lambda s, r: {"addressbook_uri": s["Addressbook"]["addressbook_uri"]}),
+    ("todo_get_by_calendar", "todo_get_by_calendar", lambda s, r: {"calendar_uri": s["Calendar"]["calendar_uri"]}),
+    ("note_get_by_category", "note_get_by_category", lambda s, r: {"category": "test"}),
+    ("collectives_list_pages", "collectives_list_pages", lambda s, r: {"collective_id": s["Collective"]["id"]}),
+    ("collectives_list_tags", "collectives_list_tags", lambda s, r: {"collective_id": s["Collective"]["id"]}),
+    ("table_get_schema", "table_get_schema", lambda s, r: {"table_id": s["Table"]["id"]}),
+    ("table_list_rows", "table_list_rows", lambda s, r: {"table_id": s["Table"]["id"]}),
 ]
 
 DOMAIN_TESTS_MUTATE = [
@@ -835,7 +826,7 @@ DOMAIN_TESTS_MUTATE = [
     ("clear_message", "clear_message", {}),
     ("note_append_content", "note_append_content", lambda s, r: {
         "id": s["Note"]["id"], "content": "Appended line"
-    }, ["Note"]),
+    }),
     ("note_search", "note_search", {"query": "Hello"}),
     ("search", "search", lambda s, r: {"provider_id": s.get("discovered_provider_id", "files"), "term": "test"}),
     ("webdav_search_files", "webdav_search_files", {"query": "test"}),
@@ -844,7 +835,7 @@ DOMAIN_TESTS_MUTATE = [
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir"}),
     ("webdav_write_file", "webdav_write_file",
      lambda s, r: {"path": f"/remote.php/dav/files/{API_USER}/t{r}-testdir/testfile.txt", "content": "Hello World"}),
-    ("table_update_row", "table_update_row", lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}, ["Row"]),
+    ("table_update_row", "table_update_row",      lambda s, r: {"row_id": s["Row"]["id"], "data": '{}'}),
 ]
 
 # =============================================================================
@@ -936,8 +927,8 @@ DOMAIN_TESTS_CLEANUP = [
 
 
 def run_domain_test(session: MCPSession, label: str, tool: str,
-                      params: dict, prereqs: list[str] = None) -> bool:
-    return run_test(session, label, tool, resolve_params(params), prereqs)
+                      params: dict) -> bool:
+    return run_test(session, label, tool, resolve_params(params))
 
 
 def run_domain_tests(session: MCPSession, phase: str, tests: list,
@@ -947,9 +938,8 @@ def run_domain_tests(session: MCPSession, phase: str, tests: list,
         label = entry[0]
         tool = entry[1]
         params = resolve_params(entry[2]) if len(entry) > 2 else {}
-        prereqs = entry[3] if len(entry) > 3 else None
         lbl = f"{phase} {prefix}{label}" if prefix else f"{phase} {label}"
-        run_domain_test(session, lbl, tool, params, prereqs)
+        run_domain_test(session, lbl, tool, params)
 
 
 # =============================================================================
@@ -989,8 +979,7 @@ def main():
             label = entry[1]
             tool = entry[1]
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"B {label}", tool, params, prereqs)
+            run_domain_test(session, f"B {label}", tool, params)
 
         # ------------------------------------------------------------------
         # Phase 2B: Discover Parameter Values (replace hardcoded IDs)
@@ -1041,11 +1030,11 @@ def main():
         log("\n=== Phase 3A: Create All Resources ===")
         for entry in RESOURCE_TESTS:
             label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, prereqs, id_field, \
+                update_tool, update_params, delete_tool, _, id_field, \
                 verify_fields = entry
             params = resolve_params(create_params)
             ok = run_test(session, f"3A create_{label.lower()}",
-                                create_tool, params, prereqs)
+                                create_tool, params)
             if ok:
                 for r in reversed(results):
                     if r["label"] == f"3A create_{label.lower()}" and r["status"] == "PASSED":
@@ -1104,7 +1093,7 @@ def main():
         log("\n=== Phase 3B: Get & Verify All Resources ===")
         for entry in RESOURCE_TESTS:
             label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, prereqs, id_field, \
+                update_tool, update_params, delete_tool, _, id_field, \
                 verify_fields = entry
             if get_tool is None:
                 results.append({
@@ -1137,27 +1126,26 @@ def main():
                 get_params["board_id"] = created.get("Board", 0)
             elif label in ("Page", "Tag"):
                 get_params["collective_id"] = created.get("Collective", 0)
-            ok = run_test(session, f"3B get_{label.lower()}",
-                                get_tool, get_params, prereqs)
-            if ok:
-                expected = resolve_params(create_params)
-                data = None
-                for r in reversed(results):
-                    if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
-                        data = r.get("data", {})
-                        break
-                if data and verify_fields and expected:
-                    vf = verify_fields if verify_fields != ["*"] else list(expected.keys())
-                    _check_verify_fields(label, get_tool, data, expected, vf)
-                for r in reversed(results):
-                    if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
-                        store[f"get_{label}"] = r.get("data", {})
-                        break
+            run_test(session, f"3B get_{label.lower()}",
+                            get_tool, get_params)
+            expected = resolve_params(create_params)
+            data = None
+            for r in reversed(results):
+                if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
+                    data = r.get("data", {})
+                    break
+            if data and verify_fields and expected:
+                vf = verify_fields if verify_fields != ["*"] else list(expected.keys())
+                _check_verify_fields(label, get_tool, data, expected, vf)
+            for r in reversed(results):
+                if r["label"] == f"3B get_{label.lower()}" and r["status"] == "PASSED":
+                    store[f"get_{label}"] = r.get("data", {})
+                    break
 
         log("\n=== Phase 3C: Update All Resources ===")
         for entry in RESOURCE_TESTS:
             label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, prereqs, id_field, \
+                update_tool, update_params, delete_tool, _, id_field, \
                 verify_fields = entry
             if update_tool is None:
                 results.append({
@@ -1191,7 +1179,7 @@ def main():
             elif label in ("Page", "Tag"):
                 params["collective_id"] = created.get("Collective", 0)
             run_test(session, f"3C update_{label.lower()}",
-                           update_tool, params, prereqs)
+                           update_tool, params)
 
         # ------------------------------------------------------------------
         # Phase 3.5: Minimal-Params Create & Delete
@@ -1200,21 +1188,9 @@ def main():
         log("\n=== Phase 3.5: Minimal-Params Create & Delete ===")
         min_created: dict[str, Any] = {}
         for entry in MINIMAL_PARAM_TESTS:
-            label, create_tool, create_params, delete_sequence_fn, prereqs, id_field = entry
-            if prereqs:
-                missing = check_prereqs(prereqs)
-                if missing:
-                    results.append({
-                        "label": f"3.5 create_{label.lower()}", "tool": create_tool,
-                        "status": "FAILED",
-                        "reason": f"Missing prerequisite: {missing}"
-                    })
-                    log(f"  FAIL 3.5 create_{label.lower()}: missing {missing}")
-                    continue
+            label, create_tool, create_params, delete_sequence_fn, _, id_field = entry
             params = resolve_params(create_params)
-            ok = run_test(session, f"3.5 create_{label.lower()}", create_tool, params, prereqs)
-            if not ok:
-                continue
+            run_test(session, f"3.5 create_{label.lower()}", create_tool, params)
             for r in reversed(results):
                 if r["label"] == f"3.5 create_{label.lower()}" and r["status"] == "PASSED":
                     create_data = r.get("data", {})
@@ -1239,7 +1215,7 @@ def main():
             log(f"  => Min {label} ID: {cid}")
             delete_ops = delete_sequence_fn(store, rid, cid)
             for del_tool, del_params in delete_ops:
-                run_test(session, f"3.5 delete_{label.lower()}", del_tool, del_params, prereqs)
+                run_test(session, f"3.5 delete_{label.lower()}", del_tool, del_params)
         # ------------------------------------------------------------------
         # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------
@@ -1248,8 +1224,7 @@ def main():
             label = entry[0]
             tool = entry[1]
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"4A {label}", tool, params, prereqs)
+            run_domain_test(session, f"4A {label}", tool, params)
 
         # ------------------------------------------------------------------
         # Phase 5: Domain Mutation Tests (before deletion, needs resources)
@@ -1267,16 +1242,14 @@ def main():
                 log(f"  FAIL 5A {label}: no tool defined")
                 continue
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"5A {label}", tool, params, prereqs)
+            run_domain_test(session, f"5A {label}", tool, params)
 
         log("\n=== Phase 5B: Domain Mutation Tools ===")
         for entry in DOMAIN_TESTS_MUTATE:
             label = entry[0]
             tool = entry[1]
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"5B {label}", tool, params, prereqs)
+            run_domain_test(session, f"5B {label}", tool, params)
 
         # ---- Phase 5C: WebDAV Move/Copy/Delete with inline verification ----
         log("\n=== Phase 5C: WebDAV Move/Copy/Delete with Verification ===")
@@ -1976,43 +1949,37 @@ def main():
             })
             log(f"  FAIL 5O verify_set_page_emoji")
 
-        result = session.call_tool("collectives_get_page",
-                                  {"collective_id": created.get("Collective", 0),
-                                   "page_id": created.get("Page", 0)})
-        data = extract_content(result)
+        run_test(session, "5O restore_collective", "collectives_restore",
+                {"id": created.get("Collective", 0)})
+
+        tag_result = session.call_tool("collectives_get_page",
+                                       {"collective_id": created.get("Collective", 0),
+                                        "page_id": created.get("Page", 0)})
+        tag_data = extract_content(tag_result)
+        tag_ids = tag_data.get("tag_ids") if isinstance(tag_data, dict) else None
+        has_tags = isinstance(tag_ids, list) and len(tag_ids) > 0
+        tag_status = ("FAILED", "PASSED")[has_tags]
+        tag_reason = "" if has_tags else "No tags found after tag_ops"
         results.append({
             "label": "5O verify_tag_ops", "tool": "collectives_get_page",
-            "status": "PASSED", "data": data
+            "status": tag_status, "data": tag_data, "reason": tag_reason
         })
-        log(f"  PASS 5O verify_tag_ops")
+        log(f"  {tag_status} 5O verify_tag_ops" + (f": {tag_reason}" if tag_reason else ""))
 
         # ---- Phase 5P: Backend-Broken Error Tests ----
         log("\n=== Phase 5P: Backend-Broken Error Tests ===")
         run_domain_tests(session, "5P", DOMAIN_TESTS_BACKEND_BROKEN)
 
-        # # ---- Phase 5Q: Notification Tests ----
-        # log("\n=== Phase 5Q: Notification Tests ===")
-        # result = session.call_tool("list_notifications")
-        # data = extract_content(result)
-        # notifs = data.get("items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
-        # nid = None
-        # if notifs:
-        #     first_n = notifs[0] if isinstance(notifs[0], dict) else {}
-        #     nid = first_n.get("id") or first_n.get("notification_id")
-        # if nid:
-        #     run_test(session, "5Q get_notification", "notification_get", {"id": nid})
-        #     run_test(session, "5Q delete_notification", "notification_delete", {"id": nid})
-        # else:
-        #     results.append({
-        #         "label": "5Q get_notification", "tool": "notification_get",
-        #         "status": "FAILED", "reason": "No notifications to test with"
-        #     })
-        #     results.append({
-        #         "label": "5Q delete_notification", "tool": "notification_delete",
-        #         "status": "FAILED", "reason": "No notifications to test with"
-        #     })
-        #     log("  FAIL 5Q notification tests: no notifications")
-        # run_test(session, "5Q delete_all_notifications", "notification_delete_all", {})
+        # ---- Phase 5Q: Notification Tests ----
+        log("\n=== Phase 5Q: Notification Tests ===")
+        notif_result = session.call_tool("list_notifications")
+        notif_data = extract_content(notif_result)
+        notif_list = notif_data.get("items", []) if isinstance(notif_data, dict) else (notif_data if isinstance(notif_data, list) else [])
+        first_notif = notif_list[0] if isinstance(notif_list, list) and notif_list else {}
+        nid = first_notif.get("id") or first_notif.get("notification_id") or 0
+        run_test(session, "5Q get_notification", "notification_get", {"id": nid})
+        run_test(session, "5Q delete_notification", "notification_delete", {"id": nid})
+        run_test(session, "5Q delete_all_notifications", "notification_delete_all", {})
 
         # ---- Phase 5R: Misc Tests ----
         log("\n=== Phase 5R: Misc Tests ===")
@@ -2095,6 +2062,10 @@ def main():
             log(f"  => Circle ID: {circle_id}")
             run_test(session, "6 list_members", "circle_list_members",
                     {"circle_id": circle_id, "include_all_fields": True})
+            run_test(session, "6 get_circle", "circle_get",
+                    {"circle_id": circle_id})
+            run_test(session, "6 update_circle", "circle_update",
+                    {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
 
             if second_user:
                 log(f"  => Second user: {second_user}")
@@ -2137,7 +2108,7 @@ def main():
         log("\n=== Phase 3D: Delete All Resources (REVERSE ORDER) ===")
         for entry in reversed(RESOURCE_TESTS):
             label, create_tool, create_params, list_tool, get_tool, \
-                update_tool, update_params, delete_tool, prereqs, id_field, \
+                update_tool, update_params, delete_tool, _, id_field, \
                 verify_fields = entry
             if delete_tool is None:
                 results.append({
@@ -2145,6 +2116,7 @@ def main():
                     "status": "FAILED",
                     "reason": "No delete_tool defined for this resource"
                 })
+                log(f"  FAIL 3D delete_{label.lower()}: no delete_tool")
                 continue
             if label not in created:
                 results.append({
@@ -2152,6 +2124,7 @@ def main():
                     "status": "FAILED",
                     "reason": f"No ID for {label} — create failed"
                 })
+                log(f"  FAIL 3D delete_{label.lower()}: no ID (create failed)")
                 continue
             cid = created.get(label)
             params = {}
@@ -2169,7 +2142,7 @@ def main():
             elif label in ("Page", "Tag"):
                 params["collective_id"] = created.get("Collective", 0)
             run_test(session, f"3D delete_{label.lower()}",
-                           delete_tool, params, prereqs)
+                           delete_tool, params)
 
         # ------------------------------------------------------------------
         # Phase 3E: Verify Delete (REVERSE ORDER)
@@ -2240,8 +2213,7 @@ def main():
             label = entry[0]
             tool = entry[1]
             params = resolve_params(entry[2]) if len(entry) > 2 else {}
-            prereqs = entry[3] if len(entry) > 3 else None
-            run_domain_test(session, f"5S {label}", tool, params, prereqs)
+            run_domain_test(session, f"5S {label}", tool, params)
 
         # ------------------------------------------------------------------
         # Report Summary
