@@ -651,7 +651,9 @@ async def get_folder_tree(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Get the folder tree.
+    """Complete overview of every file and folder in Nextcloud.
+    Shows the full directory structure from any path down to the
+    specified depth.
     Args:
         depth: Maximum depth. Defaults to 3.
         path: Relative path from user root (e.g. Documents/Subfolder). Empty = root.
