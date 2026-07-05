@@ -127,7 +127,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `search` — Search across providers
 
 ### 🔔 Notifications (4 tools)
-- `notification_list` — List all notifications
+- `list_notifications` — List all notifications
 - `notification_get` — Get a notification by ID
 - `notification_delete` — Delete a notification by ID
 - `notification_delete_all` — Delete all notifications
@@ -153,7 +153,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `find_availability` — Find available time slots
 
 ### ✅ Todos (7 tools)
-- `todo_list` — List all todos across calendars
+- `list_todos` — List all todos across calendars
 - `list_todos_by_calendar` — List todos in a calendar
 - `todo_get` — Get a todo by UID
 - `todo_create` — Create a new todo
@@ -175,7 +175,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `delete_contact` — Delete a contact by UID
 
 ### 📝 Notes (9 tools)
-- `note_list` — List all notes
+- `list_notes` — List all notes
 - `list_notes_by_category` — List notes by category
 - `note_get` — Get a note by ID
 - `note_create` — Create a new note
@@ -186,24 +186,24 @@ The server implements 185 MCP tools organized into the following categories:
 - `note_get_attachment` — Get a note attachment
 
 ### 🎯 Deck (22 tools)
-- `deck_list` — List all boards
+- `list_deck_boards` — List all boards
 - `deck_get_board` — Get a board by ID
 - `deck_create_board` — Create a new board
 - `deck_update_board` — Update an existing board
 - `deck_delete_board` — Delete a board by ID
-- `deck_list_stacks` — List stacks in a board
+- `list_deck_stacks` — List stacks in a board
 - `deck_get_stack` — Get a stack by ID
 - `deck_create_stack` — Create a new stack
 - `deck_update_stack` — Update an existing stack
 - `deck_delete_stack` — Delete a stack by ID
-- `deck_list_cards` — List cards in a stack
+- `list_deck_cards` — List cards in a stack
 - `deck_get_card` — Get a card by ID
 - `deck_create_card` — Create a new card
 - `deck_update_card` — Update an existing card
 - `deck_delete_card` — Delete a card by ID
 - `deck_archive_card` — Archive a card
 - `deck_unarchive_card` — Unarchive a card
-- `deck_list_labels` — List labels in a board
+- `list_deck_labels` — List labels in a board
 - `deck_assign_label` — Assign a label to a card
 - `deck_remove_label` — Remove a label from a card
 - `deck_assign_user` — Assign a user to a card
@@ -220,11 +220,11 @@ The server implements 185 MCP tools organized into the following categories:
 - `move_message` — Move a message to another mailbox
 
 ### 💬 Talk (11 tools)
-- `talk_list_rooms` — List all Talk conversations
+- `list_talk_rooms` — List all Talk conversations
 - `talk_create_room` — Create a new Talk conversation room
 - `talk_update_room` — Rename a Talk conversation room
 - `talk_set_description` — Set the description of a Talk conversation room
-- `talk_list_participants` — List participants in a Talk conversation room
+- `list_talk_participants` — List participants in a Talk conversation room
 - `talk_add_participant` — Add a participant to a Talk conversation room
 - `talk_remove_participant` — Remove a participant from a Talk conversation room
 - `talk_delete_room` — Delete a Talk conversation room
@@ -233,20 +233,20 @@ The server implements 185 MCP tools organized into the following categories:
 - `delete_chat_message` — Delete a chat message
 
 ### 📊 Tables (11 tools)
-- `table_list` — List all tables
+- `list_tables` — List all tables
 - `table_get` — Get a table by ID
 - `table_create` — Create a new table
 - `table_update` — Update an existing table
 - `table_delete` — Delete a table by ID
 - `table_get_schema` — Get the schema of a table
-- `table_list_rows` — List rows in a table
+- `list_table_rows` — List rows in a table
 - `table_get_row` — Get a row by ID
 - `table_create_row` — Create a new row
 - `table_update_row` — Update an existing row
 - `table_delete_row` — Delete a row by ID
 
 ### 📚 Collectives (27 tools)
-- `collectives_list` — List all collectives
+- `list_collectives` — List all collectives
 - `collectives_get_collective` — Get a collective by ID
 - `collectives_create` — Create a new collective
 - `collectives_update_collective` — Update a collective
@@ -254,8 +254,8 @@ The server implements 185 MCP tools organized into the following categories:
 - `collectives_trash` — Trash a collective
 - `collectives_restore` — Restore a trashed collective
 - `collectives_delete` — Permanently delete a collective
-- `collectives_list_trashed` — List trashed collectives
-- `collectives_list_pages` — List pages in a collective
+- `list_trashed_collectives` — List trashed collectives
+- `list_collective_pages` — List pages in a collective
 - `collectives_get_page` — Get a page by ID
 - `collectives_create_page` — Create a new page
 - `collectives_update_page` — Update a page
@@ -266,7 +266,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `collectives_set_page_emoji` — Set the emoji of a page
 - `collectives_set_page_full_width` — Toggle full-width mode on a page
 - `collectives_search_pages` — Search pages in a collective
-- `collectives_list_tags` — List tags in a collective
+- `list_collective_tags` — List tags in a collective
 - `collectives_get_tag` — Get a tag by ID
 - `collectives_create_tag` — Create a new tag
 - `collectives_update_tag` — Update a tag
@@ -275,12 +275,12 @@ The server implements 185 MCP tools organized into the following categories:
 - `collectives_remove_tag` — Remove a tag from a page
 
 ### 🔵 Circles (9 tools)
-- `circle_list` — List all circles
+- `list_circles` — List all circles
 - `circle_get` — Get a circle by ID
 - `circle_create` — Create a new circle
 - `circle_update` — Update an existing circle
 - `circle_delete` — Delete a circle by ID
 - `circle_add_member` — Add a user to a circle
 - `circle_remove_member` — Remove a member from a circle
-- `circle_list_members` — List members of a circle
+- `list_circle_members` — List members of a circle
 - `circle_update_member_level` — Update a member's level in a circle

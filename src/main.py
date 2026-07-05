@@ -1053,7 +1053,7 @@ async def list_favorites(
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
-async def notification_list(
+async def list_notifications(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1420,7 +1420,7 @@ async def find_availability(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def todo_list(
+async def list_todos(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1744,7 +1744,7 @@ async def delete_contact(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def note_list(
+async def list_notes(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1888,7 +1888,7 @@ async def note_get_attachment(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_list(
+async def list_deck_boards(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1957,7 +1957,7 @@ async def deck_update_board(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_list_stacks(
+async def list_deck_stacks(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2028,7 +2028,7 @@ async def deck_update_stack(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_list_cards(
+async def list_deck_cards(
     board_id: int,
     stack_id: int,
     include_all_fields: bool = False,
@@ -2187,7 +2187,7 @@ async def deck_unarchive_card(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_list_labels(
+async def list_deck_labels(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2437,7 +2437,7 @@ async def move_message(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def talk_list_rooms(
+async def list_talk_rooms(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2505,7 +2505,7 @@ async def talk_set_description(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def talk_list_participants(
+async def list_talk_participants(
     token: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2597,7 +2597,7 @@ async def delete_chat_message(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def table_list(
+async def list_tables(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2686,7 +2686,7 @@ async def table_get_schema(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def table_list_rows(
+async def list_table_rows(
     table_id: int,
     limit: int = 50,
     offset: int = 0,
@@ -2759,7 +2759,7 @@ async def table_delete_row(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_list(
+async def list_collectives(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2872,7 +2872,7 @@ async def collectives_delete(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def collectives_list_trashed(
+async def list_trashed_collectives(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2885,7 +2885,7 @@ async def collectives_list_trashed(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_list_pages(
+async def list_collective_pages(
     collective_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3080,7 +3080,7 @@ async def collectives_search_pages(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_list_tags(
+async def list_collective_tags(
     collective_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3195,7 +3195,7 @@ async def collectives_remove_tag(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def circle_list(
+async def list_circles(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -3291,7 +3291,7 @@ async def circle_remove_member(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def circle_list_members(
+async def list_circle_members(
     circle_id: str,
     include_all_fields: bool = False,
     ctx: Context = None

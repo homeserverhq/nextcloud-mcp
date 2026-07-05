@@ -211,21 +211,21 @@ def main():
         run_test(session, "B get_folder_tree", "get_folder_tree", {"depth": 1})
         run_test(session, "B list_search_providers", "list_search_providers", {})
         run_test(session, "B get_capabilities", "get_capabilities", {})
-        run_test(session, "B notification_list", "notification_list", {})
-        run_test(session, "B circle_list", "circle_list", {})
+        run_test(session, "B list_notifications", "list_notifications", {})
+        run_test(session, "B list_circles", "list_circles", {})
         run_test(session, "B list_activities", "list_activities", {"limit": 5})
         run_test(session, "B list_activity_filters", "list_activity_filters", {})
         run_test(session, "B list_all_calendars", "list_all_calendars", {})
         run_test(session, "B list_all_addressbooks", "list_all_addressbooks", {})
-        run_test(session, "B note_list", "note_list", {})
-        run_test(session, "B deck_list", "deck_list", {})
-        run_test(session, "B table_list", "table_list", {})
-        run_test(session, "B collectives_list", "collectives_list", {})
-        run_test(session, "B collectives_list_trashed", "collectives_list_trashed", {})
+        run_test(session, "B list_notes", "list_notes", {})
+        run_test(session, "B list_deck_boards", "list_deck_boards", {})
+        run_test(session, "B list_tables", "list_tables", {})
+        run_test(session, "B list_collectives", "list_collectives", {})
+        run_test(session, "B list_trashed_collectives", "list_trashed_collectives", {})
         run_test(session, "B list_favorites", "list_favorites", {"limit": 5})
         run_test(session, "B list_all_accounts", "list_all_accounts", {})
         run_test(session, "B list_all_shares", "list_all_shares", {})
-        run_test(session, "B talk_list_rooms", "talk_list_rooms", {})
+        run_test(session, "B list_talk_rooms", "list_talk_rooms", {})
         run_test(session, "B get_user", "get_user", {"user_id": API_USER})
         run_test(session, "B list_group_members", "list_group_members", {"group_id": "admin"})
         run_test(session, "B show_folder_root", "show_folder", {"path": "", "depth": 1})
@@ -273,7 +273,7 @@ def main():
         coll_inner = coll_data["collective"]
         store["Collective"] = coll_inner
         store["Collective_id"] = coll_inner["id"]
-        circle_list_result = session.call_tool("circle_list")
+        circle_list_result = session.call_tool("list_circles")
         circle_list_data = extract_content(circle_list_result)
         circle_list_items = get_list_items(circle_list_data)
         store["circle_id"] = circle_list_items[0]["id"]
@@ -310,19 +310,19 @@ def main():
         store["Tag"] = results[-1]["data"]["tag"]
         store["Tag_id"] = store["Tag"]["id"]
 
-        run_test(session, "3A verify_note_in_list", "note_list", {})
-        run_test(session, "3A verify_table_in_list", "table_list", {})
-        run_test(session, "3A verify_board_in_list", "deck_list", {})
+        run_test(session, "3A verify_note_in_list", "list_notes", {})
+        run_test(session, "3A verify_table_in_list", "list_tables", {})
+        run_test(session, "3A verify_board_in_list", "list_deck_boards", {})
         run_test(session, "3A verify_calendar_in_list", "list_all_calendars", {})
         run_test(session, "3A verify_addressbook_in_list", "list_all_addressbooks", {})
-        run_test(session, "3A verify_collective_in_list", "collectives_list", {})
-        run_test(session, "3A verify_stack_in_list", "deck_list_stacks", {"board_id": store["Board_id"]})
-        run_test(session, "3A verify_card_in_list", "deck_list_cards", {"board_id": store["Board_id"], "stack_id": store["Stack_id"]})
+        run_test(session, "3A verify_collective_in_list", "list_collectives", {})
+        run_test(session, "3A verify_stack_in_list", "list_deck_stacks", {"board_id": store["Board_id"]})
+        run_test(session, "3A verify_card_in_list", "list_deck_cards", {"board_id": store["Board_id"], "stack_id": store["Stack_id"]})
         run_test(session, "3A verify_event_in_list", "list_events_by_calendar", {"calendar_uri": store["Calendar_id"]})
         run_test(session, "3A verify_todo_in_list", "list_todos_by_calendar", {"calendar_uri": store["Calendar_id"]})
         run_test(session, "3A verify_contact_in_list", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook_id"]})
-        run_test(session, "3A verify_page_in_list", "collectives_list_pages", {"collective_id": store["Collective_id"]})
-        run_test(session, "3A verify_tag_in_list", "collectives_list_tags", {"collective_id": store["Collective_id"]})
+        run_test(session, "3A verify_page_in_list", "list_collective_pages", {"collective_id": store["Collective_id"]})
+        run_test(session, "3A verify_tag_in_list", "list_collective_tags", {"collective_id": store["Collective_id"]})
 
         log("\n=== Phase 3B: Get & Verify All Resources ===")
         run_test(session, "3B get_note", "note_get", {"id": store["Note_id"]})
@@ -404,17 +404,17 @@ def main():
         # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------
         log("\n=== Phase 4: Post-CRUD Domain Tools ===")
-        run_test(session, "4A deck_list_stacks", "deck_list_stacks", {"board_id": store["Board"]["id"]})
-        run_test(session, "4A deck_list_cards", "deck_list_cards", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"]})
-        run_test(session, "4A deck_list_labels", "deck_list_labels", {"board_id": store["Board"]["id"]})
+        run_test(session, "4A list_deck_stacks", "list_deck_stacks", {"board_id": store["Board"]["id"]})
+        run_test(session, "4A list_deck_cards", "list_deck_cards", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"]})
+        run_test(session, "4A list_deck_labels", "list_deck_labels", {"board_id": store["Board"]["id"]})
         run_test(session, "4A list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
         run_test(session, "4A list_contacts_by_addressbook", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook"]["addressbook_uri"]})
         run_test(session, "4A list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
         run_test(session, "4A list_notes_by_category", "list_notes_by_category", {"category": "test"})
-        run_test(session, "4A collectives_list_pages", "collectives_list_pages", {"collective_id": store["Collective"]["id"]})
-        run_test(session, "4A collectives_list_tags", "collectives_list_tags", {"collective_id": store["Collective"]["id"]})
+        run_test(session, "4A list_collective_pages", "list_collective_pages", {"collective_id": store["Collective"]["id"]})
+        run_test(session, "4A list_collective_tags", "list_collective_tags", {"collective_id": store["Collective"]["id"]})
         run_test(session, "4A table_get_schema", "table_get_schema", {"table_id": store["Table"]["id"]})
-        run_test(session, "4A table_list_rows", "table_list_rows", {"table_id": store["Table"]["id"]})
+        run_test(session, "4A list_table_rows", "list_table_rows", {"table_id": store["Table"]["id"]})
 
         # ------------------------------------------------------------------
         # Phase 5: Domain Mutation Tests (before deletion, needs resources)
@@ -516,7 +516,7 @@ def main():
         run_test(session, "5M rename_room", "talk_update_room", {"token": store["chat_token"], "room_name": f"t{rid}-renamed"})
         run_test(session, "5M set_description", "talk_set_description", {"token": store["chat_token"], "description": "Test room description"})
         run_test(session, "5M add_participant", "talk_add_participant", {"token": store["chat_token"], "new_participant": "shbadmin"})
-        run_test(session, "5M list_participants", "talk_list_participants", {"token": store["chat_token"]})
+        run_test(session, "5M list_participants", "list_talk_participants", {"token": store["chat_token"]})
         store["attendee_id"] = toon_to_json(results[-1]["data"]["items"])[1]["attendeeId"]
         run_test(session, "5M remove_participant", "talk_remove_participant", {"token": store["chat_token"], "attendee_id": store["attendee_id"]})
         run_test(session, "5M send_chat_message", "send_chat_message", {"token": store["chat_token"], "message": "Hello from MCP test"})
@@ -527,7 +527,7 @@ def main():
 
         # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")
-        run_test(session, "5N deck_list_labels", "deck_list_labels", {"board_id": store["Board"]["id"]})
+        run_test(session, "5N list_deck_labels", "list_deck_labels", {"board_id": store["Board"]["id"]})
         store["deck_first_label_id"] = toon_to_json(results[-1]["data"]["items"])[0]["id"]
         run_test(session, "5N deck_assign_label", "deck_assign_label", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "label_id": store["deck_first_label_id"]})
         run_test(session, "5N deck_remove_label", "deck_remove_label", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "label_id": store["deck_first_label_id"]})
@@ -540,7 +540,7 @@ def main():
         c5o_data = extract_content(session.call_tool("collectives_get_collective", {"id": store["Collective_id"]}))
         c5o_emoji = c5o_data.get("emoji", "")
         emoji_ok = c5o_emoji == "⭐"
-        results.append({"label":"5O verify_update_emoji","tool":"collectives_list","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
+        results.append({"label":"5O verify_update_emoji","tool":"list_collectives","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
         global passed_count, failed_count
         passed_count = passed_count + 1
         failed_count = failed_count + (1, 0)[emoji_ok]
@@ -564,7 +564,7 @@ def main():
         log("\n=== Phase 5Q: Notification Tests ===")
         run_test(session, "5Q create_notification", "notification_create", {"user_id": API_USER, "subject": f"MCP test {rid}", "message": "Notification test"})
         store["notification_id"] = results[-1]["data"]["id"]
-        run_test(session, "5Q list_notifications", "notification_list", {})
+        run_test(session, "5Q list_notifications", "list_notifications", {})
         run_test(session, "5Q get_notification", "notification_get", {"id": store["notification_id"]})
         run_test(session, "5Q delete_notification", "notification_delete", {"id": store["notification_id"]})
         run_test(session, "5Q delete_all_notifications", "notification_delete_all", {})
@@ -579,7 +579,7 @@ def main():
         run_test(session, "5R list_all_contacts", "list_all_contacts", {})
         run_test(session, "5R list_all_events", "list_all_events", {})
         run_test(session, "5R list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": cal_uri})
-        run_test(session, "5R list_all_todos", "todo_list", {})
+        run_test(session, "5R list_all_todos", "list_todos", {})
         run_test(session, "5R list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": cal_uri})
         attach_note_dir = f"Notes/test/"
         attach_filename = f"t{rid}-attach.txt"
@@ -625,11 +625,11 @@ def main():
         run_test(session, "6 create_circle", "circle_create", {"name": circle_name})
         circle_id = results[-1]["data"]["id"]
 
-        run_test(session, "6 list_members", "circle_list_members", {"circle_id": circle_id, "include_all_fields": True})
+        run_test(session, "6 list_members", "list_circle_members", {"circle_id": circle_id, "include_all_fields": True})
         run_test(session, "6 get_circle", "circle_get", {"circle_id": circle_id})
         run_test(session, "6 update_circle", "circle_update", {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
         run_test(session, "6 add_member", "circle_add_member", {"circle_id": circle_id, "user_id": second_user})
-        run_test(session, "6 list_members_post", "circle_list_members", {"circle_id": circle_id, "include_all_fields": True})
+        run_test(session, "6 list_members_post", "list_circle_members", {"circle_id": circle_id, "include_all_fields": True})
         store["member_id"] = toon_to_json(results[-1]["data"]["items"])[1]["id"]
         run_test(session, "6 update_level", "circle_update_member_level", {"circle_id": circle_id, "member_id": store["member_id"], "level": "moderator"})
         run_test(session, "6 remove_member", "circle_remove_member", {"circle_id": circle_id, "member_id": store["member_id"]})
