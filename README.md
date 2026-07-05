@@ -1,15 +1,15 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **179 MCP tools** covering 21 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **193 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 179 tools mapped to Nextcloud API endpoints across 21 resource domains.
+- **📊 Full Nextcloud Coverage** — 193 tools mapped to Nextcloud API endpoints across 22 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
-- **🧪 Comprehensive Testing** — 260+ automated tests covering all tool domains, run via the test runner pipeline.
+- **🧪 Comprehensive Testing** — 280 automated tests covering all tool domains, run via the test runner pipeline.
 
 ## 🔧 Environment Variables
 
@@ -57,21 +57,21 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 179 MCP tools organized into the following categories:
+The server implements 193 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
 - `get_capabilities` — Get server capabilities
 
 ### 👥 Users/Groups (4 tools)
-- `get_users` — List all users
+- `list_users` — List all users
 - `get_user` — Get a user by ID
-- `get_groups` — List all groups
-- `get_group_members` — Get members of a group
+- `list_groups` — List all groups
+- `list_group_members` — Get members of a group
 
 ### 🔗 File Sharing (6 tools)
 - `list_all_shares` — List all shares
-- `get_shares_by_path` — Get shares by file path
+- `list_shares_by_path` — Get shares by file path
 - `get_share` — Get a share by ID
 - `create_share` — Create a new share
 - `update_share` — Update an existing share
@@ -83,14 +83,14 @@ The server implements 179 MCP tools organized into the following categories:
 - `set_predefined_message` — Set a predefined status message
 - `set_custom_message` — Set a custom status message
 - `clear_message` — Clear the current status message
-- `get_predefined_statuses` — List predefined statuses
-- `get_user_statuses` — List all user statuses
+- `list_predefined_statuses` — List predefined statuses
+- `list_user_statuses` — List all user statuses
 
 ### 📅 OOO/Events (5 tools)
 - `get_ooo` — Get out-of-office settings for a user
 - `set_ooo` — Set out-of-office settings
 - `clear_ooo` — Clear out-of-office settings
-- `get_upcoming_events` — Get upcoming events from calendars
+- `list_upcoming_events` — Get upcoming events from calendars
 - `get_direct_download_url` — Get a direct download URL for a file
 
 ### 📁 WebDAV Files (10 tools)
@@ -105,11 +105,25 @@ The server implements 179 MCP tools organized into the following categories:
 - `webdav_search_files` — Search files via WebDAV
 - `webdav_list_favorites` — List favorite files via WebDAV
 
+### 📁 Simple File/Folder Operations (12 tools)
+- `write_file` — Create or overwrite a file
+- `read_file` — Read file content
+- `search_files` — Search files by name
+- `move_file` — Move or rename a file
+- `copy_file` — Copy a file
+- `delete_file` — Delete a file (errors if it's a folder)
+- `create_folder` — Create a directory
+- `show_folder` — Show contents of a folder
+- `move_folder` — Move or rename a folder
+- `copy_folder` — Copy a folder
+- `delete_folder` — Delete a folder (errors if it's a file)
+- `move_files` — Move multiple files into a target directory
+
 ### 🗂️ Collections (5 tools)
 - `collection_get_by_id` — Get a collection by ID
 - `collection_search` — Search across collections
 - `collection_search_raw` — Search collections with raw query
-- `collection_get_by_resource` — Get collections for a resource
+- `list_collections_by_resource` — Get collections for a resource
 - `collection_create` — Create a new collection
 
 ### ⏰ File Reminders (3 tools)
@@ -118,7 +132,7 @@ The server implements 179 MCP tools organized into the following categories:
 - `delete_file_reminder` — Delete a file reminder
 
 ### 🔍 Search (2 tools)
-- `get_search_providers` — List search providers
+- `list_search_providers` — List search providers
 - `search` — Search across providers
 
 ### 🔔 Notifications (4 tools)
@@ -128,9 +142,9 @@ The server implements 179 MCP tools organized into the following categories:
 - `notification_delete_all` — Delete all notifications
 
 ### 📊 Activity (3 tools)
-- `activity_get` — Get activity stream
-- `activity_get_filters` — List activity filters
-- `activity_get_filter` — Get activity by filter
+- `list_activities` — Get activity stream
+- `list_activity_filters` — List activity filters
+- `list_activity_filtered` — Get activity by filter
 
 ### 📅 Calendar (13 tools)
 - `list_all_calendars` — List all calendars
@@ -139,7 +153,7 @@ The server implements 179 MCP tools organized into the following categories:
 - `update_calendar` — Update an existing calendar
 - `delete_calendar` — Delete a calendar by URI
 - `list_all_events` — List all events across calendars
-- `get_events_by_calendar` — List events in a calendar
+- `list_events_by_calendar` — List events in a calendar
 - `get_event` — Get an event by UID
 - `create_event` — Create a new event
 - `update_event` — Update an existing event
@@ -149,7 +163,7 @@ The server implements 179 MCP tools organized into the following categories:
 
 ### ✅ Todos (7 tools)
 - `todo_list` — List all todos across calendars
-- `todo_get_by_calendar` — List todos in a calendar
+- `list_todos_by_calendar` — List todos in a calendar
 - `todo_get` — Get a todo by UID
 - `todo_create` — Create a new todo
 - `todo_update` — Update an existing todo
@@ -163,7 +177,7 @@ The server implements 179 MCP tools organized into the following categories:
 - `update_addressbook` — Update an existing address book
 - `delete_addressbook` — Delete an address book by URI
 - `list_all_contacts` — List all contacts across address books
-- `get_contacts_by_addressbook` — List contacts in an address book
+- `list_contacts_by_addressbook` — List contacts in an address book
 - `get_contact` — Get a contact by UID
 - `create_contact` — Create a new contact
 - `update_contact` — Update an existing contact
@@ -171,7 +185,7 @@ The server implements 179 MCP tools organized into the following categories:
 
 ### 📝 Notes (9 tools)
 - `note_list` — List all notes
-- `note_get_by_category` — List notes by category
+- `list_notes_by_category` — List notes by category
 - `note_get` — Get a note by ID
 - `note_create` — Create a new note
 - `note_update` — Update an existing note
@@ -224,7 +238,7 @@ The server implements 179 MCP tools organized into the following categories:
 - `talk_remove_participant` — Remove a participant from a Talk conversation room
 - `talk_delete_room` — Delete a Talk conversation room
 - `send_chat_message` — Send a chat message
-- `get_chat_messages` — Get chat messages from a room
+- `list_chat_messages` — Get chat messages from a room
 - `delete_chat_message` — Delete a chat message
 
 ### 📊 Tables (11 tools)

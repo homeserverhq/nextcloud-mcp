@@ -295,7 +295,7 @@ class MovePageParam(BaseModel):
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def get_users(
+async def list_users(
     search: str = "",
     limit: int = 100,
     offset: int = 0,
@@ -328,7 +328,7 @@ async def get_user(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def get_groups(
+async def list_groups(
     limit: int = 100,
     offset: int = 0,
     search: str = "",
@@ -347,7 +347,7 @@ async def get_groups(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def get_group_members(
+async def list_group_members(
     group_id: str,
     limit: int = 100,
     offset: int = 0,
@@ -379,7 +379,7 @@ async def list_all_shares(
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
-async def get_shares_by_path(
+async def list_shares_by_path(
     path: str,
     shared_with_me: bool = False,
     include_all_fields: bool = False,
@@ -537,7 +537,7 @@ async def clear_message(ctx: Context) -> dict[str, Any]:
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_predefined_statuses(
+async def list_predefined_statuses(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -550,7 +550,7 @@ async def get_predefined_statuses(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_user_statuses(
+async def list_user_statuses(
     limit: int = 100,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -616,7 +616,7 @@ async def clear_ooo(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_upcoming_events(
+async def list_upcoming_events(
     location: str = "",
     limit: int = 20,
     include_all_fields: bool = False,
@@ -706,7 +706,7 @@ async def collection_search_raw(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def collection_get_by_resource(
+async def list_collections_by_resource(
     resource_type: str,
     resource_id: str,
     include_all_fields: bool = False,
@@ -785,7 +785,7 @@ async def delete_file_reminder(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_search_providers(
+async def list_search_providers(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1228,7 +1228,7 @@ async def notification_create(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def activity_get(
+async def list_activities(
     limit: int = 50,
     sort: str = "",
     object_type: str = "",
@@ -1249,7 +1249,7 @@ async def activity_get(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def activity_get_filters(
+async def list_activity_filters(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1262,7 +1262,7 @@ async def activity_get_filters(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def activity_get_filter(
+async def list_activity_filtered(
     filter_name: str,
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1378,7 +1378,7 @@ async def list_all_events(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_events_by_calendar(
+async def list_events_by_calendar(
     calendar_uri: str,
     from_date: str = "",
     to_date: str = "",
@@ -1550,7 +1550,7 @@ async def todo_list(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def todo_get_by_calendar(
+async def list_todos_by_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1757,7 +1757,7 @@ async def list_all_contacts(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_contacts_by_addressbook(
+async def list_contacts_by_addressbook(
     addressbook_uri: str,
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1865,7 +1865,7 @@ async def note_list(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def note_get_by_category(
+async def list_notes_by_category(
     category: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2672,7 +2672,7 @@ async def send_chat_message(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def get_chat_messages(
+async def list_chat_messages(
     token: str,
     limit: int = 50,
     look_into_future: int = 0,

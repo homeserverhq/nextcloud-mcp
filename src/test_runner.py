@@ -202,19 +202,19 @@ def main():
         # Phase 2: Read-Only List Tools
         # ------------------------------------------------------------------
         log("\n=== Phase 2: Read-Only Domain Tools ===")
-        run_test(session, "B get_users", "get_users", {"limit": 5})
-        run_test(session, "B get_groups", "get_groups", {"limit": 5})
+        run_test(session, "B list_users", "list_users", {"limit": 5})
+        run_test(session, "B list_groups", "list_groups", {"limit": 5})
         run_test(session, "B get_user_status", "get_user_status", {})
-        run_test(session, "B get_predefined_statuses", "get_predefined_statuses", {})
-        run_test(session, "B get_user_statuses", "get_user_statuses", {"limit": 5})
-        run_test(session, "B get_upcoming_events", "get_upcoming_events", {"limit": 5})
+        run_test(session, "B list_predefined_statuses", "list_predefined_statuses", {})
+        run_test(session, "B list_user_statuses", "list_user_statuses", {"limit": 5})
+        run_test(session, "B list_upcoming_events", "list_upcoming_events", {"limit": 5})
         run_test(session, "B get_folder_tree", "get_folder_tree", {"depth": 1})
-        run_test(session, "B get_search_providers", "get_search_providers", {})
+        run_test(session, "B list_search_providers", "list_search_providers", {})
         run_test(session, "B get_capabilities", "get_capabilities", {})
         run_test(session, "B notification_list", "notification_list", {})
         run_test(session, "B circle_list", "circle_list", {})
-        run_test(session, "B activity_get", "activity_get", {"limit": 5})
-        run_test(session, "B activity_get_filters", "activity_get_filters", {})
+        run_test(session, "B list_activities", "list_activities", {"limit": 5})
+        run_test(session, "B list_activity_filters", "list_activity_filters", {})
         run_test(session, "B list_all_calendars", "list_all_calendars", {})
         run_test(session, "B list_all_addressbooks", "list_all_addressbooks", {})
         run_test(session, "B note_list", "note_list", {})
@@ -227,7 +227,7 @@ def main():
         run_test(session, "B list_all_shares", "list_all_shares", {})
         run_test(session, "B talk_list_rooms", "talk_list_rooms", {})
         run_test(session, "B get_user", "get_user", {"user_id": API_USER})
-        run_test(session, "B get_group_members", "get_group_members", {"group_id": "admin"})
+        run_test(session, "B list_group_members", "list_group_members", {"group_id": "admin"})
         run_test(session, "B webdav_list_directory", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/"})
 
         # ------------------------------------------------------------------
@@ -318,9 +318,9 @@ def main():
         run_test(session, "3A verify_collective_in_list", "collectives_list", {})
         run_test(session, "3A verify_stack_in_list", "deck_list_stacks", {"board_id": store["Board_id"]})
         run_test(session, "3A verify_card_in_list", "deck_list_cards", {"board_id": store["Board_id"], "stack_id": store["Stack_id"]})
-        run_test(session, "3A verify_event_in_list", "get_events_by_calendar", {"calendar_uri": store["Calendar_id"]})
-        run_test(session, "3A verify_todo_in_list", "todo_get_by_calendar", {"calendar_uri": store["Calendar_id"]})
-        run_test(session, "3A verify_contact_in_list", "get_contacts_by_addressbook", {"addressbook_uri": store["Addressbook_id"]})
+        run_test(session, "3A verify_event_in_list", "list_events_by_calendar", {"calendar_uri": store["Calendar_id"]})
+        run_test(session, "3A verify_todo_in_list", "list_todos_by_calendar", {"calendar_uri": store["Calendar_id"]})
+        run_test(session, "3A verify_contact_in_list", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook_id"]})
         run_test(session, "3A verify_page_in_list", "collectives_list_pages", {"collective_id": store["Collective_id"]})
         run_test(session, "3A verify_tag_in_list", "collectives_list_tags", {"collective_id": store["Collective_id"]})
 
@@ -407,10 +407,10 @@ def main():
         run_test(session, "4A deck_list_stacks", "deck_list_stacks", {"board_id": store["Board"]["id"]})
         run_test(session, "4A deck_list_cards", "deck_list_cards", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"]})
         run_test(session, "4A deck_list_labels", "deck_list_labels", {"board_id": store["Board"]["id"]})
-        run_test(session, "4A get_events_by_calendar", "get_events_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
-        run_test(session, "4A get_contacts_by_addressbook", "get_contacts_by_addressbook", {"addressbook_uri": store["Addressbook"]["addressbook_uri"]})
-        run_test(session, "4A todo_get_by_calendar", "todo_get_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
-        run_test(session, "4A note_get_by_category", "note_get_by_category", {"category": "test"})
+        run_test(session, "4A list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
+        run_test(session, "4A list_contacts_by_addressbook", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook"]["addressbook_uri"]})
+        run_test(session, "4A list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
+        run_test(session, "4A list_notes_by_category", "list_notes_by_category", {"category": "test"})
         run_test(session, "4A collectives_list_pages", "collectives_list_pages", {"collective_id": store["Collective"]["id"]})
         run_test(session, "4A collectives_list_tags", "collectives_list_tags", {"collective_id": store["Collective"]["id"]})
         run_test(session, "4A table_get_schema", "table_get_schema", {"table_id": store["Table"]["id"]})
@@ -473,7 +473,7 @@ def main():
         run_test(session, "5F create_share", "create_share", {"path": rel_path, "share_type": "public", "share_with": "", "permissions": "read"})
         share_id = results[-1]["data"]["id"]
         run_test(session, "5F get_share", "get_share", {"id": share_id})
-        run_test(session, "5F get_shares_by_path", "get_shares_by_path", {"path": rel_path})
+        run_test(session, "5F list_shares_by_path", "list_shares_by_path", {"path": rel_path})
         run_test(session, "5F update_share", "update_share", {"id": share_id, "permissions": "read"})
         run_test(session, "5F delete_share", "delete_share", {"id": share_id})
 
@@ -486,7 +486,7 @@ def main():
         store["collection_5g_id"] = str(results[-1]["data"]["id"])
         run_test(session, "5G search_collections", "collection_search", {"search": "test-collection-5g"})
         run_test(session, "5G get_collection_by_id", "collection_get_by_id", {"id": store["collection_5g_id"]})
-        run_test(session, "5G get_collections_by_resource", "collection_get_by_resource", {"resource_type": "file", "resource_id": str(store["fixture_file_id"])})
+        run_test(session, "5G list_collections_by_resource", "list_collections_by_resource", {"resource_type": "file", "resource_id": str(store["fixture_file_id"])})
         run_test(session, "5G delete_circle_share", "delete_share", {"id": store["share5g_id"]})
 
         # ---- Phase 5H: Reminder Tests ----
@@ -541,7 +541,7 @@ def main():
         run_test(session, "5M remove_participant", "talk_remove_participant", {"token": store["chat_token"], "attendee_id": store["attendee_id"]})
         run_test(session, "5M send_chat_message", "send_chat_message", {"token": store["chat_token"], "message": "Hello from MCP test"})
         store["chat_msg_id"] = results[-1]["data"]["id"]
-        run_test(session, "5M get_chat_messages", "get_chat_messages", {"token": store["chat_token"], "limit": 5})
+        run_test(session, "5M list_chat_messages", "list_chat_messages", {"token": store["chat_token"], "limit": 5})
         run_test(session, "5M delete_chat_message", "delete_chat_message", {"token": store["chat_token"], "message_id": store["chat_msg_id"]})
         run_test(session, "5M delete_room", "talk_delete_room", {"token": store["chat_token"]})
 
@@ -595,12 +595,12 @@ def main():
         run_test(session, "5R find_availability", "find_availability", {"calendar_uris": cal_uri, "from_date": "2026-07-01T00:00:00+00:00", "to_date": "2026-07-07T00:00:00+00:00"})
         run_test(session, "5R create_meeting", "create_meeting", {"summary": f"t{rid}-Meeting", "dtstart": "2026-07-01T10:00:00+00:00", "dtend": "2026-07-01T11:00:00+00:00", "attendees": "test@example.com", "description": "Test meeting", "calendar_uri": cal_uri})
         run_test(session, "5R search_todos", "todo_search", {"query": make_name("Todo"), "calendar_uri": cal_uri})
-        run_test(session, "5R get_activity_filter", "activity_get_filter", {"filter_name": "all", "limit": 5})
+        run_test(session, "5R list_activity_filtered", "list_activity_filtered", {"filter_name": "all", "limit": 5})
         run_test(session, "5R list_all_contacts", "list_all_contacts", {})
         run_test(session, "5R list_all_events", "list_all_events", {})
-        run_test(session, "5R get_events_by_calendar", "get_events_by_calendar", {"calendar_uri": cal_uri})
+        run_test(session, "5R list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": cal_uri})
         run_test(session, "5R list_all_todos", "todo_list", {})
-        run_test(session, "5R get_todos_by_calendar", "todo_get_by_calendar", {"calendar_uri": cal_uri})
+        run_test(session, "5R list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": cal_uri})
         attach_note_dir = f"/remote.php/dav/files/{API_USER}/Notes/test/"
         attach_filename = f"t{rid}-attach.txt"
         run_test(session, "5R create_attachment", "webdav_write_file", {"path": f"{attach_note_dir}{attach_filename}", "content": "MCP attachment test"})
@@ -633,7 +633,7 @@ def main():
         wd = extract_content(whoami)
         current_user = wd["userId"]
         store["current_user"] = current_user
-        all_users = session.call_tool("get_users")
+        all_users = session.call_tool("list_users")
         ud = extract_content(all_users)
         user_list = get_list_items(ud)
         second_user = user_list[0]
