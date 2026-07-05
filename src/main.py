@@ -654,7 +654,7 @@ async def get_folder_tree(
     """Get the folder tree.
     Args:
         depth: Maximum depth. Defaults to 3.
-        path: Full DAV path: /remote.php/dav/files/{username}/... Root path to start from.
+        path: Relative path from user root (e.g. Documents/Subfolder). Empty = root.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().get_folder_tree(get_user_token(), depth, path, include_all_fields)
@@ -746,7 +746,7 @@ async def get_file_reminder(
 ) -> dict[str, Any]:
     """Get the reminder for a file.
     Args:
-        file_id: ID of the file. Get this from webdav_list_directory() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_file_reminder(file_id, get_user_token(), include_all_fields)
@@ -760,7 +760,7 @@ async def set_file_reminder(
 ) -> dict[str, Any]:
     """Set a reminder on a file.
     Args:
-        file_id: ID of the file. Get this from webdav_list_directory() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
     result = await get_client().set_file_reminder(file_id, due_date, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -776,7 +776,7 @@ async def delete_file_reminder(
 ) -> dict[str, Any]:
     """Delete the reminder on a file.
     Args:
-        file_id: ID of the file. Get this from webdav_list_directory() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
     """
     result = await get_client().delete_file_reminder(file_id, get_user_token())
     if isinstance(result, list):
@@ -830,135 +830,6 @@ async def get_capabilities(
     return await get_client().get_capabilities(get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
-async def webdav_list_directory(
-    path: str,
-    depth: int = 1,
-    include_all_fields: bool = False,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """List files and directories in a path.
-    Args:
-        path: Full DAV path: /remote.php/dav/files/{username}/...
-        depth: Directory depth. Defaults to 1.
-        include_all_fields: Default False (common fields only). Set True for all fields.
-    """
-    data = await get_client().webdav_list_directory(path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
-
-
-@mcp.tool(tags={"read", "basic", "nextcloud"})
-async def webdav_read_file(
-    path: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Read file content from a path.
-    Args:
-        path: Full DAV path: /remote.php/dav/files/{username}/...
-    """
-    return {"content": await get_client().webdav_read_file(path, get_user_token())}
-
-
-@mcp.tool(tags={"write", "basic", "nextcloud"})
-async def webdav_write_file(
-    path: str,
-    content: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Write content to a file.
-    Args:
-        path: Full DAV path: /remote.php/dav/files/{username}/...
-        content: Content to write.
-    """
-    return await get_client().webdav_write_file(path, content, get_user_token(), ALLOW_ALL_AGGREGATE)
-
-
-@mcp.tool(tags={"write", "basic", "nextcloud"})
-async def webdav_create_directory(
-    path: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Create a directory.
-    Args:
-        path: Full DAV path: /remote.php/dav/files/{username}/...
-    """
-    return await get_client().webdav_create_directory(path, get_user_token(), ALLOW_ALL_AGGREGATE)
-
-
-@mcp.tool(tags={"write", "basic", "nextcloud"})
-async def webdav_delete_resource(
-    path: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Delete a file or directory.
-    Args:
-        path: Full DAV path: /remote.php/dav/files/{username}/...
-    """
-    return await get_client().webdav_delete_resource(path, get_user_token())
-
-
-@mcp.tool(tags={"write", "basic", "nextcloud"})
-async def webdav_move_resource(
-    source: str,
-    destination: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Move or rename a file or directory.
-    Args:
-        source: Full DAV path: /remote.php/dav/files/{username}/...
-        destination: Full DAV path: /remote.php/dav/files/{username}/...
-    """
-    return await get_client().webdav_move_resource(source, destination, get_user_token())
-
-
-@mcp.tool(tags={"write", "basic", "nextcloud"})
-async def webdav_copy_resource(
-    source: str,
-    destination: str,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Copy a file or directory.
-    Args:
-        source: Full DAV path: /remote.php/dav/files/{username}/...
-        destination: Full DAV path: /remote.php/dav/files/{username}/...
-    """
-    return await get_client().webdav_copy_resource(source, destination, get_user_token())
-
-
-@mcp.tool(tags={"read", "basic", "nextcloud"})
-async def webdav_search_files(
-    query: str,
-    limit: int = 50,
-    mime_type: str = "",
-    include_all_fields: bool = False,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Search files by name or content.
-    Args:
-        query: Search query.
-        limit: Maximum results. Defaults to 50.
-        mime_type: Filter by MIME type.
-        include_all_fields: Default False (common fields only). Set True for all fields.
-    """
-    data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
-
-
-@mcp.tool(tags={"read", "basic", "nextcloud"})
-async def webdav_list_favorites(
-    limit: int = 50,
-    include_all_fields: bool = False,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """List favorite files.
-    Args:
-        limit: Maximum results. Defaults to 50.
-        include_all_fields: Default False (common fields only). Set True for all fields.
-    """
-    data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
-
-
 # =============================================================================
 # Simple File / Folder Operations (relative paths, auto-resolve username)
 # =============================================================================
@@ -997,14 +868,18 @@ async def read_file(
 async def search_files(
     query: str,
     limit: int = 50,
+    mime_type: str = "",
+    include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search files by name.
     Args:
         query: Search term.
         limit: Maximum results. Defaults to 50.
+        mime_type: Filter by MIME type.
+        include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().webdav_search_files(query, get_user_token(), limit, "", ALLOW_ALL_AGGREGATE)
+    data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1075,15 +950,17 @@ async def create_folder(
 async def show_folder(
     path: str = "",
     depth: int = 1,
+    include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Show contents of a folder. Empty path lists top-level files/folders.
     Args:
         path: Relative path. Empty = root.
         depth: Directory depth. Defaults to 1.
+        include_all_fields: Default False (common fields only). Set True for all fields.
     """
     full_path = await _resolve_path(path)
-    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, ALLOW_ALL_AGGREGATE)
+    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1158,6 +1035,21 @@ async def move_files(
         await get_client().webdav_move_resource(src, dst, get_user_token())
         results.append({"file": f, "status": "moved"})
     return {"results": results}
+
+
+@mcp.tool(tags={"read", "basic", "nextcloud"})
+async def list_favorites(
+    limit: int = 50,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """List favorite files.
+    Args:
+        limit: Maximum results. Defaults to 50.
+        include_all_fields: Default False (common fields only). Set True for all fields.
+    """
+    data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    return {"items": json_to_toon(data)}
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})

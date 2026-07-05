@@ -222,13 +222,13 @@ def main():
         run_test(session, "B table_list", "table_list", {})
         run_test(session, "B collectives_list", "collectives_list", {})
         run_test(session, "B collectives_list_trashed", "collectives_list_trashed", {})
-        run_test(session, "B webdav_list_favorites", "webdav_list_favorites", {"limit": 5})
+        run_test(session, "B list_favorites", "list_favorites", {"limit": 5})
         run_test(session, "B list_all_accounts", "list_all_accounts", {})
         run_test(session, "B list_all_shares", "list_all_shares", {})
         run_test(session, "B talk_list_rooms", "talk_list_rooms", {})
         run_test(session, "B get_user", "get_user", {"user_id": API_USER})
         run_test(session, "B list_group_members", "list_group_members", {"group_id": "admin"})
-        run_test(session, "B webdav_list_directory", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/"})
+        run_test(session, "B show_folder_root", "show_folder", {"path": "", "depth": 1})
 
         # ------------------------------------------------------------------
         # Phase 3: Full CRUD Cycles — flat, no loops, no conditionals
@@ -431,27 +431,27 @@ def main():
         run_test(session, "5B note_append_content", "note_append_content", {"id": store["Note"]["id"], "content": "Appended line"})
         run_test(session, "5B note_search", "note_search", {"query": "Hello"})
         run_test(session, "5B search", "search", {"provider_id": "files", "term": "test"})
-        run_test(session, "5B webdav_search_files", "webdav_search_files", {"query": "test"})
-        run_test(session, "5B webdav_create_directory", "webdav_create_directory", {"path": f"/remote.php/dav/files/{API_USER}/t{rid}-testdir"})
-        run_test(session, "5B webdav_write_file", "webdav_write_file", {"path": f"/remote.php/dav/files/{API_USER}/t{rid}-testdir/testfile.txt", "content": "Hello World"})
+        run_test(session, "5B search_files", "search_files", {"query": "test"})
+        run_test(session, "5B create_folder", "create_folder", {"path": f"t{rid}-testdir"})
+        run_test(session, "5B write_file", "write_file", {"path": f"t{rid}-testdir/testfile.txt", "content": "Hello World"})
         run_test(session, "5B table_update_row", "table_update_row", {"row_id": store["Row"]["id"], "data": {}})
 
-        # ---- Phase 5C: WebDAV Move/Copy/Delete with inline verification ----
-        log("\n=== Phase 5C: WebDAV Move/Copy/Delete ===")
-        testdir = f"/remote.php/dav/files/{API_USER}/t{rid}-testdir"
+        # ---- Phase 5C: File Move/Copy/Delete with inline verification ----
+        log("\n=== Phase 5C: File Move/Copy/Delete ===")
+        testdir = f"t{rid}-testdir"
         testfile = f"{testdir}/testfile.txt"
-        moved_file = f"/remote.php/dav/files/{API_USER}/t{rid}-moved.txt"
-        copied_file = f"/remote.php/dav/files/{API_USER}/t{rid}-copied.txt"
-        run_test(session, "5C verify_create_directory", "webdav_list_directory", {"path": testdir, "depth": 0})
-        run_test(session, "5C verify_read_file", "webdav_read_file", {"path": testfile})
-        run_test(session, "5C move_resource", "webdav_move_resource", {"source": testfile, "destination": moved_file})
-        run_test(session, "5C verify_moved", "webdav_read_file", {"path": moved_file})
-        run_test(session, "5C copy_resource", "webdav_copy_resource", {"source": moved_file, "destination": copied_file})
-        run_test(session, "5C verify_copied", "webdav_read_file", {"path": copied_file})
-        run_test(session, "5C delete_testfile", "webdav_delete_resource", {"path": moved_file})
-        run_test(session, "5C delete_copied", "webdav_delete_resource", {"path": copied_file})
-        run_test(session, "5C delete_testdir", "webdav_delete_resource", {"path": testdir})
-        run_test(session, "5C verify_delete_resource", "webdav_list_directory", {"path": f"/remote.php/dav/files/{API_USER}/", "depth": 1})
+        moved_file = f"t{rid}-moved.txt"
+        copied_file = f"t{rid}-copied.txt"
+        run_test(session, "5C verify_create_directory", "show_folder", {"path": testdir, "depth": 0})
+        run_test(session, "5C verify_read_file", "read_file", {"path": testfile})
+        run_test(session, "5C move_file", "move_file", {"source": testfile, "destination": moved_file})
+        run_test(session, "5C verify_moved", "read_file", {"path": moved_file})
+        run_test(session, "5C copy_file", "copy_file", {"source": moved_file, "destination": copied_file})
+        run_test(session, "5C verify_copied", "read_file", {"path": copied_file})
+        run_test(session, "5C delete_testfile", "delete_file", {"path": moved_file})
+        run_test(session, "5C delete_copied", "delete_file", {"path": copied_file})
+        run_test(session, "5C delete_testdir", "delete_folder", {"path": testdir})
+        run_test(session, "5C verify_delete_resource", "show_folder", {"path": "", "depth": 1})
 
         # ---- Phase 5D: Read-back Verification ----
         log("\n=== Phase 5D: Read-back Verification ===")
@@ -459,12 +459,12 @@ def main():
         run_test(session, "5D verify_set_status", "get_user_status", {})
         run_test(session, "5D verify_clear_message", "get_user_status", {})
 
-        # ---- Phase 5E: WebDAV Fixture ----
-        log("\n=== Phase 5E: WebDAV Fixture Creation ===")
-        fixture_path = f"/remote.php/dav/files/{API_USER}/t{rid}-fixture.txt"
-        run_test(session, "5E create_fixture_file", "webdav_write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
+        # ---- Phase 5E: File Fixture ----
+        log("\n=== Phase 5E: File Fixture Creation ===")
+        fixture_path = f"t{rid}-fixture.txt"
+        run_test(session, "5E create_fixture_file", "write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
         store["fixture_path"] = fixture_path
-        run_test(session, "5E list_fixture", "webdav_list_directory", {"path": fixture_path, "depth": 0, "include_all_fields": True})
+        run_test(session, "5E list_fixture", "show_folder", {"path": fixture_path, "depth": 0, "include_all_fields": True})
         store["fixture_file_id"] = int(get_list_items(results[-1]["data"])[0]["fileid"])
 
         # ---- Phase 5F: Sharing Tests ----
@@ -601,15 +601,15 @@ def main():
         run_test(session, "5R list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": cal_uri})
         run_test(session, "5R list_all_todos", "todo_list", {})
         run_test(session, "5R list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": cal_uri})
-        attach_note_dir = f"/remote.php/dav/files/{API_USER}/Notes/test/"
+        attach_note_dir = f"Notes/test/"
         attach_filename = f"t{rid}-attach.txt"
-        run_test(session, "5R create_attachment", "webdav_write_file", {"path": f"{attach_note_dir}{attach_filename}", "content": "MCP attachment test"})
+        run_test(session, "5R create_attachment", "write_file", {"path": f"{attach_note_dir}{attach_filename}", "content": "MCP attachment test"})
         run_test(session, "5R get_attachment", "note_get_attachment", {"note_id": store["Note"]["id"], "path": attach_filename})
 
-        # ---- Phase 5S: WebDAV Fixture Cleanup ----
-        log("\n=== Phase 5S: WebDAV Fixture Cleanup ===")
-        run_test(session, "5S delete_fixture", "webdav_delete_resource", {"path": fixture_path})
-        run_test(session, "5S delete_attach", "webdav_delete_resource", {"path": f"/remote.php/dav/files/{API_USER}/Notes/test/t{rid}-attach.txt"})
+        # ---- Phase 5S: File Fixture Cleanup ----
+        log("\n=== Phase 5S: File Fixture Cleanup ===")
+        run_test(session, "5S delete_fixture", "delete_file", {"path": fixture_path})
+        run_test(session, "5S delete_attach", "delete_file", {"path": f"Notes/test/t{rid}-attach.txt"})
 
         # ---- Phase 5T: Simple File/Folder Operations ----
         log("\n=== Phase 5T: Simple File/Folder Operations ===")

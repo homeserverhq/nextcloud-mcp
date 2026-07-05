@@ -1,12 +1,12 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **193 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **185 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 193 tools mapped to Nextcloud API endpoints across 22 resource domains.
+- **📊 Full Nextcloud Coverage** — 185 tools mapped to Nextcloud API endpoints across 22 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
 - **🧪 Comprehensive Testing** — 280 automated tests covering all tool domains, run via the test runner pipeline.
@@ -58,7 +58,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 193 MCP tools organized into the following categories:
+The server implements 185 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
@@ -94,19 +94,8 @@ The server implements 193 MCP tools organized into the following categories:
 - `list_upcoming_events` — Get upcoming events from calendars
 - `get_direct_download_url` — Get a direct download URL for a file
 
-### 📁 WebDAV Files (10 tools)
-- `get_folder_tree`
-- `webdav_list_directory` — List directory contents via WebDAV
-- `webdav_read_file` — Read a file via WebDAV
-- `webdav_write_file` — Write a file via WebDAV
-- `webdav_create_directory` — Create a directory via WebDAV
-- `webdav_delete_resource` — Delete a resource via WebDAV
-- `webdav_move_resource` — Move a resource via WebDAV
-- `webdav_copy_resource` — Copy a resource via WebDAV
-- `webdav_search_files` — Search files via WebDAV
-- `webdav_list_favorites` — List favorite files via WebDAV
-
-### 📁 Simple File/Folder Operations (12 tools)
+### 📁 File/Folder Operations (14 tools)
+- `get_folder_tree` — Get the folder tree structure
 - `write_file` — Create or overwrite a file
 - `read_file` — Read file content
 - `search_files` — Search files by name
@@ -119,6 +108,7 @@ The server implements 193 MCP tools organized into the following categories:
 - `copy_folder` — Copy a folder
 - `delete_folder` — Delete a folder (errors if it's a file)
 - `move_files` — Move multiple files into a target directory
+- `list_favorites` — List favorite files
 
 ### 🗂️ Collections (5 tools)
 - `collection_get_by_id` — Get a collection by ID
