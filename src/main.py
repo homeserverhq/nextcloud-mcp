@@ -662,7 +662,7 @@ async def get_folder_tree(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def collection_get_by_id(
+async def get_collection_by_id(
     id: str,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -676,7 +676,7 @@ async def collection_get_by_id(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def collection_search(
+async def search_collections(
     search: str = "",
     limit: int = 50,
     include_all_fields: bool = False,
@@ -693,7 +693,7 @@ async def collection_search(
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
-async def collection_search_raw(
+async def search_collections_raw(
     search: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -723,7 +723,7 @@ async def list_collections_by_resource(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collection_create(
+async def create_collection(
     resource_type: str = "file",
     resource_id: str = "",
     name: str = "",
@@ -1066,7 +1066,7 @@ async def list_notifications(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def notification_get(
+async def get_notification(
     id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1080,7 +1080,7 @@ async def notification_get(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def notification_delete(
+async def delete_notification(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1095,7 +1095,7 @@ async def notification_delete(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def notification_delete_all(ctx: Context) -> dict[str, Any]:
+async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
     """Delete all notifications."""
     result = await get_client().delete_all_notifications(get_user_token())
     if isinstance(result, list):
@@ -1104,7 +1104,7 @@ async def notification_delete_all(ctx: Context) -> dict[str, Any]:
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def notification_create(
+async def create_notification(
     user_id: str,
     subject: str,
     message: str = "",
@@ -1457,7 +1457,7 @@ async def list_todos_by_calendar(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def todo_create(
+async def create_todo(
     summary: str,
     description: str,
     due_date: str,
@@ -1480,7 +1480,7 @@ async def todo_create(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def todo_get(
+async def get_todo(
     todo_uid: str,
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1496,7 +1496,7 @@ async def todo_get(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def todo_update(
+async def update_todo(
     todo_uid: str,
     calendar_uri: str,
     summary: Optional[str] = None,
@@ -1521,7 +1521,7 @@ async def todo_update(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def todo_delete(
+async def delete_todo(
     todo_uid: str,
     calendar_uri: str,
     ctx: Context = None
@@ -1535,7 +1535,7 @@ async def todo_delete(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def todo_search(
+async def search_todos(
     query: str,
     calendar_uri: str = "",
     limit: int = 50,
@@ -1772,7 +1772,7 @@ async def list_notes_by_category(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def note_get(
+async def get_note(
     id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1786,7 +1786,7 @@ async def note_get(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def note_create(
+async def create_note(
     title: str,
     content: str,
     category: str = "",
@@ -1803,7 +1803,7 @@ async def note_create(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def note_update(
+async def update_note(
     id: int,
     title: Optional[str] = None,
     content: Optional[str] = None,
@@ -1824,7 +1824,7 @@ async def note_update(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def note_delete(
+async def delete_note(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1837,7 +1837,7 @@ async def note_delete(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def note_append_content(
+async def append_note_content(
     id: int,
     content: str,
     ctx: Context = None
@@ -1853,7 +1853,7 @@ async def note_append_content(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def note_search(
+async def search_notes(
     query: str,
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1874,7 +1874,7 @@ async def note_search(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def note_get_attachment(
+async def get_note_attachment(
     note_id: int,
     path: str,
     ctx: Context = None
@@ -1901,7 +1901,7 @@ async def list_deck_boards(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_get_board(
+async def get_deck_board(
     board_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1915,7 +1915,7 @@ async def deck_get_board(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def deck_create_board(
+async def create_deck_board(
     title: str,
     color: str = "",
     archived: bool = False,
@@ -1932,7 +1932,7 @@ async def deck_create_board(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_update_board(
+async def update_deck_board(
     board_id: int,
     title: Optional[str] = None,
     color: Optional[str] = None,
@@ -1972,7 +1972,7 @@ async def list_deck_stacks(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def deck_create_stack(
+async def create_deck_stack(
     board_id: int,
     title: str,
     order: int = 0,
@@ -1989,7 +1989,7 @@ async def deck_create_stack(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_get_stack(
+async def get_deck_stack(
     board_id: int,
     stack_id: int,
     include_all_fields: bool = False,
@@ -2005,7 +2005,7 @@ async def deck_get_stack(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_update_stack(
+async def update_deck_stack(
     board_id: int,
     stack_id: int,
     title: Optional[str] = None,
@@ -2045,7 +2045,7 @@ async def list_deck_cards(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def deck_get_card(
+async def get_deck_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2063,7 +2063,7 @@ async def deck_get_card(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def deck_create_card(
+async def create_deck_card(
     board_id: int,
     stack_id: int,
     title: str,
@@ -2087,7 +2087,7 @@ async def deck_create_card(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def deck_update_card(
+async def update_deck_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2113,7 +2113,7 @@ async def deck_update_card(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_delete_board(
+async def delete_deck_board(
     board_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2125,7 +2125,7 @@ async def deck_delete_board(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_delete_stack(
+async def delete_deck_stack(
     board_id: int,
     stack_id: int,
     ctx: Context = None
@@ -2139,7 +2139,7 @@ async def deck_delete_stack(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def deck_delete_card(
+async def delete_deck_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2155,7 +2155,7 @@ async def deck_delete_card(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_archive_card(
+async def archive_deck_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2171,7 +2171,7 @@ async def deck_archive_card(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_unarchive_card(
+async def unarchive_deck_card(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2202,7 +2202,7 @@ async def list_deck_labels(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_assign_label(
+async def assign_deck_label(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2220,7 +2220,7 @@ async def deck_assign_label(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_remove_label(
+async def remove_deck_label(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2238,7 +2238,7 @@ async def deck_remove_label(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_assign_user(
+async def assign_deck_user(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2256,7 +2256,7 @@ async def deck_assign_user(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def deck_remove_user(
+async def remove_deck_user(
     board_id: int,
     stack_id: int,
     card_id: int,
@@ -2450,7 +2450,7 @@ async def list_talk_rooms(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def talk_create_room(
+async def create_talk_room(
     room_type: str,
     room_name: str,
     ctx: Context = None
@@ -2465,7 +2465,7 @@ async def talk_create_room(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def talk_delete_room(
+async def delete_talk_room(
     token: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2477,7 +2477,7 @@ async def talk_delete_room(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def talk_update_room(
+async def update_talk_room(
     token: str,
     room_name: str,
     ctx: Context = None
@@ -2491,7 +2491,7 @@ async def talk_update_room(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def talk_set_description(
+async def set_talk_description(
     token: str,
     description: str,
     ctx: Context = None
@@ -2520,7 +2520,7 @@ async def list_talk_participants(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def talk_add_participant(
+async def add_talk_participant(
     token: str,
     new_participant: str,
     source: str = "users",
@@ -2536,7 +2536,7 @@ async def talk_add_participant(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def talk_remove_participant(
+async def remove_talk_participant(
     token: str,
     attendee_id: int,
     ctx: Context = None
@@ -2610,7 +2610,7 @@ async def list_tables(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def table_get(
+async def get_table(
     table_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2624,7 +2624,7 @@ async def table_get(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def table_create(
+async def create_table(
     title: str,
     description: str,
     emoji: str = "",
@@ -2641,7 +2641,7 @@ async def table_create(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def table_update(
+async def update_table(
     table_id: int,
     title: Optional[str] = None,
     description: Optional[str] = None,
@@ -2660,7 +2660,7 @@ async def table_update(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def table_delete(
+async def delete_table(
     table_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2672,7 +2672,7 @@ async def table_delete(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def table_get_schema(
+async def get_table_schema(
     table_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2705,7 +2705,7 @@ async def list_table_rows(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def table_create_row(
+async def create_table_row(
     table_id: int,
     data: dict[str, Any],
     ctx: Context = None
@@ -2719,7 +2719,7 @@ async def table_create_row(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def table_get_row(
+async def get_table_row(
     row_id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2733,7 +2733,7 @@ async def table_get_row(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def table_update_row(
+async def update_table_row(
     row_id: int,
     data: Optional[dict[str, Any]] = None,
     ctx: Context = None
@@ -2747,7 +2747,7 @@ async def table_update_row(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def table_delete_row(
+async def delete_table_row(
     row_id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2772,7 +2772,7 @@ async def list_collectives(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_create(
+async def create_collective(
     name: str,
     emoji: str = "",
     ctx: Context = None
@@ -2787,7 +2787,7 @@ async def collectives_create(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_get_collective(
+async def get_collective(
     id: int,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2801,7 +2801,7 @@ async def collectives_get_collective(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_update_collective(
+async def update_collective(
     id: int,
     name: Optional[str] = None,
     emoji: Optional[str] = None,
@@ -2822,7 +2822,7 @@ async def collectives_update_collective(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_update_emoji(
+async def update_collective_emoji(
     id: int,
     emoji: str,
     ctx: Context = None
@@ -2836,7 +2836,7 @@ async def collectives_update_emoji(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_trash(
+async def trash_collective(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2848,7 +2848,7 @@ async def collectives_trash(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_restore(
+async def restore_collective(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2860,7 +2860,7 @@ async def collectives_restore(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_delete(
+async def delete_collective(
     id: int,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2900,7 +2900,7 @@ async def list_collective_pages(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_get_page(
+async def get_collective_page(
     collective_id: int,
     page_id: int,
     include_all_fields: bool = False,
@@ -2916,7 +2916,7 @@ async def collectives_get_page(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def collectives_create_page(
+async def create_collective_page(
     collective_id: int,
     title: str,
     parent_id: int = 0,
@@ -2933,7 +2933,7 @@ async def collectives_create_page(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_trash_page(
+async def trash_collective_page(
     collective_id: int,
     page_id: int,
     ctx: Context = None
@@ -2947,7 +2947,7 @@ async def collectives_trash_page(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_restore_page(
+async def restore_collective_page(
     collective_id: int,
     page_id: int,
     ctx: Context = None
@@ -2961,7 +2961,7 @@ async def collectives_restore_page(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_delete_page(
+async def delete_collective_page(
     collective_id: int,
     page_id: int,
     ctx: Context = None
@@ -2978,7 +2978,7 @@ async def collectives_delete_page(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_move_page(
+async def move_collective_page(
     collective_id: int,
     page_id: int,
     destination_collective_id: int,
@@ -2998,7 +2998,7 @@ async def collectives_move_page(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_set_page_emoji(
+async def set_collective_page_emoji(
     collective_id: int,
     page_id: int,
     emoji: str,
@@ -3014,7 +3014,7 @@ async def collectives_set_page_emoji(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_set_page_full_width(
+async def set_collective_page_full_width(
     collective_id: int,
     page_id: int,
     is_full_width: bool,
@@ -3030,7 +3030,7 @@ async def collectives_set_page_full_width(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_update_page(
+async def update_collective_page(
     collective_id: int,
     page_id: int,
     title: Optional[str] = None,
@@ -3061,7 +3061,7 @@ async def collectives_update_page(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_search_pages(
+async def search_collective_pages(
     collective_id: int,
     query: str,
     limit: int = 50,
@@ -3095,7 +3095,7 @@ async def list_collective_tags(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def collectives_get_tag(
+async def get_collective_tag(
     collective_id: int,
     tag_id: int,
     include_all_fields: bool = False,
@@ -3111,7 +3111,7 @@ async def collectives_get_tag(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def collectives_create_tag(
+async def create_collective_tag(
     collective_id: int,
     name: str,
     color: str,
@@ -3128,7 +3128,7 @@ async def collectives_create_tag(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_update_tag(
+async def update_collective_tag(
     collective_id: int,
     tag_id: int,
     name: Optional[str] = None,
@@ -3148,7 +3148,7 @@ async def collectives_update_tag(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_delete_tag(
+async def delete_collective_tag(
     collective_id: int,
     tag_id: int,
     ctx: Context = None
@@ -3163,7 +3163,7 @@ async def collectives_delete_tag(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_assign_tag(
+async def assign_collective_tag(
     collective_id: int,
     page_id: int,
     tag_id: int,
@@ -3179,7 +3179,7 @@ async def collectives_assign_tag(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def collectives_remove_tag(
+async def remove_collective_tag(
     collective_id: int,
     page_id: int,
     tag_id: int,
@@ -3208,7 +3208,7 @@ async def list_circles(
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
-async def circle_get(
+async def get_circle(
     circle_id: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -3220,7 +3220,7 @@ async def circle_get(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def circle_create(
+async def create_circle(
     name: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -3232,7 +3232,7 @@ async def circle_create(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def circle_update(
+async def update_circle(
     circle_id: str,
     name: Optional[str] = None,
     description: Optional[str] = None,
@@ -3248,7 +3248,7 @@ async def circle_update(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def circle_delete(
+async def delete_circle(
     circle_id: str,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -3261,7 +3261,7 @@ async def circle_delete(
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
-async def circle_add_member(
+async def add_circle_member(
     circle_id: str,
     user_id: str,
     ctx: Context = None
@@ -3276,7 +3276,7 @@ async def circle_add_member(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def circle_remove_member(
+async def remove_circle_member(
     circle_id: str,
     member_id: str,
     ctx: Context = None
@@ -3307,7 +3307,7 @@ async def list_circle_members(
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
-async def circle_update_member_level(
+async def update_circle_member_level(
     circle_id: str,
     member_id: str,
     level: str,

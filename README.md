@@ -111,11 +111,11 @@ The server implements 185 MCP tools organized into the following categories:
 - `list_favorites` — List favorite files
 
 ### 🗂️ Collections (5 tools)
-- `collection_get_by_id` — Get a collection by ID
-- `collection_search` — Search across collections
-- `collection_search_raw` — Search collections with raw query
+- `get_collection_by_id` — Get a collection by ID
+- `search_collections` — Search across collections
+- `search_collections_raw` — Search collections with raw query
 - `list_collections_by_resource` — Get collections for a resource
-- `collection_create` — Create a new collection
+- `create_collection` — Create a new collection
 
 ### ⏰ File Reminders (3 tools)
 - `get_file_reminder` — Get a file reminder
@@ -128,9 +128,9 @@ The server implements 185 MCP tools organized into the following categories:
 
 ### 🔔 Notifications (4 tools)
 - `list_notifications` — List all notifications
-- `notification_get` — Get a notification by ID
-- `notification_delete` — Delete a notification by ID
-- `notification_delete_all` — Delete all notifications
+- `get_notification` — Get a notification by ID
+- `delete_notification` — Delete a notification by ID
+- `delete_all_notifications` — Delete all notifications
 
 ### 📊 Activity (3 tools)
 - `list_activities` — Get activity stream
@@ -155,11 +155,11 @@ The server implements 185 MCP tools organized into the following categories:
 ### ✅ Todos (7 tools)
 - `list_todos` — List all todos across calendars
 - `list_todos_by_calendar` — List todos in a calendar
-- `todo_get` — Get a todo by UID
-- `todo_create` — Create a new todo
-- `todo_update` — Update an existing todo
-- `todo_delete` — Delete a todo by UID
-- `todo_search` — Search across todos
+- `get_todo` — Get a todo by UID
+- `create_todo` — Create a new todo
+- `update_todo` — Update an existing todo
+- `delete_todo` — Delete a todo by UID
+- `search_todos` — Search across todos
 
 ### 👤 Contacts (11 tools)
 - `list_all_addressbooks` — List all address books
@@ -177,37 +177,37 @@ The server implements 185 MCP tools organized into the following categories:
 ### 📝 Notes (9 tools)
 - `list_notes` — List all notes
 - `list_notes_by_category` — List notes by category
-- `note_get` — Get a note by ID
-- `note_create` — Create a new note
-- `note_update` — Update an existing note
-- `note_delete` — Delete a note by ID
-- `note_append_content` — Append content to a note
-- `note_search` — Search notes by content
-- `note_get_attachment` — Get a note attachment
+- `get_note` — Get a note by ID
+- `create_note` — Create a new note
+- `update_note` — Update an existing note
+- `delete_note` — Delete a note by ID
+- `append_note_content` — Append content to a note
+- `search_notes` — Search notes by content
+- `get_note_attachment` — Get a note attachment
 
 ### 🎯 Deck (22 tools)
 - `list_deck_boards` — List all boards
-- `deck_get_board` — Get a board by ID
-- `deck_create_board` — Create a new board
-- `deck_update_board` — Update an existing board
-- `deck_delete_board` — Delete a board by ID
+- `get_deck_board` — Get a board by ID
+- `create_deck_board` — Create a new board
+- `update_deck_board` — Update an existing board
+- `delete_deck_board` — Delete a board by ID
 - `list_deck_stacks` — List stacks in a board
-- `deck_get_stack` — Get a stack by ID
-- `deck_create_stack` — Create a new stack
-- `deck_update_stack` — Update an existing stack
-- `deck_delete_stack` — Delete a stack by ID
+- `get_deck_stack` — Get a stack by ID
+- `create_deck_stack` — Create a new stack
+- `update_deck_stack` — Update an existing stack
+- `delete_deck_stack` — Delete a stack by ID
 - `list_deck_cards` — List cards in a stack
-- `deck_get_card` — Get a card by ID
-- `deck_create_card` — Create a new card
-- `deck_update_card` — Update an existing card
-- `deck_delete_card` — Delete a card by ID
-- `deck_archive_card` — Archive a card
-- `deck_unarchive_card` — Unarchive a card
+- `get_deck_card` — Get a card by ID
+- `create_deck_card` — Create a new card
+- `update_deck_card` — Update an existing card
+- `delete_deck_card` — Delete a card by ID
+- `archive_deck_card` — Archive a card
+- `unarchive_deck_card` — Unarchive a card
 - `list_deck_labels` — List labels in a board
-- `deck_assign_label` — Assign a label to a card
-- `deck_remove_label` — Remove a label from a card
-- `deck_assign_user` — Assign a user to a card
-- `deck_remove_user` — Remove a user from a card
+- `assign_deck_label` — Assign a label to a card
+- `remove_deck_label` — Remove a label from a card
+- `assign_deck_user` — Assign a user to a card
+- `remove_deck_user` — Remove a user from a card
 
 ### 📧 Mail (8 tools)
 - `list_all_accounts` — List all mail accounts
@@ -221,66 +221,66 @@ The server implements 185 MCP tools organized into the following categories:
 
 ### 💬 Talk (11 tools)
 - `list_talk_rooms` — List all Talk conversations
-- `talk_create_room` — Create a new Talk conversation room
-- `talk_update_room` — Rename a Talk conversation room
-- `talk_set_description` — Set the description of a Talk conversation room
+- `create_talk_room` — Create a new Talk conversation room
+- `update_talk_room` — Rename a Talk conversation room
+- `set_talk_description` — Set the description of a Talk conversation room
 - `list_talk_participants` — List participants in a Talk conversation room
-- `talk_add_participant` — Add a participant to a Talk conversation room
-- `talk_remove_participant` — Remove a participant from a Talk conversation room
-- `talk_delete_room` — Delete a Talk conversation room
+- `add_talk_participant` — Add a participant to a Talk conversation room
+- `remove_talk_participant` — Remove a participant from a Talk conversation room
+- `delete_talk_room` — Delete a Talk conversation room
 - `send_chat_message` — Send a chat message
 - `list_chat_messages` — Get chat messages from a room
 - `delete_chat_message` — Delete a chat message
 
 ### 📊 Tables (11 tools)
 - `list_tables` — List all tables
-- `table_get` — Get a table by ID
-- `table_create` — Create a new table
-- `table_update` — Update an existing table
-- `table_delete` — Delete a table by ID
-- `table_get_schema` — Get the schema of a table
+- `get_table` — Get a table by ID
+- `create_table` — Create a new table
+- `update_table` — Update an existing table
+- `delete_table` — Delete a table by ID
+- `get_table_schema` — Get the schema of a table
 - `list_table_rows` — List rows in a table
-- `table_get_row` — Get a row by ID
-- `table_create_row` — Create a new row
-- `table_update_row` — Update an existing row
-- `table_delete_row` — Delete a row by ID
+- `get_table_row` — Get a row by ID
+- `create_table_row` — Create a new row
+- `update_table_row` — Update an existing row
+- `delete_table_row` — Delete a row by ID
 
 ### 📚 Collectives (27 tools)
 - `list_collectives` — List all collectives
-- `collectives_get_collective` — Get a collective by ID
-- `collectives_create` — Create a new collective
-- `collectives_update_collective` — Update a collective
-- `collectives_update_emoji` — Update the emoji of a collective
-- `collectives_trash` — Trash a collective
-- `collectives_restore` — Restore a trashed collective
-- `collectives_delete` — Permanently delete a collective
+- `get_collective` — Get a collective by ID
+- `create_collective` — Create a new collective
+- `update_collective` — Update a collective
+- `update_collective_emoji` — Update the emoji of a collective
+- `trash_collective` — Trash a collective
+- `restore_collective` — Restore a trashed collective
+- `delete_collective` — Permanently delete a collective
 - `list_trashed_collectives` — List trashed collectives
 - `list_collective_pages` — List pages in a collective
-- `collectives_get_page` — Get a page by ID
-- `collectives_create_page` — Create a new page
-- `collectives_update_page` — Update a page
-- `collectives_trash_page` — Trash a page
-- `collectives_restore_page` — Restore a trashed page
-- `collectives_delete_page` — Permanently delete a page
-- `collectives_move_page` — Move a page to a new parent
-- `collectives_set_page_emoji` — Set the emoji of a page
-- `collectives_set_page_full_width` — Toggle full-width mode on a page
-- `collectives_search_pages` — Search pages in a collective
+- `get_collective_page` — Get a page by ID
+- `create_collective_page` — Create a new page
+- `update_collective_page` — Update a page
+- `trash_collective_page` — Trash a page
+- `restore_collective_page` — Restore a trashed page
+- `delete_collective_page` — Permanently delete a page
+- `move_collective_page` — Move a page to a new parent
+- `set_collective_page_emoji` — Set the emoji of a page
+- `set_collective_page_full_width` — Toggle full-width mode on a page
+- `search_collective_pages` — Search pages in a collective
 - `list_collective_tags` — List tags in a collective
-- `collectives_get_tag` — Get a tag by ID
-- `collectives_create_tag` — Create a new tag
-- `collectives_update_tag` — Update a tag
-- `collectives_delete_tag` — Delete a tag by ID
-- `collectives_assign_tag` — Assign a tag to a page
-- `collectives_remove_tag` — Remove a tag from a page
+- `get_collective_tag` — Get a tag by ID
+- `create_collective_tag` — Create a new tag
+- `update_collective_tag` — Update a tag
+- `delete_collective_tag` — Delete a tag by ID
+- `assign_collective_tag` — Assign a tag to a page
+- `remove_collective_tag` — Remove a tag from a page
 
 ### 🔵 Circles (9 tools)
 - `list_circles` — List all circles
-- `circle_get` — Get a circle by ID
-- `circle_create` — Create a new circle
-- `circle_update` — Update an existing circle
-- `circle_delete` — Delete a circle by ID
-- `circle_add_member` — Add a user to a circle
-- `circle_remove_member` — Remove a member from a circle
+- `get_circle` — Get a circle by ID
+- `create_circle` — Create a new circle
+- `update_circle` — Update an existing circle
+- `delete_circle` — Delete a circle by ID
+- `add_circle_member` — Add a user to a circle
+- `remove_circle_member` — Remove a member from a circle
 - `list_circle_members` — List members of a circle
-- `circle_update_member_level` — Update a member's level in a circle
+- `update_circle_member_level` — Update a member's level in a circle
