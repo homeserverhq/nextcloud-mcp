@@ -387,9 +387,9 @@ async def get_share(
 @mcp.tool(tags={"write", "basic", "nextcloud"})
 async def create_share(
     path: str,
-    share_type: int,
+    share_type: str,
     share_with: str,
-    permissions: int = 1,
+    permissions: str = "read",
     password: str = "",
     expire_date: str = "",
     ctx: Context = None
@@ -397,21 +397,23 @@ async def create_share(
     """Create a new share.
     Args:
         path: Path to the file or folder to share.
-        share_type: Type of share (0=user, 1=group, 3=public, 6=federated).
+        share_type: user, group, public, federated, or circle share.
         share_with: User/group ID to share with.
-        permissions: Permissions bitmask (1=read, 2=update, 4=create, 8=delete, 16=share, 31=all). Defaults to 1 (read).
+        permissions: read, update, create, delete, share, or all. Defaults to read.
         password: Password for link shares.
         expire_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
-    params = CreateShareParam(path=path, shareType=share_type, shareWith=share_with,
-                              permissions=permissions, password=password, expireDate=expire_date)
+    share_type_map = {"user": 0, "group": 1, "public": 3, "federated": 6, "circle": 7}
+    perm_map = {"read": 1, "update": 2, "create": 4, "delete": 8, "share": 16, "all": 31}
+    params = CreateShareParam(path=path, shareType=share_type_map[share_type], shareWith=share_with,
+                              permissions=perm_map[permissions], password=password, expireDate=expire_date)
     return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
 async def update_share(
     id: int,
-    permissions: Optional[int] = None,
+    permissions: Optional[str] = None,
     password: Optional[str] = None,
     expire_date: Optional[str] = None,
     ctx: Context = None
@@ -419,10 +421,13 @@ async def update_share(
     """Update an existing share.
     Args:
         id: ID of the share to update. Get this from list_all_shares().
-        permissions: New permissions bitmask (1=read, 2=update, 4=create, 8=delete, 16=share, 31=all).
+        permissions: read, update, create, delete, share, or all.
         password: New password for link shares.
         expire_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
+    perm_map = {"read": 1, "update": 2, "create": 4, "delete": 8, "share": 16, "all": 31}
+    if permissions is not None:
+        permissions = perm_map[permissions]
     params = UpdateShareParam(id=id, permissions=permissions, password=password, expireDate=expire_date)
     return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -1346,7 +1351,7 @@ async def todo_create(
         description: TODO description.
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         calendar_uri: Calendar URI to add the todo to. Get this from list_calendars(). If omitted, uses default task calendar.
-        priority: Priority (0-9). Defaults to 0 (no priority). 1=high, 5=medium, 9=low.
+        priority: 0-9. Lower = more urgent (1=highest, 9=lowest). 0=no priority. Defaults to 0.
         status: Status (NEEDS-ACTION, IN-PROCESS, COMPLETED). Defaults to NEEDS-ACTION.
     """
     return await get_client().create_todo(summary, description, due_date, priority,
@@ -1386,7 +1391,7 @@ async def todo_update(
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
         summary: New title.
         description: New description.
-        priority: New priority (0-9). 1=high, 5=medium, 9=low.
+        priority: New priority (0-9). Lower = more urgent (1=highest, 9=lowest). 0=no priority.
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         status: New status.
     """
@@ -2325,16 +2330,17 @@ async def talk_list_rooms(
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
 async def talk_create_room(
-    room_type: int,
+    room_type: str,
     room_name: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new Talk conversation room.
     Args:
-        room_type: Room type. 1=one-to-one, 2=group, 3=public.
+        room_type: one-to-one, group, or public room.
         room_name: Name for the room.
     """
-    return await get_client().talk_create_room(room_type, room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
+    room_type_map = {"one-to-one": 1, "group": 2, "public": 3}
+    return await get_client().talk_create_room(room_type_map[room_type], room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3183,16 +3189,17 @@ async def circle_list_members(
 async def circle_update_member_level(
     circle_id: str,
     member_id: str,
-    level: int,
+    level: str,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Change a member's level in a Circle (Team).
     Args:
         circle_id: Circle ID. Get this from circle_list().
         member_id: Member ID. Get this from circle_list_members().
-        level: New level (1=Member, 4=Moderator, 8=Admin, 9=Owner).
+        level: Member, Moderator, Admin, or Owner.
     """
-    return await get_client().circles_update_member_level(circle_id, member_id, level,
+    level_map = {"member": 1, "moderator": 4, "admin": 8, "owner": 9}
+    return await get_client().circles_update_member_level(circle_id, member_id, level_map[level],
                                                            get_user_token(), ALLOW_ALL_AGGREGATE)
 
 

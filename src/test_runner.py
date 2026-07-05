@@ -470,16 +470,16 @@ def main():
         # ---- Phase 5F: Sharing Tests ----
         log("\n=== Phase 5F: Sharing Tests ===")
         rel_path = f"/t{rid}-fixture.txt"
-        run_test(session, "5F create_share", "create_share", {"path": rel_path, "share_type": 3, "share_with": "", "permissions": 1})
+        run_test(session, "5F create_share", "create_share", {"path": rel_path, "share_type": "public", "share_with": "", "permissions": "read"})
         share_id = results[-1]["data"]["id"]
         run_test(session, "5F get_share", "get_share", {"id": share_id})
         run_test(session, "5F get_shares_by_path", "get_shares_by_path", {"path": rel_path})
-        run_test(session, "5F update_share", "update_share", {"id": share_id, "permissions": 1})
+        run_test(session, "5F update_share", "update_share", {"id": share_id, "permissions": "read"})
         run_test(session, "5F delete_share", "delete_share", {"id": share_id})
 
         # ---- Phase 5G: Collaboration Tests ----
         log("\n=== Phase 5G: Collaboration Tests ===")
-        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": 7, "share_with": store["circle_id"], "permissions": 1})
+        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": store["circle_id"], "permissions": "read"})
         store["share5g_id"] = results[-1]["data"]["id"]
         run_test(session, "5G list_all_shares", "list_all_shares", {})
         run_test(session, "5G create_collection", "collection_create", {"resource_type": "file", "resource_id": str(store["fixture_file_id"]), "name": "test-collection-5g"})
@@ -531,7 +531,7 @@ def main():
 
         # ---- Phase 5M: Chat Tests ----
         log("\n=== Phase 5M: Chat Tests ===")
-        run_test(session, "5M create_room", "talk_create_room", {"room_type": 3, "room_name": f"t{rid}-chat"})
+        run_test(session, "5M create_room", "talk_create_room", {"room_type": "public", "room_name": f"t{rid}-chat"})
         store["chat_token"] = results[-1]["data"]["token"]
         run_test(session, "5M rename_room", "talk_update_room", {"token": store["chat_token"], "room_name": f"t{rid}-renamed"})
         run_test(session, "5M set_description", "talk_set_description", {"token": store["chat_token"], "description": "Test room description"})
@@ -632,7 +632,7 @@ def main():
         run_test(session, "6 add_member", "circle_add_member", {"circle_id": circle_id, "user_id": second_user})
         run_test(session, "6 list_members_post", "circle_list_members", {"circle_id": circle_id, "include_all_fields": True})
         store["member_id"] = toon_to_json(results[-1]["data"]["items"])[1]["id"]
-        run_test(session, "6 update_level", "circle_update_member_level", {"circle_id": circle_id, "member_id": store["member_id"], "level": 4})
+        run_test(session, "6 update_level", "circle_update_member_level", {"circle_id": circle_id, "member_id": store["member_id"], "level": "moderator"})
         run_test(session, "6 remove_member", "circle_remove_member", {"circle_id": circle_id, "member_id": store["member_id"]})
         run_test(session, "6 delete_circle", "circle_delete", {"circle_id": circle_id})
 
