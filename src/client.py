@@ -511,7 +511,7 @@ class NextcloudClient:
             return self._filter_fields(data["users"], "user", include_all_fields)
         return self._filter_fields(data, "user", include_all_fields)
 
-    async def get_user(self, user_id: str, api_key: str = None,
+    async def get_user(self, user_id: str, api_key: str = None, 
                        include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/cloud/users/{quote(user_id, safe='')}", api_key)
         return self._filter_fields(data, "user", include_all_fields)
@@ -550,19 +550,20 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/files_sharing/api/v1/shares", api_key, params=params or None)
         return self._filter_fields(data, "share", include_all_fields)
 
-    async def get_share(self, share_id: int, api_key: str = None,
+    async def get_share(self, share_id: int, api_key: str = None, 
                         include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key)
         return self._filter_fields(data, "share", include_all_fields)
 
-    async def create_share(self, payload: dict[str, Any], api_key: str = None) -> Any:
-        return await self.post("/ocs/v2.php/apps/files_sharing/api/v1/shares", api_key, json=payload)
-
+    async def create_share(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/ocs/v2.php/apps/files_sharing/api/v1/shares", api_key, json=payload)
+        return self._filter_fields(data, "share", include_all_fields)
     async def update_share(self, share_id: int, payload: dict[str, Any],
-                           api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key, json=payload)
+                           api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key, json=payload)
+        return self._filter_fields(data, "share", include_all_fields)
 
-    async def delete_share(self, share_id: int, api_key: str = None) -> Any:
+    async def delete_share(self, share_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key)
 
     # =========================================================================
@@ -573,26 +574,30 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/user_status/api/v1/user_status", api_key)
         return self._filter_fields(data, "user_status", include_all_fields)
 
-    async def set_status(self, status_type: str, api_key: str = None) -> Any:
-        return await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/status", api_key,
+    async def set_status(self, status_type: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/status", api_key,
                             json={"statusType": status_type})
-
+        return self._filter_fields(data, "user_status", include_all_fields)
     async def set_predefined_message(self, message_id: str, api_key: str = None,
-                                     clear_at: str = "") -> Any:
+                                     clear_at: str = "", include_all_fields: bool = False) -> Any:
         body = {"messageId": message_id}
         if clear_at:
             body["clearAt"] = clear_at
-        return await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/predefined", api_key, json=body)
+        data = await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/predefined", api_key, json=body)
+        return self._filter_fields(data, "user_status", include_all_fields)
 
     async def set_custom_message(self, message: str, status_icon: str,
-                                 api_key: str = None, clear_at: str = "") -> Any:
+                                 api_key: str = None, clear_at: str = "",
+                                 include_all_fields: bool = False) -> Any:
         body = {"message": message, "statusIcon": status_icon}
         if clear_at:
             body["clearAt"] = clear_at
-        return await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/custom", api_key, json=body)
+        data = await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/custom", api_key, json=body)
+        return self._filter_fields(data, "user_status", include_all_fields)
 
-    async def clear_message(self, api_key: str = None) -> Any:
-        return await self.delete("/ocs/v2.php/apps/user_status/api/v1/user_status/message", api_key)
+    async def clear_message(self, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.delete("/ocs/v2.php/apps/user_status/api/v1/user_status/message", api_key)
+        return self._filter_fields(data, "user_status", include_all_fields)
 
     async def get_predefined_statuses(self, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.get("/ocs/v2.php/apps/user_status/api/v1/predefined_statuses", api_key)
@@ -614,13 +619,14 @@ class NextcloudClient:
         return self._filter_fields(data, "ooo", include_all_fields)
 
     async def set_ooo(self, user_id: str, payload: dict[str, Any],
-                      api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key, json=payload)
+                      api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key, json=payload)
+        return self._filter_fields(data, "ooo", include_all_fields)
 
-    async def clear_ooo(self, user_id: str, api_key: str = None) -> Any:
+    async def clear_ooo(self, user_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
 
-    async def get_upcoming_events(self, api_key: str = None,
+    async def get_upcoming_events(self, api_key: str = None, 
                                   location: str = "", limit: int = 20,
                                   include_all_fields: bool = False) -> Any:
         params = {"limit": limit}
@@ -629,7 +635,7 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/dav/api/v1/events/upcoming", api_key, params=params)
         return self._filter_fields(data, "event", include_all_fields)
 
-    async def get_direct_download_url(self, file_id: int, api_key: str = None) -> Any:
+    async def get_direct_download_url(self, file_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.post("/ocs/v2.php/apps/dav/api/v1/direct", api_key, json={"fileId": file_id})
 
     # =========================================================================
@@ -647,7 +653,7 @@ class NextcloudClient:
     # Domain: Collaboration Collections
     # =========================================================================
 
-    async def list_collection(self, collection_id: str, api_key: str = None,
+    async def list_collection(self, collection_id: str, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/collaboration/resources/collections/{quote(collection_id, safe='')}", api_key)
         return self._filter_fields(data, "collection", include_all_fields)
@@ -667,23 +673,25 @@ class NextcloudClient:
         return self._filter_fields(data, "collection", include_all_fields)
 
     async def create_collection_on_resource(self, resource_type: str, resource_id: str,
-                                            name: str, api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(resource_id, safe='')}",
+                                            name: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(resource_id, safe='')}",
                               api_key, json={"name": name})
+        return self._filter_fields(data, "collection", include_all_fields)
 
     # =========================================================================
     # Domain: Files Reminders
     # =========================================================================
 
-    async def get_file_reminder(self, file_id: int, api_key: str = None,
+    async def get_file_reminder(self, file_id: int, api_key: str = None, 
                                include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}", api_key)
         return self._filter_fields(data, "file_reminder", include_all_fields)
 
-    async def set_file_reminder(self, file_id: int, due_date: str, api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}", api_key, json={"dueDate": due_date})
+    async def set_file_reminder(self, file_id: int, due_date: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}", api_key, json={"dueDate": due_date})
+        return self._filter_fields(data, "file_reminder", include_all_fields)
 
-    async def delete_file_reminder(self, file_id: int, api_key: str = None) -> Any:
+    async def delete_file_reminder(self, file_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}", api_key)
 
     # =========================================================================
@@ -696,7 +704,7 @@ class NextcloudClient:
             return self._filter_fields(data["providers"], "search_provider", include_all_fields)
         return self._filter_fields(data, "search_provider", include_all_fields)
 
-    async def search(self, provider_id: str, term: str, api_key: str = None,
+    async def search(self, provider_id: str, term: str, api_key: str = None, 
                     limit: int = 50, cursor: str = "",
                     include_all_fields: bool = False) -> Any:
         params = {"term": term, "limit": limit}
@@ -727,7 +735,7 @@ class NextcloudClient:
             return data.get("id", "")
         return ""
 
-    async def webdav_list_directory(self, path: str, api_key: str = None,
+    async def webdav_list_directory(self, path: str, api_key: str = None, 
                                     depth: int = 1, include_all_fields: bool = False) -> Any:
         props = ["d:displayname", "d:getcontenttype", "d:getcontentlength",
                  "d:getlastmodified", "d:resourcetype", "d:getetag",
@@ -737,27 +745,27 @@ class NextcloudClient:
                                           extra_headers={"Depth": str(depth)})
         return self._filter_fields(results, "file", include_all_fields)
 
-    async def webdav_read_file(self, path: str, api_key: str = None) -> Any:
+    async def webdav_read_file(self, path: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self._dav_get(path, api_key)
 
-    async def webdav_write_file(self, path: str, content: str, api_key: str = None) -> Any:
-        return await self._dav_put(path, content, api_key, content_type="application/octet-stream")
-
-    async def webdav_create_directory(self, path: str, api_key: str = None) -> Any:
-        return await self._dav_mkcol(path, api_key)
-
-    async def webdav_delete_resource(self, path: str, api_key: str = None) -> Any:
+    async def webdav_write_file(self, path: str, content: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self._dav_put(path, content, api_key, content_type="application/octet-stream")
+        return self._filter_fields(data, "file", include_all_fields)
+    async def webdav_create_directory(self, path: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self._dav_mkcol(path, api_key)
+        return self._filter_fields(data, "file", include_all_fields)
+    async def webdav_delete_resource(self, path: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self._dav_delete(path, api_key)
 
     async def webdav_move_resource(self, source: str, destination: str,
-                                   api_key: str = None) -> Any:
+                                   api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self._dav_move(source, destination, api_key)
 
     async def webdav_copy_resource(self, source: str, destination: str,
-                                   api_key: str = None) -> Any:
+                                   api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self._dav_copy(source, destination, api_key)
 
-    async def webdav_search_files(self, query: str, api_key: str = None,
+    async def webdav_search_files(self, query: str, api_key: str = None, 
                                   limit: int = 50, mime_type: str = "",
                                   include_all_fields: bool = False) -> Any:
         params = {"term": query, "limit": limit}
@@ -783,19 +791,20 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/notifications/api/v2/notifications", api_key)
         return self._filter_fields(data, "notification", include_all_fields)
 
-    async def get_notification(self, notification_id: int, api_key: str = None,
+    async def get_notification(self, notification_id: int, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/notifications/api/v2/notifications/{notification_id}", api_key)
         return self._filter_fields(data, "notification", include_all_fields)
 
-    async def delete_notification(self, notification_id: int, api_key: str = None) -> Any:
+    async def delete_notification(self, notification_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/notifications/api/v2/notifications/{notification_id}", api_key)
 
-    async def delete_all_notifications(self, api_key: str = None) -> Any:
+    async def delete_all_notifications(self, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete("/ocs/v2.php/apps/notifications/api/v2/notifications", api_key)
 
-    async def create_notification(self, user_id: str, subject: str, message: str = "", api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/notifications/api/v3/admin_notifications/{user_id}", api_key, params={"subject": subject, "message": message})
+    async def create_notification(self, user_id: str, subject: str, message: str = "", api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/apps/notifications/api/v3/admin_notifications/{user_id}", api_key, params={"subject": subject, "message": message})
+        return self._filter_fields(data, "notification", include_all_fields)
 
     # =========================================================================
     # Domain: Activity
@@ -818,7 +827,7 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/activity/api/v2/activity/filters", api_key)
         return self._filter_fields(data, "activity_filter", include_all_fields)
 
-    async def get_activity_filter(self, filter_name: str, api_key: str = None,
+    async def get_activity_filter(self, filter_name: str, api_key: str = None, 
                                   limit: int = 50, include_all_fields: bool = False) -> Any:
         params = {"limit": limit}
         data = await self.get(f"/ocs/v2.php/apps/activity/api/v2/activity/{quote(filter_name, safe='')}", api_key, params=params)
@@ -840,7 +849,7 @@ class NextcloudClient:
         return self._filter_fields(results, "calendar", include_all_fields)
 
     async def create_calendar(self, display_name: str, color: str = "",
-                              api_key: str = None) -> Any:
+                              api_key: str = None, include_all_fields: bool = False) -> Any:
         username = self.extract_username(api_key) if api_key else ""
         if not username:
             raise ValueError("Could not extract username from api_key")
@@ -864,9 +873,10 @@ class NextcloudClient:
   </d:set>
 </d:mkcol>"""
         await self._dav_mkcol(path, api_key, body=body)
-        return {"calendar_uri": f"{username}/{calendar_uri}", "display_name": display_name, "status": "created"}
+        data = {"calendar_uri": f"{username}/{calendar_uri}", "display_name": display_name, "status": "created"}
+        return self._filter_fields(data, "calendar", include_all_fields)
 
-    async def get_calendar(self, calendar_uri: str, api_key: str = None,
+    async def get_calendar(self, calendar_uri: str, api_key: str = None, 
                            include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         props = ["d:displayname", "d:resourcetype", "cs:getctag",
@@ -883,7 +893,7 @@ class NextcloudClient:
         return {}
 
     async def update_calendar(self, calendar_uri: str, display_name: str,
-                              color: str = None, api_key: str = None) -> Any:
+                              color: str = None, api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/"
         color_prop = ""
@@ -899,9 +909,10 @@ class NextcloudClient:
     </d:prop>
   </d:set>
 </d:propertyupdate>"""
-        return await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
+        data = await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
+        return self._filter_fields(data, "calendar", include_all_fields)
 
-    async def delete_calendar(self, calendar_uri: str, api_key: str = None) -> Any:
+    async def delete_calendar(self, calendar_uri: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         return await self._dav_delete(f"/remote.php/dav/calendars/{calendar_uri}/", api_key)
 
@@ -932,7 +943,7 @@ class NextcloudClient:
             return results[0].get("href", "").rstrip("/")
         return None
 
-    async def list_events(self, calendar_uri: str, api_key: str = None,
+    async def list_events(self, calendar_uri: str, api_key: str = None, 
                           from_date: str = "", to_date: str = "",
                           limit: int = 50, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
@@ -972,7 +983,7 @@ class NextcloudClient:
                            dtstart: str, dtend: str, description: str = "",
                            location: str = "", rrule: str = "", timezone: str = "",
                            api_key: str = None, uid: str = "",
-                           attendees: str = "") -> Any:
+                           attendees: str = "", include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         resolved = await self._resolve_attendees(attendees, api_key)
         euid = uid or uuid.uuid4().hex
@@ -983,13 +994,13 @@ class NextcloudClient:
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
             ics, api_key)
         result["event_uid"] = euid
-        return result
+        return self._filter_fields(result, "event", include_all_fields)
 
     async def update_event(self, calendar_uri: str, event_uid: str,
                            summary: str = None, dtstart: str = None,
                            dtend: str = None, description: str = None,
                            location: str = None, api_key: str = None,
-                           attendees: str = "") -> Any:
+                           attendees: str = "", include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}.ics"
         try:
@@ -1015,10 +1026,11 @@ class NextcloudClient:
             final_summary, final_dtstart, final_dtend,
             final_desc, final_loc, "", "", event_uid,
             attendees=final_attendees)
-        return await self._dav_put(path, new_ics, api_key)
+        data = await self._dav_put(path, new_ics, api_key)
+        return self._filter_fields(data, "event", include_all_fields)
 
     async def delete_event(self, calendar_uri: str, event_uid: str,
-                           api_key: str = None) -> Any:
+                           api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         base_path = f"/remote.php/dav/calendars/{calendar_uri}/{event_uid}"
         try:
@@ -1103,7 +1115,7 @@ class NextcloudClient:
     async def create_meeting(self, summary: str, dtstart: str, dtend: str,
                              attendees: str, description: str = "",
                              location: str = "", calendar_uri: str = "",
-                             api_key: str = None) -> Any:
+                             api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal = ICal()
         cal.add("prodid", "-//Nextcloud MCP//nextcloud-mcp//EN")
@@ -1171,11 +1183,11 @@ class NextcloudClient:
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
             ics, api_key)
         result["event_uid"] = euid
-        return result
+        return self._filter_fields(result, "event", include_all_fields)
 
     async def find_availability(self, calendar_uris: str, from_date: str,
                                 to_date: str, timezone: str = "",
-                                api_key: str = None) -> Any:
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
         start = _to_dav_datetime(from_date)
         end = _to_dav_datetime(to_date)
         body = self._freebusy_query_xml(start, end)
@@ -1242,7 +1254,7 @@ class NextcloudClient:
     async def create_todo(self, summary: str, description: str = "",
                           due_date: str = "", priority: int = 0,
                           status: str = "NEEDS-ACTION",
-                          calendar_uri: str = "", api_key: str = None) -> Any:
+                          calendar_uri: str = "", api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         cal_uri = calendar_uri or await self._get_todo_calendar_uri(api_key)
         euid = uuid.uuid4().hex
@@ -1250,12 +1262,12 @@ class NextcloudClient:
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{cal_uri}/{euid}.ics", ics, api_key)
         result["todo_uid"] = euid
-        return result
+        return self._filter_fields(result, "todo", include_all_fields)
 
     async def update_todo(self, todo_uid: str, calendar_uri: str,
                           summary: str = None, description: str = None,
                           priority: int = None, due_date: str = None,
-                          status: str = None, api_key: str = None) -> Any:
+                          status: str = None, api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics"
         try:
@@ -1277,10 +1289,11 @@ class NextcloudClient:
         final_status = status or current.get("status", "NEEDS-ACTION")
         new_ics = self._create_ics_todo(final_summary, final_desc, final_due,
                                         final_priority, final_status, todo_uid)
-        return await self._dav_put(path, new_ics, api_key)
+        data = await self._dav_put(path, new_ics, api_key)
+        return self._filter_fields(data, "todo", include_all_fields)
 
     async def delete_todo(self, todo_uid: str, calendar_uri: str,
-                          api_key: str = None) -> Any:
+                          api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         path = f"/remote.php/dav/calendars/{calendar_uri}/{todo_uid}.ics"
         try:
@@ -1291,7 +1304,7 @@ class NextcloudClient:
                 return await self._dav_delete(href, api_key)
             raise
 
-    async def search_todos(self, query: str, api_key: str = None,
+    async def search_todos(self, query: str, api_key: str = None, 
                            calendar_uri: str = "", limit: int = 50,
                            include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
@@ -1327,7 +1340,7 @@ class NextcloudClient:
         return self._filter_fields(results, "addressbook", include_all_fields)
 
     async def create_addressbook(self, display_name: str, description: str,
-                                  api_key: str = None) -> Any:
+                                  api_key: str = None, include_all_fields: bool = False) -> Any:
         username = self.extract_username(api_key) if api_key else ""
         if not username:
             raise ValueError("Could not extract username from api_key")
@@ -1346,9 +1359,10 @@ class NextcloudClient:
   </d:set>
 </d:mkcol>"""
         await self._dav_mkcol(path, api_key, body=body)
-        return {"addressbook_uri": f"users/{username}/{uri}", "display_name": display_name, "description": description, "status": "created"}
+        data = {"addressbook_uri": f"users/{username}/{uri}", "display_name": display_name, "description": description, "status": "created"}
+        return self._filter_fields(data, "addressbook", include_all_fields)
 
-    async def get_addressbook(self, addressbook_uri: str, api_key: str = None,
+    async def get_addressbook(self, addressbook_uri: str, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         props = ["d:displayname", "d:resourcetype", "d:getetag",
@@ -1362,7 +1376,7 @@ class NextcloudClient:
         return {}
 
     async def update_addressbook(self, addressbook_uri: str, display_name: str,
-                                  description: str = None, api_key: str = None) -> Any:
+                                  description: str = None, api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         path = f"/remote.php/dav/addressbooks/{addressbook_uri}/"
         desc_xml = f"<d:displayname>{display_name}</d:displayname>"
@@ -1376,13 +1390,14 @@ class NextcloudClient:
     </d:prop>
   </d:set>
 </d:propertyupdate>"""
-        return await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
+        data = await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
+        return self._filter_fields(data, "addressbook", include_all_fields)
 
-    async def delete_addressbook(self, addressbook_uri: str, api_key: str = None) -> Any:
+    async def delete_addressbook(self, addressbook_uri: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         return await self._dav_delete(f"/remote.php/dav/addressbooks/{addressbook_uri}/", api_key)
 
-    async def list_contacts(self, addressbook_uri: str, api_key: str = None,
+    async def list_contacts(self, addressbook_uri: str, api_key: str = None, 
                             limit: int = 50, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         props = ["d:displayname", "d:getetag", "card:addressbook-data"]
@@ -1443,7 +1458,7 @@ class NextcloudClient:
 
     async def create_contact(self, addressbook_uri: str, fn: str, email: str,
                              telephone: str = "", organization: str = "",
-                             adr: str = "", api_key: str = None) -> Any:
+                             adr: str = "", api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         vcard_text = self._create_vcard(fn, email, telephone, organization, adr)
         cuid = fn.replace(" ", "_")
@@ -1451,12 +1466,12 @@ class NextcloudClient:
             f"/remote.php/dav/addressbooks/{addressbook_uri}/{cuid}.vcf",
             vcard_text, api_key, content_type="text/vcard; charset=utf-8")
         result["contact_uid"] = cuid
-        return result
+        return self._filter_fields(result, "contact", include_all_fields)
 
     async def update_contact(self, addressbook_uri: str, contact_uid: str,
                              fn: str = None, email: str = None,
                              telephone: str = None, organization: str = None,
-                             adr: str = None, api_key: str = None) -> Any:
+                             adr: str = None, api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         path = f"/remote.php/dav/addressbooks/{addressbook_uri}/{contact_uid}.vcf"
         vcard_text = await self._dav_get(path, api_key)
@@ -1476,11 +1491,12 @@ class NextcloudClient:
         final_adr = adr if adr is not None else current_adr
         new_vcard = self._create_vcard(final_fn, final_email, final_tel,
                                        final_org, final_adr, contact_uid)
-        return await self._dav_put(path, new_vcard, api_key,
+        data = await self._dav_put(path, new_vcard, api_key,
                                    content_type="text/vcard; charset=utf-8")
+        return self._filter_fields(data, "contact", include_all_fields)
 
     async def delete_contact(self, addressbook_uri: str, contact_uid: str,
-                             api_key: str = None) -> Any:
+                             api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
         return await self._dav_delete(
             f"/remote.php/dav/addressbooks/{addressbook_uri}/{contact_uid}.vcf", api_key)
@@ -1497,17 +1513,18 @@ class NextcloudClient:
         data = await self.get("/index.php/apps/notes/api/v1/notes", api_key, params=params or None, is_ocs=False)
         return self._filter_fields(data, "note", include_all_fields)
 
-    async def get_note(self, note_id: int, api_key: str = None,
+    async def get_note(self, note_id: int, api_key: str = None, 
                        include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/notes/api/v1/notes/{note_id}", api_key, is_ocs=False)
         return self._filter_fields(data, "note", include_all_fields)
 
-    async def create_note(self, payload: dict[str, Any], api_key: str = None) -> Any:
-        return await self.post("/index.php/apps/notes/api/v1/notes", api_key, json=payload, is_ocs=False)
-
+    async def create_note(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/index.php/apps/notes/api/v1/notes", api_key, json=payload, is_ocs=False)
+        return self._filter_fields(data, "note", include_all_fields)
     async def update_note(self, note_id: int, payload: dict[str, Any],
-                          api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/notes/api/v1/notes/{note_id}", api_key, json=payload, is_ocs=False)
+                          api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/notes/api/v1/notes/{note_id}", api_key, json=payload, is_ocs=False)
+        return self._filter_fields(data, "note", include_all_fields)
 
     async def delete_note(self, note_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/index.php/apps/notes/api/v1/notes/{note_id}", api_key, is_ocs=False)
@@ -1526,42 +1543,45 @@ class NextcloudClient:
         data = await self.get("/index.php/apps/deck/api/v1.0/boards", api_key, is_ocs=False)
         return self._filter_fields(data, "board", include_all_fields)
 
-    async def deck_get_board(self, board_id: int, api_key: str = None,
+    async def deck_get_board(self, board_id: int, api_key: str = None, 
                              include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}", api_key, is_ocs=False)
         return self._filter_fields(data, "board", include_all_fields)
 
-    async def deck_create_board(self, payload: dict[str, Any], api_key: str = None) -> Any:
+    async def deck_create_board(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
         color = payload.pop("color", None) or "FF0000"
         payload["color"] = color.lstrip("#")
-        return await self.post("/index.php/apps/deck/api/v1.0/boards", api_key, json=payload, is_ocs=False)
+        data = await self.post("/index.php/apps/deck/api/v1.0/boards", api_key, json=payload, is_ocs=False)
+        return self._filter_fields(data, "board", include_all_fields)
 
     async def deck_update_board(self, board_id: int, payload: dict[str, Any],
-                                 api_key: str = None) -> Any:
+                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         if "color" in payload and payload["color"]:
             payload["color"] = payload["color"].lstrip("#")
         allowed = {"title", "color", "archived"}
         clean = {k: v for k, v in payload.items() if k in allowed and v is not None}
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}",
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}",
                               api_key, json=clean, is_ocs=False)
+        return self._filter_fields(data, "board", include_all_fields)
 
-    async def deck_list_stacks(self, board_id: int, api_key: str = None,
+    async def deck_list_stacks(self, board_id: int, api_key: str = None, 
                                include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks", api_key, is_ocs=False)
         return self._filter_fields(data, "stack", include_all_fields)
 
     async def deck_create_stack(self, board_id: int, payload: dict[str, Any],
-                                 api_key: str = None) -> Any:
+                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         payload.setdefault("order", 0)
-        return await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks", api_key, json=payload, is_ocs=False)
+        data = await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks", api_key, json=payload, is_ocs=False)
+        return self._filter_fields(data, "stack", include_all_fields)
 
-    async def deck_get_stack(self, board_id: int, stack_id: int, api_key: str = None,
+    async def deck_get_stack(self, board_id: int, stack_id: int, api_key: str = None, 
                              include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}", api_key, is_ocs=False)
         return self._filter_fields(data, "stack", include_all_fields)
 
     async def deck_update_stack(self, board_id: int, stack_id: int,
-                                 payload: dict[str, Any], api_key: str = None) -> Any:
+                                 payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
         allowed = {"title", "order"}
         clean = {k: v for k, v in payload.items() if k in allowed and v is not None}
         if "order" not in clean:
@@ -1572,28 +1592,30 @@ class NextcloudClient:
                     clean["order"] = current["order"]
             except Exception:
                 pass
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}",
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}",
                               api_key, json=clean, is_ocs=False)
+        return self._filter_fields(data, "stack", include_all_fields)
 
-    async def deck_list_cards(self, board_id: int, stack_id: int, api_key: str = None,
+    async def deck_list_cards(self, board_id: int, stack_id: int, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
         stack = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}", api_key, is_ocs=False)
         if isinstance(stack, dict):
             return self._filter_fields(stack.get("cards", []), "card", include_all_fields)
         return []
 
-    async def deck_get_card(self, board_id: int, stack_id: int, card_id: int, api_key: str = None,
+    async def deck_get_card(self, board_id: int, stack_id: int, card_id: int, api_key: str = None, 
                             include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}", api_key, is_ocs=False)
         return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_create_card(self, board_id: int, stack_id: int, payload: dict[str, Any],
-                                api_key: str = None) -> Any:
-        return await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards",
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards",
                                api_key, json=payload, is_ocs=False)
+        return self._filter_fields(data, "board", include_all_fields)
 
     async def deck_update_card(self, board_id: int, stack_id: int, card_id: int,
-                                payload: dict[str, Any], api_key: str = None) -> Any:
+                                payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
         allowed = {"title", "description", "duedate", "order"}
         clean = {k: v for k, v in payload.items() if k in allowed and v is not None}
         try:
@@ -1609,8 +1631,9 @@ class NextcloudClient:
         except Exception:
             clean.setdefault("type", "plain")
             clean.setdefault("owner", "")
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
                               api_key, json=clean, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_delete_card(self, board_id: int, stack_id: int, card_id: int,
                                 api_key: str = None) -> Any:
@@ -1633,7 +1656,7 @@ class NextcloudClient:
         return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/unarchive",
                               api_key, is_ocs=False)
 
-    async def deck_list_labels(self, board_id: int, api_key: str = None,
+    async def deck_list_labels(self, board_id: int, api_key: str = None, 
                                 include_all_fields: bool = False) -> Any:
         board = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}", api_key, is_ocs=False)
         if isinstance(board, dict):
@@ -1671,7 +1694,7 @@ class NextcloudClient:
         except Exception:
             return []
 
-    async def mail_list_mailboxes(self, account_id: int, api_key: str = None,
+    async def mail_list_mailboxes(self, account_id: int, api_key: str = None, 
                                   include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/mail/api/mailboxes", api_key,
                             is_ocs=True, is_raw_json=True,
@@ -1701,7 +1724,7 @@ class NextcloudClient:
 
     async def mail_send_message(self, account_id: int, subject: str, body: str,
                                 to: str, cc: str = "", bcc: str = "",
-                                api_key: str = None) -> Any:
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
         from_email = ""
         try:
             accts = await self.mail_list_accounts(api_key)
@@ -1710,7 +1733,7 @@ class NextcloudClient:
                              accts[0].get("email") or "")
         except Exception:
             pass
-        return await self.post("/ocs/v2.php/apps/mail/message/send",
+        data = await self.post("/ocs/v2.php/apps/mail/message/send",
                              api_key,
                              json={"accountId": account_id,
                                    "fromEmail": from_email,
@@ -1720,42 +1743,47 @@ class NextcloudClient:
                                    "to": [{"email": to, "label": to}],
                                    "cc": [{"email": cc, "label": cc}] if cc else [],
                                    "bcc": [{"email": bcc, "label": bcc}] if bcc else []})
+        return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_save_draft(self, account_id: int, subject: str, body: str,
                               to: str, cc: str = "", bcc: str = "",
-                              api_key: str = None) -> Any:
-        return await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/draft",
+                              api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/index.php/apps/mail/api/accounts/{account_id}/draft",
                               api_key, is_ocs=True, is_raw_json=True,
                               json={"subject": subject, "body": body, "to": to, "cc": cc, "bcc": bcc})
+        return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_set_message_flags(self, account_id: int, message_id: int,
                                      seen: bool = None, flagged: bool = None,
-                                     api_key: str = None) -> Any:
+                                     api_key: str = None, include_all_fields: bool = False) -> Any:
         flags = {}
         if seen is not None:
             flags["seen"] = seen
         if flagged is not None:
             flags["flagged"] = flagged
-        return await self.put(f"/index.php/apps/mail/api/messages/{message_id}/flags",
+        data = await self.put(f"/index.php/apps/mail/api/messages/{message_id}/flags",
                              api_key, is_ocs=True, is_raw_json=True,
                              json={"flags": flags})
+        return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_move_message(self, account_id: int, message_id: int,
-                                mailbox_db_id: int, api_key: str = None) -> Any:
-        return await self.post(f"/index.php/apps/mail/api/messages/{message_id}/move",
+                                mailbox_db_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/index.php/apps/mail/api/messages/{message_id}/move",
                              api_key, is_ocs=True, is_raw_json=True,
                              json={"destFolderId": mailbox_db_id})
+        return self._filter_fields(data, "mail_message", include_all_fields)
 
     # =========================================================================
     # Domain: Talk (OCS)
     # =========================================================================
 
     async def talk_send_message(self, token: str, message: str,
-                                api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/apps/spreed/api/v1/chat/{token}",
                               api_key, json={"message": message})
+        return self._filter_fields(data, "talk_message", include_all_fields)
 
-    async def talk_get_messages(self, token: str, api_key: str = None,
+    async def talk_get_messages(self, token: str, api_key: str = None, 
                                 limit: int = 50, look_into_future: int = 0,
                                 include_all_fields: bool = False) -> Any:
         params = {"limit": limit, "lookIntoFuture": look_into_future}
@@ -1763,15 +1791,16 @@ class NextcloudClient:
                              api_key, params=params)
         return self._filter_fields(data, "talk_message", include_all_fields)
 
-    async def talk_list_rooms(self, api_key: str = None,
+    async def talk_list_rooms(self, api_key: str = None, 
                                include_all_fields: bool = False) -> Any:
         data = await self.get("/ocs/v2.php/apps/spreed/api/v4/room", api_key)
         return self._filter_fields(data, "talk_room", include_all_fields)
 
     async def talk_create_room(self, room_type: int, room_name: str,
-                                api_key: str = None) -> Any:
-        return await self.post("/ocs/v2.php/apps/spreed/api/v4/room",
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/ocs/v2.php/apps/spreed/api/v4/room",
                               api_key, json={"roomType": room_type, "roomName": room_name})
+        return self._filter_fields(data, "talk_room", include_all_fields)
 
     async def talk_delete_room(self, token: str,
                                 api_key: str = None) -> Any:
@@ -1779,20 +1808,25 @@ class NextcloudClient:
         return result if isinstance(result, dict) else {"success": True, "data": result}
 
     async def talk_update_room(self, token: str, room_name: str,
-                                api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}",
+                                api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}",
                              api_key, json={"roomName": room_name})
+        return self._filter_fields(data, "talk_room", include_all_fields)
 
     async def talk_set_description(self, token: str, description: str,
-                                    api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/description",
+                                    api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/description",
                              api_key, json={"description": description})
+        return self._filter_fields(data, "talk_room", include_all_fields)
 
     async def talk_add_participant(self, token: str, new_participant: str,
-                                    source: str = "users", api_key: str = None) -> Any:
+                                    source: str = "users", api_key: str = None,
+                                    include_all_fields: bool = False) -> Any:
         result = await self.post(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/participants",
                                 api_key, json={"newParticipant": new_participant, "source": source})
-        return result if isinstance(result, dict) else {"success": True, "data": result}
+        if isinstance(result, dict):
+            return self._filter_fields(result, "talk_participant", include_all_fields)
+        return {"success": True, "data": result}
 
     async def talk_remove_participant(self, token: str, attendee_id: int,
                                        api_key: str = None) -> Any:
@@ -1800,7 +1834,7 @@ class NextcloudClient:
                                   api_key, params={"attendeeId": attendee_id})
         return result if isinstance(result, dict) else {"success": True, "data": result}
 
-    async def talk_list_participants(self, token: str, api_key: str = None,
+    async def talk_list_participants(self, token: str, api_key: str = None, 
                                       include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/spreed/api/v4/room/{token}/participants", api_key)
         return self._filter_fields(data, "talk_participant", include_all_fields)
@@ -1821,22 +1855,23 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/tables/api/2/tables", api_key)
         return self._filter_fields(data, "table", include_all_fields)
 
-    async def tables_get_table(self, table_id: int, api_key: str = None,
+    async def tables_get_table(self, table_id: int, api_key: str = None, 
                                include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
         return self._filter_fields(data, "table", include_all_fields)
 
-    async def tables_create_table(self, payload: dict[str, Any], api_key: str = None) -> Any:
-        return await self.post("/ocs/v2.php/apps/tables/api/2/tables", api_key, json=payload)
-
+    async def tables_create_table(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/ocs/v2.php/apps/tables/api/2/tables", api_key, json=payload)
+        return self._filter_fields(data, "table", include_all_fields)
     async def tables_update_table(self, table_id: int, payload: dict[str, Any],
-                                  api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key, json=payload)
+                                  api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key, json=payload)
+        return self._filter_fields(data, "table", include_all_fields)
 
     async def tables_delete_table(self, table_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
 
-    async def tables_get_schema(self, table_id: int, api_key: str = None,
+    async def tables_get_schema(self, table_id: int, api_key: str = None, 
                                 include_all_fields: bool = False) -> Any:
         table = await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
         columns = await self.get(f"/ocs/v2.php/apps/tables/api/2/columns/table/{table_id}", api_key)
@@ -1852,42 +1887,44 @@ class NextcloudClient:
         }
         return self._filter_fields(schema, "table_schema", include_all_fields)
 
-    async def tables_list_rows(self, table_id: int, api_key: str = None,
+    async def tables_list_rows(self, table_id: int, api_key: str = None, 
                                 limit: int = 50, offset: int = 0,
                                 include_all_fields: bool = False) -> Any:
         data = await self.get(f"/apps/tables/api/1/tables/{table_id}/rows",
                               api_key, is_ocs=False)
         return self._filter_fields(data, "row", include_all_fields)
 
-    async def tables_get_row(self, row_id: int, api_key: str = None,
+    async def tables_get_row(self, row_id: int, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
         data = await self.get(f"/apps/tables/api/1/rows/{row_id}",
                               api_key, is_ocs=False)
         return self._filter_fields(data, "row", include_all_fields)
 
     async def tables_create_row(self, table_id: int, data: str,
-                                 api_key: str = None) -> Any:
+                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         import json as _json
         data_obj = _json.loads(data) if isinstance(data, str) else data
         try:
-            return await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
+            data = await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
                                   api_key, json={"data": data_obj})
         except Exception:
-            return await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
+            data = await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
                                   api_key, json={"data": {}})
+        return self._filter_fields(data, "row", include_all_fields)
 
     async def tables_update_row(self, row_id: int, data: str = None,
-                                 api_key: str = None) -> Any:
+                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         import json as _json
         payload = {}
         if data is not None:
             payload["data"] = _json.loads(data) if isinstance(data, str) else data
         try:
-            return await self.put(f"/apps/tables/api/1/rows/{row_id}",
+            data = await self.put(f"/apps/tables/api/1/rows/{row_id}",
                                   api_key, is_ocs=False, json=payload)
         except Exception:
-            return await self.put(f"/apps/tables/api/1/rows/{row_id}",
+            data = await self.put(f"/apps/tables/api/1/rows/{row_id}",
                                   api_key, is_ocs=False, json={"data": {}})
+        return self._filter_fields(data, "row", include_all_fields)
 
     async def tables_delete_row(self, row_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/apps/tables/api/1/rows/{row_id}",
@@ -1902,10 +1939,10 @@ class NextcloudClient:
         items = data.get("collectives", data) if isinstance(data, dict) else data
         return self._filter_fields(items, "collective", include_all_fields)
 
-    async def collectives_create(self, payload: dict[str, Any], api_key: str = None) -> Any:
-        return await self.post("/ocs/v2.php/apps/collectives/api/v1.0/collectives", api_key, json=payload)
-
-    async def collectives_get_collective(self, collective_id: int, api_key: str = None,
+    async def collectives_create(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post("/ocs/v2.php/apps/collectives/api/v1.0/collectives", api_key, json=payload)
+        return self._filter_fields(data, "collective", include_all_fields)
+    async def collectives_get_collective(self, collective_id: int, api_key: str = None, 
                                          include_all_fields: bool = False) -> Any:
         data = await self.get("/ocs/v2.php/apps/collectives/api/v1.0/collectives", api_key)
         items = data.get("collectives", data) if isinstance(data, dict) else data
@@ -1917,20 +1954,23 @@ class NextcloudClient:
 
     async def collectives_update_collective(self, collective_id: int,
                                             payload: dict[str, Any],
-                                            api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}",
+                                            api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}",
                               api_key, json=payload)
+        return self._filter_fields(data, "collective", include_all_fields)
 
     async def collectives_update_emoji(self, collective_id: int, emoji: str,
-                                       api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}",
+                                       api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}",
                              api_key, json={"emoji": emoji})
+        return self._filter_fields(data, "collective", include_all_fields)
 
-    async def collectives_trash(self, collective_id: int, api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}", api_key)
-
-    async def collectives_restore(self, collective_id: int, api_key: str = None) -> Any:
-        return await self.patch(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/trash/{collective_id}", api_key)
+    async def collectives_trash(self, collective_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}", api_key)
+        return self._filter_fields(data, "collective", include_all_fields)
+    async def collectives_restore(self, collective_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.patch(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/trash/{collective_id}", api_key)
+        return self._filter_fields(data, "collective", include_all_fields)
 
     async def collectives_delete(self, collective_id: int, api_key: str = None) -> Any:
         try:
@@ -1944,7 +1984,7 @@ class NextcloudClient:
         items = data.get("collectives", data) if isinstance(data, dict) else data
         return self._filter_fields(items, "collective", include_all_fields)
 
-    async def collectives_list_pages(self, collective_id: int, api_key: str = None,
+    async def collectives_list_pages(self, collective_id: int, api_key: str = None, 
                                      include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages", api_key)
         items = data.get("pages", data) if isinstance(data, dict) else data
@@ -1975,7 +2015,7 @@ class NextcloudClient:
         return self._filter_fields(page_data, "collective_page", include_all_fields)
 
     async def collectives_create_page(self, collective_id: int, parent_id: int,
-                                      payload: dict[str, Any], api_key: str = None) -> Any:
+                                      payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
         if not parent_id:
             pages_data = await self.collectives_list_pages(collective_id, api_key)
             pages = pages_data if isinstance(pages_data, list) else (
@@ -1984,15 +2024,18 @@ class NextcloudClient:
             if pages:
                 parent_id = pages[0].get("id", 0)
         path = f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{parent_id}"
-        return await self.post(path, api_key, json=payload)
+        data = await self.post(path, api_key, json=payload)
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_trash_page(self, collective_id: int, page_id: int,
-                                     api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}", api_key)
+                                     api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}", api_key)
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_restore_page(self, collective_id: int, page_id: int,
-                                       api_key: str = None) -> Any:
-        return await self.patch(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/trash/{page_id}", api_key)
+                                       api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.patch(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/trash/{page_id}", api_key)
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_delete_page(self, collective_id: int, page_id: int,
                                       api_key: str = None) -> Any:
@@ -2005,26 +2048,30 @@ class NextcloudClient:
     async def collectives_move_page(self, collective_id: int, page_id: int,
                                     destination_collective_id: int,
                                     destination_parent_id: int = 0,
-                                    api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}",
+                                    api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}",
                              api_key, json={"destinationCollectiveId": destination_collective_id,
                                            "destinationParentId": destination_parent_id})
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_set_page_emoji(self, collective_id: int, page_id: int,
-                                         emoji: str, api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/emoji",
+                                         emoji: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/emoji",
                              api_key, json={"emoji": emoji})
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_set_page_full_width(self, collective_id: int, page_id: int,
-                                               is_full_width: bool, api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/fullWidth",
+                                               is_full_width: bool, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/fullWidth",
                               api_key, json={"fullWidth": is_full_width})
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_update_page(self, collective_id: int, page_id: int,
                                       payload: dict[str, Any],
-                                      api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}",
+                                      api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}",
                               api_key, json=payload)
+        return self._filter_fields(data, "collective_page", include_all_fields)
 
     async def collectives_search_pages(self, collective_id: int, query: str,
                                        api_key: str = None, limit: int = 50,
@@ -2035,16 +2082,17 @@ class NextcloudClient:
         items = data.get("pages", data) if isinstance(data, dict) else data
         return self._filter_fields(items, "collective_page", include_all_fields)
 
-    async def collectives_list_tags(self, collective_id: int, api_key: str = None,
+    async def collectives_list_tags(self, collective_id: int, api_key: str = None, 
                                     include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags", api_key)
         items = data.get("tags", data) if isinstance(data, dict) else data
         return self._filter_fields(items, "collective_tag", include_all_fields)
 
     async def collectives_create_tag(self, collective_id: int, payload: dict[str, Any],
-                                     api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags",
+                                     api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags",
                               api_key, json=payload)
+        return self._filter_fields(data, "collective_tag", include_all_fields)
 
     async def collectives_get_tag(self, collective_id: int, tag_id: int,
                                    api_key: str = None,
@@ -2060,22 +2108,25 @@ class NextcloudClient:
         return {"error": f"Tag {tag_id} not found in collective {collective_id}"}
 
     async def collectives_update_tag(self, collective_id: int, tag_id: int,
-                                     payload: dict[str, Any], api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags/{tag_id}",
+                                     payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags/{tag_id}",
                               api_key, json=payload)
+        return self._filter_fields(data, "collective_tag", include_all_fields)
 
     async def collectives_delete_tag(self, collective_id: int, tag_id: int,
                                      api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/tags/{tag_id}", api_key)
 
     async def collectives_assign_tag(self, collective_id: int, page_id: int,
-                                     tag_id: int, api_key: str = None) -> Any:
-        return await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/tags/{tag_id}",
+                                     tag_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/tags/{tag_id}",
                              api_key, json={})
+        return self._filter_fields(data, "collective_tag", include_all_fields)
 
     async def collectives_remove_tag(self, collective_id: int, page_id: int,
-                                     tag_id: int, api_key: str = None) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/tags/{tag_id}", api_key)
+                                     tag_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/pages/{page_id}/tags/{tag_id}", api_key)
+        return self._filter_fields(data, "collective_tag", include_all_fields)
 
     # =========================================================================
     # Domain: Circles (OCS)
@@ -2093,38 +2144,41 @@ class NextcloudClient:
         data = await self.post("/ocs/v2.php/apps/circles/circles", api_key, json={"name": name, "type": circle_type})
         return self._filter_fields(data, "circle", include_all_fields)
 
-    async def circles_update(self, circle_id: str, name: str = None, description: str = None, config: int = None, api_key: str = None) -> Any:
+    async def circles_update(self, circle_id: str, name: str = None, description: str = None, config: int = None, api_key: str = None, include_all_fields: bool = False) -> Any:
         if name is not None:
             await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/name", api_key, json={"value": name})
         if description is not None:
             await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/description", api_key, json={"value": description})
         if config is not None:
             await self.put(f"/ocs/v2.php/apps/circles/circles/{circle_id}/config", api_key, json={"value": config})
-        return await self.circles_get(circle_id, api_key)
+        data = await self.circles_get(circle_id, api_key)
+        return self._filter_fields(data, "circle", include_all_fields)
 
     async def circles_delete(self, circle_id: str, api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/circles/circles/{circle_id}", api_key)
 
     async def circles_add_member(self, circle_id: str, ident: str, member_type: int = 1,
-                                  api_key: str = None) -> Any:
-        return await self.post(f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/multi",
+                                  api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.post(f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/multi",
                                api_key, json={"members": [{"id": ident, "type": member_type}]})
+        return self._filter_fields(data, "circle", include_all_fields)
 
     async def circles_remove_member(self, circle_id: str, member_id: str,
                                      api_key: str = None) -> Any:
         return await self.delete(
             f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/{member_id}", api_key)
 
-    async def circles_list_members(self, circle_id: str, api_key: str = None,
+    async def circles_list_members(self, circle_id: str, api_key: str = None, 
                                     include_all_fields: bool = False) -> Any:
         data = await self.get(f"/ocs/v2.php/apps/circles/circles/{circle_id}/members", api_key)
         return self._filter_fields(data, "circle", include_all_fields)
 
     async def circles_update_member_level(self, circle_id: str, member_id: str, level: int,
-                                           api_key: str = None) -> Any:
-        return await self.put(
+                                           api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(
             f"/ocs/v2.php/apps/circles/circles/{circle_id}/members/{member_id}/level",
             api_key, json={"level": level})
+        return self._filter_fields(data, "circle", include_all_fields)
 
     async def patch(self, path: str, api_key: Optional[str] = None, **kwargs: Any) -> Any:
         return await self.request("PATCH", path, api_key, **kwargs)

@@ -333,7 +333,7 @@ async def get_group_members(
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().get_group_members(group_id, get_user_token(), limit, offset, include_all_fields)
+    data = await get_client().get_group_members(group_id, get_user_token(), limit, offset, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -363,7 +363,7 @@ async def get_shares_by_path(
         shared_with_me: Set to True to only show shares received from others. Defaults to False.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_shares(get_user_token(), shared_with_me, path, include_all_fields)
+    data = await get_client().list_shares(get_user_token(), shared_with_me, path, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -405,7 +405,7 @@ async def create_share(
     """
     params = CreateShareParam(path=path, shareType=share_type, shareWith=share_with,
                               permissions=permissions, password=password, expireDate=expire_date)
-    return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -424,7 +424,7 @@ async def update_share(
         expire_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
     params = UpdateShareParam(id=id, permissions=permissions, password=password, expireDate=expire_date)
-    return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -463,7 +463,7 @@ async def set_status(
     Args:
         status_type: Status type (online, away, dnd, invisible).
     """
-    return await get_client().set_status(status_type, get_user_token())
+    return await get_client().set_status(status_type, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -477,7 +477,7 @@ async def set_predefined_message(
         message_id: ID of the predefined message. Get this from get_predefined_statuses() (e.g. "meeting", "commuting").
         clear_at: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
-    return await get_client().set_predefined_message(message_id, get_user_token(), clear_at)
+    return await get_client().set_predefined_message(message_id, get_user_token(), clear_at, ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -493,13 +493,13 @@ async def set_custom_message(
         status_icon: Emoji icon for the status.
         clear_at: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
-    return await get_client().set_custom_message(message, status_icon, get_user_token(), clear_at)
+    return await get_client().set_custom_message(message, status_icon, get_user_token(), clear_at, ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
 async def clear_message(ctx: Context) -> dict[str, Any]:
     """Clear the current status message."""
-    result = await get_client().clear_message(get_user_token())
+    result = await get_client().clear_message(get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "cleared", "result": result}
 
 
@@ -566,7 +566,7 @@ async def set_ooo(
     last_day_str = last_day_dt.strftime('%Y-%m-%d') if isinstance(last_day_dt, dt.datetime) else last_day_dt
     params = SetOOOParam(firstDay=first_day_str, lastDay=last_day_str, status=status, message=message)
     user_id = NextcloudClient.extract_username(get_user_token() or "")
-    return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -685,7 +685,7 @@ async def collection_get_by_resource(
         resource_id: ID of resource.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().get_collections_by_resource(resource_type, resource_id, get_user_token(), include_all_fields)
+    data = await get_client().get_collections_by_resource(resource_type, resource_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -702,7 +702,7 @@ async def collection_create(
         resource_id: ID of resource.
         name: Collection name.
     """
-    return await get_client().create_collection_on_resource(resource_type, resource_id, name, get_user_token())
+    return await get_client().create_collection_on_resource(resource_type, resource_id, name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
@@ -730,7 +730,7 @@ async def set_file_reminder(
         file_id: ID of the file. Get this from webdav_list_directory() (the oc:fileid field in PROPFIND response).
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
-    result = await get_client().set_file_reminder(file_id, due_date, get_user_token())
+    result = await get_client().set_file_reminder(file_id, due_date, get_user_token(), ALLOW_ALL_AGGREGATE)
     if isinstance(result, list):
         return {"success": True, "reminder_set": True}
     return result
@@ -781,7 +781,7 @@ async def search(
         cursor: Pagination cursor.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().search(provider_id, term, get_user_token(), limit, cursor, include_all_fields)
+    data = await get_client().search(provider_id, term, get_user_token(), limit, cursor, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"results": json_to_toon(data)}
 
 
@@ -810,7 +810,7 @@ async def webdav_list_directory(
         depth: Directory depth. Defaults to 1.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().webdav_list_directory(path, get_user_token(), depth, include_all_fields)
+    data = await get_client().webdav_list_directory(path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -837,7 +837,7 @@ async def webdav_write_file(
         path: Full DAV path: /remote.php/dav/files/{username}/...
         content: Content to write.
     """
-    return await get_client().webdav_write_file(path, content, get_user_token())
+    return await get_client().webdav_write_file(path, content, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -849,7 +849,7 @@ async def webdav_create_directory(
     Args:
         path: Full DAV path: /remote.php/dav/files/{username}/...
     """
-    return await get_client().webdav_create_directory(path, get_user_token())
+    return await get_client().webdav_create_directory(path, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -907,7 +907,7 @@ async def webdav_search_files(
         mime_type: Filter by MIME type.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields)
+    data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -990,7 +990,7 @@ async def notification_create(
         subject: Subject of the notification, max 255 chars.
         message: Message of the notification, max 4000 chars.
     """
-    return await get_client().create_notification(user_id, subject, message, get_user_token())
+    return await get_client().create_notification(user_id, subject, message, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1040,7 +1040,7 @@ async def activity_get_filter(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().get_activity_filter(filter_name, get_user_token(), limit, include_all_fields)
+    data = await get_client().get_activity_filter(filter_name, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1069,7 +1069,7 @@ async def create_calendar(
         color: Calendar color in #RRGGBB format (e.g. #FF0000 for red).
     """
     params = CreateCalendarParam(display_name=display_name, color=color)
-    return await get_client().create_calendar(params.display_name, params.color, get_user_token())
+    return await get_client().create_calendar(params.display_name, params.color, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1085,7 +1085,7 @@ async def update_calendar(
         display_name: New display name.
         color: New calendar color in #RRGGBB format (e.g. #FF0000 for red).
     """
-    result = await get_client().update_calendar(calendar_uri, display_name, color, get_user_token())
+    result = await get_client().update_calendar(calendar_uri, display_name, color, get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "updated", "result": result}
 
 
@@ -1160,7 +1160,7 @@ async def get_events_by_calendar(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_events(calendar_uri, get_user_token(), from_date, to_date, limit, include_all_fields)
+    data = await get_client().list_events(calendar_uri, get_user_token(), from_date, to_date, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1206,7 +1206,7 @@ async def create_event(
         attendees: Comma-separated attendee email addresses to invite (e.g. 'leon@example.com'). Leave empty for no attendees.
     """
     return await get_client().create_event(calendar_uri, summary, dtstart, dtend,
-                                           description, location, rrule, timezone, get_user_token(), attendees=attendees)
+                                           description, location, rrule, timezone, api_key=get_user_token(), attendees=attendees, include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1233,7 +1233,7 @@ async def update_event(
         attendees: Comma-separated attendee email addresses. Leave empty (default) to preserve existing attendees.
     """
     return await get_client().update_event(calendar_uri, event_uid, summary, dtstart,
-                                           dtend, description, location, get_user_token(), attendees=attendees or "")
+                                           dtend, description, location, get_user_token(), attendees=attendees or "", include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1272,7 +1272,7 @@ async def create_meeting(
         calendar_uri: Leave empty (default) to use your personal/default calendar. Only fill this if you need to use a specific calendar.
     """
     return await get_client().create_meeting(summary, dtstart, dtend, attendees, description,
-                                             location, calendar_uri, get_user_token())
+                                             location, calendar_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1326,7 +1326,7 @@ async def todo_get_by_calendar(
         calendar_uri: URI of the calendar. Get this from list_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_todos(get_user_token(), calendar_uri, include_all_fields)
+    data = await get_client().list_todos(get_user_token(), calendar_uri, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1350,7 +1350,7 @@ async def todo_create(
         status: Status (NEEDS-ACTION, IN-PROCESS, COMPLETED). Defaults to NEEDS-ACTION.
     """
     return await get_client().create_todo(summary, description, due_date, priority,
-                                          status, calendar_uri, get_user_token())
+                                          status, calendar_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1391,7 +1391,7 @@ async def todo_update(
         status: New status.
     """
     return await get_client().update_todo(todo_uid, calendar_uri, summary, description,
-                                          priority, due_date, status, get_user_token())
+                                          priority, due_date, status, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1423,7 +1423,7 @@ async def todo_search(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().search_todos(query, get_user_token(), calendar_uri, limit, include_all_fields)
+    data = await get_client().search_todos(query, get_user_token(), calendar_uri, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1452,7 +1452,7 @@ async def create_addressbook(
         description: Description.
     """
     params = CreateAddressbookParam(display_name=display_name, description=description)
-    return await get_client().create_addressbook(params.display_name, params.description, get_user_token())
+    return await get_client().create_addressbook(params.display_name, params.description, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1464,7 +1464,7 @@ async def delete_addressbook(
     Args:
         addressbook_uri: URI of the address book to delete. Get this from list_addressbooks().
     """
-    return await get_client().delete_addressbook(addressbook_uri, get_user_token())
+    return await get_client().delete_addressbook(addressbook_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1494,7 +1494,7 @@ async def update_addressbook(
         display_name: New display name.
         description: New description.
     """
-    result = await get_client().update_addressbook(addressbook_uri, display_name, description, get_user_token())
+    result = await get_client().update_addressbook(addressbook_uri, display_name, description, get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "updated", "result": result}
 
 
@@ -1535,7 +1535,7 @@ async def get_contacts_by_addressbook(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_contacts(addressbook_uri, get_user_token(), limit, include_all_fields)
+    data = await get_client().list_contacts(addressbook_uri, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1575,7 +1575,7 @@ async def create_contact(
         adr: Postal address.
     """
     return await get_client().create_contact(addressbook_uri, fn, email, telephone,
-                                             organization, adr, get_user_token())
+                                             organization, adr, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1600,7 +1600,7 @@ async def update_contact(
         adr: New postal address.
     """
     return await get_client().update_contact(addressbook_uri, contact_uid, fn, email,
-                                             telephone, organization, adr, get_user_token())
+                                             telephone, organization, adr, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1641,7 +1641,7 @@ async def note_get_by_category(
         category: Category to filter by.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_notes(get_user_token(), category, include_all_fields)
+    data = await get_client().list_notes(get_user_token(), category, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1673,7 +1673,7 @@ async def note_create(
         category: Note category.
     """
     params = CreateNoteParam(title=title, content=content, category=category)
-    return await get_client().create_note(params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().create_note(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1694,7 +1694,7 @@ async def note_update(
         favorite: Set as favorite.
     """
     params = UpdateNoteParam(id=id, title=title, content=content, category=category, favorite=favorite)
-    return await get_client().update_note(id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().update_note(id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1739,7 +1739,7 @@ async def note_search(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().list_notes(get_user_token(), "", include_all_fields)
+    data = await get_client().list_notes(get_user_token(), "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     if isinstance(data, list):
         q = query.lower()
         filtered = [n for n in data if q in n.get("title", "").lower() or q in n.get("content", "").lower()]
@@ -1802,7 +1802,7 @@ async def deck_create_board(
         archived: Whether the board is archived. Defaults to False.
     """
     params = CreateBoardParam(title=title, color=color, archived=archived)
-    return await get_client().deck_create_board(params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().deck_create_board(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -1827,7 +1827,7 @@ async def deck_update_board(
         payload["color"] = color
     if archived is not None:
         payload["archived"] = archived
-    return await get_client().deck_update_board(board_id, payload, get_user_token())
+    return await get_client().deck_update_board(board_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1841,7 +1841,7 @@ async def deck_list_stacks(
         board_id: Board ID. Get this from deck_list_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().deck_list_stacks(board_id, get_user_token(), include_all_fields)
+    data = await get_client().deck_list_stacks(board_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1859,7 +1859,7 @@ async def deck_create_stack(
         order: Display order. Defaults to 0.
     """
     params = CreateStackParam(board_id=board_id, title=title, order=order)
-    return await get_client().deck_create_stack(board_id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().deck_create_stack(board_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1898,7 +1898,7 @@ async def deck_update_stack(
         payload["title"] = title
     if order is not None:
         payload["order"] = order
-    return await get_client().deck_update_stack(board_id, stack_id, payload, get_user_token())
+    return await get_client().deck_update_stack(board_id, stack_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -1914,7 +1914,7 @@ async def deck_list_cards(
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().deck_list_cards(board_id, stack_id, get_user_token(), include_all_fields)
+    data = await get_client().deck_list_cards(board_id, stack_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -1957,7 +1957,7 @@ async def deck_create_card(
     """
     params = CreateCardParam(title=title, description=description,
                               duedate=duedate, order=order)
-    return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -1983,7 +1983,7 @@ async def deck_update_card(
     """
     params = UpdateCardParam(title=title, description=description,
                               duedate=duedate, order=order)
-    return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2071,7 +2071,7 @@ async def deck_list_labels(
         board_id: Board ID. Get this from deck_list_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().deck_list_labels(board_id, get_user_token(), include_all_fields)
+    data = await get_client().deck_list_labels(board_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2171,7 +2171,7 @@ async def list_mailboxes(
         account_id: Account ID. Get this from list_accounts().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().mail_list_mailboxes(account_id, get_user_token(), include_all_fields)
+    data = await get_client().mail_list_mailboxes(account_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2190,7 +2190,7 @@ async def list_messages(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().mail_list_messages(account_id, mailbox_db_id, get_user_token(), limit, include_all_fields)
+    data = await get_client().mail_list_messages(account_id, mailbox_db_id, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2244,7 +2244,7 @@ async def send_message(
         bcc: BCC recipient email.
     """
     try:
-        result = await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, get_user_token())
+        result = await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, get_user_token(), ALLOW_ALL_AGGREGATE)
         return {"status": "sent", "data": result if isinstance(result, dict) else {}}
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -2269,7 +2269,7 @@ async def create_email_draft(
         cc: CC recipient email.
         bcc: BCC recipient email.
     """
-    result = await get_client().mail_save_draft(account_id, subject, body, to, cc, bcc, get_user_token())
+    result = await get_client().mail_save_draft(account_id, subject, body, to, cc, bcc, get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"id": result.get("id") if isinstance(result, dict) else None, "status": "draft_created"}
 
 
@@ -2289,7 +2289,7 @@ async def set_message_flags(
         flagged: Mark as flagged/unflagged.
     """
     params = SetFlagsParam(message_id=message_id, seen=seen, flagged=flagged)
-    result = await get_client().mail_set_message_flags(account_id, message_id, params.seen, params.flagged, get_user_token())
+    result = await get_client().mail_set_message_flags(account_id, message_id, params.seen, params.flagged, get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "ok", "flags": result}
 
 
@@ -2306,7 +2306,7 @@ async def move_message(
         message_id: Message database ID to move. Get this from list_messages(account_id, mailbox_db_id).
         mailbox_db_id: Destination mailbox database ID. Get this from list_mailboxes(account_id).
     """
-    result = await get_client().mail_move_message(account_id, message_id, mailbox_db_id, get_user_token())
+    result = await get_client().mail_move_message(account_id, message_id, mailbox_db_id, get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "moved", "result": result}
 
 
@@ -2319,7 +2319,7 @@ async def talk_list_rooms(
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().talk_list_rooms(get_user_token(), include_all_fields)
+    data = await get_client().talk_list_rooms(get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2334,7 +2334,7 @@ async def talk_create_room(
         room_type: Room type. 1=one-to-one, 2=group, 3=public.
         room_name: Name for the room.
     """
-    return await get_client().talk_create_room(room_type, room_name, get_user_token())
+    return await get_client().talk_create_room(room_type, room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2360,7 +2360,7 @@ async def talk_update_room(
         token: Room token to rename.
         room_name: New name for the room (up to 255 characters).
     """
-    return await get_client().talk_update_room(token, room_name, get_user_token())
+    return await get_client().talk_update_room(token, room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -2374,7 +2374,7 @@ async def talk_set_description(
         token: Room token.
         description: Description text.
     """
-    return await get_client().talk_set_description(token, description, get_user_token())
+    return await get_client().talk_set_description(token, description, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2388,7 +2388,7 @@ async def talk_list_participants(
         token: Room token.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().talk_list_participants(token, get_user_token(), include_all_fields)
+    data = await get_client().talk_list_participants(token, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2405,7 +2405,7 @@ async def talk_add_participant(
         new_participant: User, group, email, or circle to add.
         source: Source type. Defaults to 'users'. Options: users, groups, emails, circles.
     """
-    return await get_client().talk_add_participant(token, new_participant, source, get_user_token())
+    return await get_client().talk_add_participant(token, new_participant, source, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -2433,7 +2433,7 @@ async def send_chat_message(
         token: Conversation token. Get this from creating a Talk room.
         message: Message text.
     """
-    return await get_client().talk_send_message(token, message, get_user_token())
+    return await get_client().talk_send_message(token, message, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2451,7 +2451,7 @@ async def get_chat_messages(
         look_into_future: Wait for new messages (1) or not (0).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().talk_get_messages(token, get_user_token(), limit, look_into_future, include_all_fields)
+    data = await get_client().talk_get_messages(token, get_user_token(), limit, look_into_future, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2510,7 +2510,7 @@ async def table_create(
         emoji: Table emoji.
     """
     params = CreateTableParam(title=title, description=description, emoji=emoji)
-    return await get_client().tables_create_table(params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().tables_create_table(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2529,7 +2529,7 @@ async def table_update(
         emoji: New emoji.
     """
     params = UpdateTableParam(table_id=table_id, title=title, description=description, emoji=emoji)
-    return await get_client().tables_update_table(table_id, params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().tables_update_table(table_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2573,7 +2573,7 @@ async def table_list_rows(
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().tables_list_rows(table_id, get_user_token(), limit, offset, include_all_fields)
+    data = await get_client().tables_list_rows(table_id, get_user_token(), limit, offset, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"rows": json_to_toon(data)}
 
 
@@ -2588,7 +2588,7 @@ async def table_create_row(
         table_id: Table ID. Get this from table_list().
         data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
     """
-    return await get_client().tables_create_row(table_id, json.dumps(data), get_user_token())
+    return await get_client().tables_create_row(table_id, json.dumps(data), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2616,7 +2616,7 @@ async def table_update_row(
         row_id: Row ID. Get this from table_list_rows(table_id).
         data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
     """
-    return await get_client().tables_update_row(row_id, json.dumps(data) if data is not None else None, get_user_token())
+    return await get_client().tables_update_row(row_id, json.dumps(data) if data is not None else None, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "primary", "nextcloud"})
@@ -2656,7 +2656,7 @@ async def collectives_create(
         emoji: Collective emoji.
     """
     params = CreateCollectiveParam(name=name, emoji=emoji)
-    return await get_client().collectives_create(params.model_dump(exclude_defaults=True), get_user_token())
+    return await get_client().collectives_create(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2691,7 +2691,7 @@ async def collectives_update_collective(
         payload["name"] = name
     if emoji is not None:
         payload["emoji"] = emoji
-    return await get_client().collectives_update_collective(id, payload, get_user_token())
+    return await get_client().collectives_update_collective(id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2705,7 +2705,7 @@ async def collectives_update_emoji(
         id: Collective ID. Get this from collectives_list().
         emoji: New emoji.
     """
-    return await get_client().collectives_update_emoji(id, emoji, get_user_token())
+    return await get_client().collectives_update_emoji(id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2717,7 +2717,7 @@ async def collectives_trash(
     Args:
         id: Collective ID. Get this from collectives_list().
     """
-    return await get_client().collectives_trash(id, get_user_token())
+    return await get_client().collectives_trash(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2729,7 +2729,7 @@ async def collectives_restore(
     Args:
         id: Collective ID. Get this from collectives_list().
     """
-    return await get_client().collectives_restore(id, get_user_token())
+    return await get_client().collectives_restore(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2768,7 +2768,7 @@ async def collectives_list_pages(
         collective_id: Collective ID. Get this from collectives_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().collectives_list_pages(collective_id, get_user_token(), include_all_fields)
+    data = await get_client().collectives_list_pages(collective_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2802,7 +2802,7 @@ async def collectives_create_page(
         parent_id: Parent page ID. Defaults to 0 (root).
     """
     return await get_client().collectives_create_page(collective_id, parent_id,
-                                                       {"title": title}, get_user_token())
+                                                       {"title": title}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2816,7 +2816,7 @@ async def collectives_trash_page(
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
     """
-    return await get_client().collectives_trash_page(collective_id, page_id, get_user_token())
+    return await get_client().collectives_trash_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2830,7 +2830,7 @@ async def collectives_restore_page(
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
     """
-    return await get_client().collectives_restore_page(collective_id, page_id, get_user_token())
+    return await get_client().collectives_restore_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2867,7 +2867,7 @@ async def collectives_move_page(
     """
     return await get_client().collectives_move_page(collective_id, page_id,
                                                      destination_collective_id, destination_parent_id,
-                                                     get_user_token())
+                                                     get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2883,7 +2883,7 @@ async def collectives_set_page_emoji(
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
         emoji: Emoji to set.
     """
-    return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token())
+    return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2899,7 +2899,7 @@ async def collectives_set_page_full_width(
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
         is_full_width: Whether the page should be displayed full-width.
     """
-    return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token())
+    return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2930,7 +2930,7 @@ async def collectives_update_page(
         payload["fullWidth"] = is_full_width
     if parent_id is not None:
         payload["parentId"] = parent_id
-    return await get_client().collectives_update_page(collective_id, page_id, payload, get_user_token())
+    return await get_client().collectives_update_page(collective_id, page_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2948,7 +2948,7 @@ async def collectives_search_pages(
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().collectives_search_pages(collective_id, query, get_user_token(), limit, include_all_fields)
+    data = await get_client().collectives_search_pages(collective_id, query, get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2963,7 +2963,7 @@ async def collectives_list_tags(
         collective_id: Collective ID. Get this from collectives_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().collectives_list_tags(collective_id, get_user_token(), include_all_fields)
+    data = await get_client().collectives_list_tags(collective_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -2997,7 +2997,7 @@ async def collectives_create_tag(
         color: Tag color.
     """
     params = CreateTagParam(collective_id=collective_id, name=name, color=color)
-    return await get_client().collectives_create_tag(collective_id, {"name": name, "color": color}, get_user_token())
+    return await get_client().collectives_create_tag(collective_id, {"name": name, "color": color}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3017,7 +3017,7 @@ async def collectives_update_tag(
     """
     return await get_client().collectives_update_tag(collective_id, tag_id,
                                                       {"name": name, "color": color} if name or color else {},
-                                                      get_user_token())
+                                                      get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3048,7 +3048,7 @@ async def collectives_assign_tag(
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
     """
-    return await get_client().collectives_assign_tag(collective_id, page_id, tag_id, get_user_token())
+    return await get_client().collectives_assign_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3064,7 +3064,7 @@ async def collectives_remove_tag(
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
     """
-    return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token())
+    return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -3101,7 +3101,7 @@ async def circle_create(
     Args:
         name: Circle name.
     """
-    return await get_client().circles_create(name, circle_type=1, api_key=get_user_token())
+    return await get_client().circles_create(name, circle_type=1, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3117,7 +3117,7 @@ async def circle_update(
         name: New name for the circle.
         description: New description.
     """
-    return await get_client().circles_update(circle_id, name=name, description=description, api_key=get_user_token())
+    return await get_client().circles_update(circle_id, name=name, description=description, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -3144,7 +3144,7 @@ async def circle_add_member(
         circle_id: Circle ID. Get this from circle_list().
         user_id: User ID to add to the circle.
     """
-    result = await get_client().circles_add_member(circle_id, user_id, api_key=get_user_token())
+    result = await get_client().circles_add_member(circle_id, user_id, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
     return {"success": True, "data": result}
 
 
@@ -3175,7 +3175,7 @@ async def circle_list_members(
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().circles_list_members(circle_id, get_user_token(),
-                                                     include_all_fields)
+                                                     include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
 
 
@@ -3193,7 +3193,7 @@ async def circle_update_member_level(
         level: New level (1=Member, 4=Moderator, 8=Admin, 9=Owner).
     """
     return await get_client().circles_update_member_level(circle_id, member_id, level,
-                                                           get_user_token())
+                                                           get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
