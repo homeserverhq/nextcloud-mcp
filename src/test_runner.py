@@ -431,27 +431,7 @@ def main():
         run_test(session, "5B note_append_content", "note_append_content", {"id": store["Note"]["id"], "content": "Appended line"})
         run_test(session, "5B note_search", "note_search", {"query": "Hello"})
         run_test(session, "5B search", "search", {"provider_id": "files", "term": "test"})
-        run_test(session, "5B search_files", "search_files", {"query": "test"})
-        run_test(session, "5B create_folder", "create_folder", {"path": f"t{rid}-testdir"})
-        run_test(session, "5B write_file", "write_file", {"path": f"t{rid}-testdir/testfile.txt", "content": "Hello World"})
         run_test(session, "5B table_update_row", "table_update_row", {"row_id": store["Row"]["id"], "data": {}})
-
-        # ---- Phase 5C: File Move/Copy/Delete with inline verification ----
-        log("\n=== Phase 5C: File Move/Copy/Delete ===")
-        testdir = f"t{rid}-testdir"
-        testfile = f"{testdir}/testfile.txt"
-        moved_file = f"t{rid}-moved.txt"
-        copied_file = f"t{rid}-copied.txt"
-        run_test(session, "5C verify_create_directory", "show_folder", {"path": testdir, "depth": 0})
-        run_test(session, "5C verify_read_file", "read_file", {"path": testfile})
-        run_test(session, "5C move_file", "move_file", {"source": testfile, "destination": moved_file})
-        run_test(session, "5C verify_moved", "read_file", {"path": moved_file})
-        run_test(session, "5C copy_file", "copy_file", {"source": moved_file, "destination": copied_file})
-        run_test(session, "5C verify_copied", "read_file", {"path": copied_file})
-        run_test(session, "5C delete_testfile", "delete_file", {"path": moved_file})
-        run_test(session, "5C delete_copied", "delete_file", {"path": copied_file})
-        run_test(session, "5C delete_testdir", "delete_folder", {"path": testdir})
-        run_test(session, "5C verify_delete_resource", "show_folder", {"path": "", "depth": 1})
 
         # ---- Phase 5D: Read-back Verification ----
         log("\n=== Phase 5D: Read-back Verification ===")
@@ -618,7 +598,9 @@ def main():
         run_test(session, "5T show_folder", "show_folder", {"path": f"t{rid}-simple"})
         run_test(session, "5T read_file", "read_file", {"path": f"t{rid}-simple/test.txt"})
         run_test(session, "5T move_file", "move_file", {"source": f"t{rid}-simple/test.txt", "destination": f"t{rid}-moved.txt"})
+        run_test(session, "5T verify_moved", "read_file", {"path": f"t{rid}-moved.txt"})
         run_test(session, "5T copy_file", "copy_file", {"source": f"t{rid}-moved.txt", "destination": f"t{rid}-copied.txt"})
+        run_test(session, "5T verify_copied", "read_file", {"path": f"t{rid}-copied.txt"})
         run_test(session, "5T move_files", "move_files", {"files": [f"t{rid}-moved.txt", f"t{rid}-copied.txt"], "destination": f"t{rid}-simple"})
         run_test(session, "5T search_files", "search_files", {"query": f"t{rid}"})
         run_test(session, "5T move_folder", "move_folder", {"source": f"t{rid}-simple", "destination": f"t{rid}-renamed"})
@@ -626,6 +608,7 @@ def main():
         run_test(session, "5T delete_file", "delete_file", {"path": f"t{rid}-renamed/t{rid}-moved.txt"})
         run_test(session, "5T delete_renamed_folder", "delete_folder", {"path": f"t{rid}-renamed"})
         run_test(session, "5T delete_copied_folder", "delete_folder", {"path": f"t{rid}-copiedfolder"})
+        run_test(session, "5T verify_delete", "show_folder", {"path": "", "depth": 1})
 
         # ---- Phase 6: Circle Member Management Tests ----
         log("\n=== Phase 6: Circle Member Management Tests ===")
