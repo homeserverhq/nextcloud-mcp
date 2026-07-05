@@ -18,6 +18,7 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 | `NEXTCLOUD_BASE_URL` | Yes | Docker-internal URL of the Nextcloud API (e.g. `http://nextcloud-web:80`) |
 | `MCP_SERVER_PORT` | Yes | Port number the MCP server listens on |
 | `ALLOW_ALL_AGGREGATE` | No | When `true`, aggregate listing tools honor the `include_all_fields` parameter. When `false` (default), the parameter is silently forced to `False` for aggregate list operations. |
+| `IS_STATEFUL` | No | When `true`, uses stateful Streamable HTTP with session tracking. When `false` (default), uses stateless mode. |
 
 ## 📦 Installation & Local Development
 
