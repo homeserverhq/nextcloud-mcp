@@ -611,6 +611,22 @@ def main():
         run_test(session, "5S delete_fixture", "webdav_delete_resource", {"path": fixture_path})
         run_test(session, "5S delete_attach", "webdav_delete_resource", {"path": f"/remote.php/dav/files/{API_USER}/Notes/test/t{rid}-attach.txt"})
 
+        # ---- Phase 5T: Simple File/Folder Operations ----
+        log("\n=== Phase 5T: Simple File/Folder Operations ===")
+        run_test(session, "5T create_folder", "create_folder", {"path": f"t{rid}-simple"})
+        run_test(session, "5T write_file", "write_file", {"path": f"t{rid}-simple/test.txt", "content": "Hello World"})
+        run_test(session, "5T show_folder", "show_folder", {"path": f"t{rid}-simple"})
+        run_test(session, "5T read_file", "read_file", {"path": f"t{rid}-simple/test.txt"})
+        run_test(session, "5T move_file", "move_file", {"source": f"t{rid}-simple/test.txt", "destination": f"t{rid}-moved.txt"})
+        run_test(session, "5T copy_file", "copy_file", {"source": f"t{rid}-moved.txt", "destination": f"t{rid}-copied.txt"})
+        run_test(session, "5T move_files", "move_files", {"files": [f"t{rid}-moved.txt", f"t{rid}-copied.txt"], "destination": f"t{rid}-simple"})
+        run_test(session, "5T search_files", "search_files", {"query": f"t{rid}"})
+        run_test(session, "5T move_folder", "move_folder", {"source": f"t{rid}-simple", "destination": f"t{rid}-renamed"})
+        run_test(session, "5T copy_folder", "copy_folder", {"source": f"t{rid}-renamed", "destination": f"t{rid}-copiedfolder"})
+        run_test(session, "5T delete_file", "delete_file", {"path": f"t{rid}-renamed/t{rid}-moved.txt"})
+        run_test(session, "5T delete_renamed_folder", "delete_folder", {"path": f"t{rid}-renamed"})
+        run_test(session, "5T delete_copied_folder", "delete_folder", {"path": f"t{rid}-copiedfolder"})
+
         # ---- Phase 6: Circle Member Management Tests ----
         log("\n=== Phase 6: Circle Member Management Tests ===")
         whoami = session.call_tool("get_user_status")

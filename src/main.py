@@ -47,6 +47,33 @@ def get_user_token() -> Optional[str]:
     return _current_user_token.get()
 
 
+_current_username: Optional[str] = None
+
+
+async def _resolve_path(path: str = "") -> str:
+    global _current_username
+    if _current_username is None:
+        data = await get_client().get("/ocs/v2.php/cloud/user", get_user_token())
+        _current_username = data.get("id", "")
+    prefix = f"/remote.php/dav/files/{_current_username}/"
+    if not path:
+        return prefix
+    return prefix + path.lstrip("/")
+
+
+async def _get_resource_type(full_path: str) -> str:
+    try:
+        results = await get_client().webdav_list_directory(full_path, get_user_token(), depth=0, include_all_fields=True)
+        if results and isinstance(results, list) and len(results) > 0:
+            rt = results[0].get("resourcetype", [])
+            if isinstance(rt, list) and "collection" in rt:
+                return "folder"
+            return "file"
+    except Exception:
+        pass
+    return ""
+
+
 # =============================================================================
 # Pydantic Contract Models & Tools
 # =============================================================================
@@ -930,6 +957,207 @@ async def webdav_list_favorites(
     """
     data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     return {"items": json_to_toon(data)}
+
+
+# =============================================================================
+# Simple File / Folder Operations (relative paths, auto-resolve username)
+# =============================================================================
+
+# --- File Operations (CRUD) ---
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def write_file(
+    path: str,
+    content: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create or overwrite a file.
+    Args:
+        path: Relative path (e.g. Documents/notes.txt).
+        content: Content to write.
+    """
+    full_path = await _resolve_path(path)
+    return await get_client().webdav_write_file(full_path, content, get_user_token(), ALLOW_ALL_AGGREGATE)
+
+
+@mcp.tool(tags={"read", "basic", "nextcloud"})
+async def read_file(
+    path: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Read file content.
+    Args:
+        path: Relative path (e.g. Documents/notes.txt).
+    """
+    full_path = await _resolve_path(path)
+    return {"content": await get_client().webdav_read_file(full_path, get_user_token())}
+
+
+@mcp.tool(tags={"read", "basic", "nextcloud"})
+async def search_files(
+    query: str,
+    limit: int = 50,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Search files by name.
+    Args:
+        query: Search term.
+        limit: Maximum results. Defaults to 50.
+    """
+    data = await get_client().webdav_search_files(query, get_user_token(), limit, "", ALLOW_ALL_AGGREGATE)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def move_file(
+    source: str,
+    destination: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Move or rename a file.
+    Args:
+        source: Source relative path.
+        destination: Destination relative path.
+    """
+    src = await _resolve_path(source)
+    dst = await _resolve_path(destination)
+    return await get_client().webdav_move_resource(src, dst, get_user_token())
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def copy_file(
+    source: str,
+    destination: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Copy a file.
+    Args:
+        source: Source relative path.
+        destination: Destination relative path.
+    """
+    src = await _resolve_path(source)
+    dst = await _resolve_path(destination)
+    return await get_client().webdav_copy_resource(src, dst, get_user_token())
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def delete_file(
+    path: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a file. Errors if the path is a folder.
+    Args:
+        path: Relative path to the file.
+    """
+    full_path = await _resolve_path(path)
+    rtype = await _get_resource_type(full_path)
+    if rtype == "folder":
+        return {"error": f"'{path}' is a folder — use delete_folder instead"}
+    return await get_client().webdav_delete_resource(full_path, get_user_token())
+
+
+# --- Folder Operations (CRUD) ---
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def create_folder(
+    path: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a directory.
+    Args:
+        path: Relative path (e.g. Documents/NewFolder).
+    """
+    full_path = await _resolve_path(path)
+    return await get_client().webdav_create_directory(full_path, get_user_token(), ALLOW_ALL_AGGREGATE)
+
+
+@mcp.tool(tags={"read", "basic", "nextcloud"})
+async def show_folder(
+    path: str = "",
+    depth: int = 1,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Show contents of a folder. Empty path lists top-level files/folders.
+    Args:
+        path: Relative path. Empty = root.
+        depth: Directory depth. Defaults to 1.
+    """
+    full_path = await _resolve_path(path)
+    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, ALLOW_ALL_AGGREGATE)
+    return {"items": json_to_toon(data)}
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def move_folder(
+    source: str,
+    destination: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Move or rename a folder and all its contents.
+    Args:
+        source: Source relative path.
+        destination: Destination relative path.
+    """
+    src = await _resolve_path(source)
+    dst = await _resolve_path(destination)
+    return await get_client().webdav_move_resource(src, dst, get_user_token())
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def copy_folder(
+    source: str,
+    destination: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Copy a folder and all its contents.
+    Args:
+        source: Source relative path.
+        destination: Destination relative path.
+    """
+    src = await _resolve_path(source)
+    dst = await _resolve_path(destination)
+    return await get_client().webdav_copy_resource(src, dst, get_user_token())
+
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def delete_folder(
+    path: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Delete a folder. Errors if the path is a file.
+    Args:
+        path: Relative path to the folder.
+    """
+    full_path = await _resolve_path(path)
+    rtype = await _get_resource_type(full_path)
+    if rtype == "file":
+        return {"error": f"'{path}' is a file — use delete_file instead"}
+    return await get_client().webdav_delete_resource(full_path, get_user_token())
+
+
+# --- Bulk Operations ---
+
+@mcp.tool(tags={"write", "basic", "nextcloud"})
+async def move_files(
+    files: list[str],
+    destination: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Move multiple files into a target directory.
+    Args:
+        files: List of relative paths to files.
+        destination: Target directory relative path.
+    """
+    dest_base = await _resolve_path(destination)
+    dest_base = dest_base.rstrip("/") + "/"
+    results = []
+    for f in files:
+        src = await _resolve_path(f)
+        filename = f.rstrip("/").split("/")[-1] or f
+        dst = dest_base + filename
+        await get_client().webdav_move_resource(src, dst, get_user_token())
+        results.append({"file": f, "status": "moved"})
+    return {"results": results}
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
