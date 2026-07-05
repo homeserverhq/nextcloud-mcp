@@ -14,6 +14,7 @@ from .client import NextcloudClient
 _current_user_token: ContextVar[Optional[str]] = ContextVar("current_user_token", default=None)
 
 ALLOW_ALL_AGGREGATE = os.getenv("ALLOW_ALL_AGGREGATE", "false").lower() in ("true", "1", "yes")
+IS_STATEFUL = os.getenv("IS_STATEFUL", "false").lower() in ("true", "1", "yes")
 
 
 class AuthMiddleware:
@@ -3232,7 +3233,10 @@ def main():
     host = "0.0.0.0"
     port = int(port_env)
     path = "/mcp"
-    app = mcp.http_app(path=path, json_response=True)
+    if IS_STATEFUL:
+        app = mcp.http_app(path=path, json_response=True)
+    else:
+        app = mcp.http_app(path=path, json_response=True, stateless_http=True)
     app = AuthMiddleware(app)
     print(f"Starting Nextcloud MCP server on http://{host}:{port}{path}")
     import uvicorn
