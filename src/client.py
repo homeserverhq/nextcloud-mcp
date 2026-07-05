@@ -1647,14 +1647,16 @@ class NextcloudClient:
         return await self.delete(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}", api_key, is_ocs=False)
 
     async def deck_archive_card(self, board_id: int, stack_id: int, card_id: int,
-                                 api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/archive",
+                                 api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/archive",
                               api_key, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_unarchive_card(self, board_id: int, stack_id: int, card_id: int,
-                                   api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/unarchive",
+                                   api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/unarchive",
                               api_key, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_list_labels(self, board_id: int, api_key: str = None, 
                                 include_all_fields: bool = False) -> Any:
@@ -1664,24 +1666,28 @@ class NextcloudClient:
         return []
 
     async def deck_assign_label(self, board_id: int, stack_id: int, card_id: int,
-                                 label_id: int, api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/assignLabel",
+                                 label_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/assignLabel",
                               api_key, json={"labelId": label_id}, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_remove_label(self, board_id: int, stack_id: int, card_id: int,
-                                 label_id: int, api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/removeLabel",
+                                 label_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/removeLabel",
                               api_key, json={"labelId": label_id}, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_assign_user(self, board_id: int, stack_id: int, card_id: int,
-                                user_id: str, api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/assignUser",
+                                user_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/assignUser",
                               api_key, json={"userId": user_id}, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_remove_user(self, board_id: int, stack_id: int, card_id: int,
-                                user_id: str, api_key: str = None) -> Any:
-        return await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/unassignUser",
+                                user_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
+        data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}/unassignUser",
                               api_key, json={"userId": user_id}, is_ocs=False)
+        return self._filter_fields(data, "card", include_all_fields)
 
     # =========================================================================
     # Domain: Mail (Custom API + OCS)

@@ -1722,8 +1722,8 @@ async def note_append_content(
         content: Content to append.
     """
     existing = await get_client().get_note(id, get_user_token())
-    combined = (existing.get("content", "") if isinstance(existing, dict) else "") + "\n" + content
-    return await get_client().update_note(id, {"content": combined}, get_user_token())
+    combined = (existing.get("content") or "") + "\n\n" + content
+    return await get_client().update_note(id, {"content": combined}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2041,7 +2041,7 @@ async def deck_archive_card(
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
     """
-    return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token())
+    return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2057,7 +2057,7 @@ async def deck_unarchive_card(
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
     """
-    return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token())
+    return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
@@ -2090,7 +2090,7 @@ async def deck_assign_label(
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
         label_id: Label ID. Get this from deck_list_labels(board_id).
     """
-    return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token())
+    return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2108,7 +2108,7 @@ async def deck_remove_label(
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
         label_id: Label ID. Get this from deck_list_labels(board_id).
     """
-    return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token())
+    return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2126,7 +2126,7 @@ async def deck_assign_user(
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
         user_id: User ID to assign.
     """
-    return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token())
+    return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"write", "advanced", "nextcloud"})
@@ -2144,7 +2144,7 @@ async def deck_remove_user(
         card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
         user_id: User ID to remove.
     """
-    return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token())
+    return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"read", "primary", "nextcloud"})
