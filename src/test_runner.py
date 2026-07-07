@@ -208,7 +208,7 @@ def main():
         run_test(session, "B list_predefined_statuses", "list_predefined_statuses", {})
         run_test(session, "B list_user_statuses", "list_user_statuses", {"limit": 5})
         run_test(session, "B list_upcoming_events", "list_upcoming_events", {"limit": 5})
-        run_test(session, "B get_folder_tree", "get_folder_tree", {"depth": 1})
+        run_test(session, "B list_full_files_folders", "list_full_files_folders", {"depth": 1})
         run_test(session, "B list_search_providers", "list_search_providers", {})
         run_test(session, "B get_capabilities", "get_capabilities", {})
         run_test(session, "B list_notifications", "list_notifications", {})

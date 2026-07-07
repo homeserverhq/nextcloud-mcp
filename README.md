@@ -95,7 +95,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `get_direct_download_url` — Get a direct download URL for a file
 
 ### 📁 File/Folder Operations (14 tools)
-- `get_folder_tree` — Get the folder tree structure
+- `list_full_files_folders` — Complete overview of every file and folder in Nextcloud
 - `write_file` — Create or overwrite a file
 - `read_file` — Read file content
 - `search_files` — Search files by name

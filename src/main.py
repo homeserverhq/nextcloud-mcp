@@ -645,7 +645,7 @@ async def get_direct_download_url(
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
-async def get_folder_tree(
+async def list_full_files_folders(
     depth: int = 3,
     path: str = "",
     include_all_fields: bool = False,
