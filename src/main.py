@@ -303,6 +303,7 @@ async def list_users(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List or search users.
+
     Args:
         search: Search term to filter users by.
         limit: Maximum results. Defaults to 100.
@@ -320,6 +321,7 @@ async def get_user(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single user by ID.
+
     Args:
         user_id: ID of the user. Get this from get_users().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -336,6 +338,7 @@ async def list_groups(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List or search groups.
+
     Args:
         limit: Maximum results. Defaults to 100.
         offset: Pagination offset. Defaults to 0.
@@ -355,6 +358,7 @@ async def list_group_members(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get members of a group.
+
     Args:
         group_id: ID of the group. Get this from get_groups().
         limit: Maximum results. Defaults to 100.
@@ -371,6 +375,7 @@ async def list_all_shares(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all shares.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -386,6 +391,7 @@ async def list_shares_by_path(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get shares filtered by file path.
+
     Args:
         path: File path to filter by.
         shared_with_me: Set to True to only show shares received from others. Defaults to False.
@@ -402,6 +408,7 @@ async def get_share(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single share by ID.
+
     Args:
         id: ID of the share. Get this from list_all_shares().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -423,6 +430,7 @@ async def create_share(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new share.
+
     Args:
         path: Path to the file or folder to share.
         share_type: user, group, public, federated, or circle share.
@@ -447,6 +455,7 @@ async def update_share(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update an existing share.
+
     Args:
         id: ID of the share to update. Get this from list_all_shares().
         permissions: read, update, create, delete, share, or all.
@@ -466,6 +475,7 @@ async def delete_share(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a share by ID.
+
     Args:
         id: ID of the share to delete. Get this from list_all_shares().
     """
@@ -481,6 +491,7 @@ async def get_user_status(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the current user's status.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -493,6 +504,7 @@ async def set_status(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set the user status type.
+
     Args:
         status_type: Status type (online, away, dnd, invisible).
     """
@@ -506,6 +518,7 @@ async def set_predefined_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a predefined status message.
+
     Args:
         message_id: ID of the predefined message. Get this from get_predefined_statuses() (e.g. "meeting", "commuting").
         clear_at: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -521,6 +534,7 @@ async def set_custom_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a custom status message with icon.
+
     Args:
         message: Custom status message text.
         status_icon: Emoji icon for the status.
@@ -542,6 +556,7 @@ async def list_predefined_statuses(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List available predefined statuses.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -556,6 +571,7 @@ async def list_user_statuses(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all user statuses.
+
     Args:
         limit: Maximum results. Defaults to 100.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -571,6 +587,7 @@ async def get_ooo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get out-of-office settings for a user.
+
     Args:
         user_id: ID of the user. Get this from get_users().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -587,6 +604,7 @@ async def set_ooo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set out-of-office settings.
+
     Args:
         first_day: ISO 8601 format (2026-06-22T15:00:00-04:00).
         last_day: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -608,6 +626,7 @@ async def clear_ooo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Clear out-of-office for a user.
+
     Args:
         user_id: ID of the user. Get this from get_users().
     """
@@ -623,6 +642,7 @@ async def list_upcoming_events(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get upcoming events.
+
     Args:
         location: Location to filter events by.
         limit: Maximum results. Defaults to 20.
@@ -638,6 +658,7 @@ async def get_direct_download_url(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a direct download URL for a file.
+
     Args:
         file_id: ID of the file.
     """
@@ -654,6 +675,7 @@ async def list_full_files_folders(
     """Complete overview of every file and folder in Nextcloud.
     Shows the full directory structure from any path down to the
     specified depth.
+
     Args:
         depth: Maximum depth. Defaults to 3.
         path: Relative path from user root (e.g. Documents/Subfolder). Empty = root.
@@ -670,6 +692,7 @@ async def get_collection_by_id(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get collection details by ID.
+
     Args:
         id: Collection ID.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -685,6 +708,7 @@ async def search_collections(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search collections.
+
     Args:
         search: Search term.
         limit: Maximum results. Defaults to 50.
@@ -700,6 +724,7 @@ async def search_collections_raw(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search collections (returns raw JSON). Use this for data extraction.
+
     Args:
         search: Search term.
     """
@@ -715,6 +740,7 @@ async def list_collections_by_resource(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get collections for a specific resource.
+
     Args:
         resource_type: Type of resource.
         resource_id: ID of resource.
@@ -732,6 +758,7 @@ async def create_collection(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a collection on a resource.
+
     Args:
         resource_type: Type of resource (default: "file").
         resource_id: ID of resource.
@@ -747,6 +774,7 @@ async def get_file_reminder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the reminder for a file.
+
     Args:
         file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -761,6 +789,7 @@ async def set_file_reminder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a reminder on a file.
+
     Args:
         file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -777,6 +806,7 @@ async def delete_file_reminder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete the reminder on a file.
+
     Args:
         file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
     """
@@ -792,6 +822,7 @@ async def list_search_providers(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all search providers.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -809,6 +840,7 @@ async def search(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Unified search across Nextcloud.
+
     Args:
         provider_id: Search provider ID. Get this from get_search_providers() (e.g. "files", "calendar", "deck").
         term: Search term.
@@ -826,6 +858,7 @@ async def get_capabilities(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get server capabilities.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -845,6 +878,7 @@ async def write_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create or overwrite a file.
+
     Args:
         path: Relative path (e.g. Documents/notes.txt).
         content: Content to write.
@@ -859,6 +893,7 @@ async def read_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Read file content.
+
     Args:
         path: Relative path (e.g. Documents/notes.txt).
     """
@@ -875,6 +910,7 @@ async def search_files(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search files by name.
+
     Args:
         query: Search term.
         limit: Maximum results. Defaults to 50.
@@ -892,6 +928,7 @@ async def move_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move or rename a file.
+
     Args:
         source: Source relative path.
         destination: Destination relative path.
@@ -908,6 +945,7 @@ async def copy_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Copy a file.
+
     Args:
         source: Source relative path.
         destination: Destination relative path.
@@ -923,6 +961,7 @@ async def delete_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a file. Errors if the path is a folder.
+
     Args:
         path: Relative path to the file.
     """
@@ -941,6 +980,7 @@ async def create_folder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a directory.
+
     Args:
         path: Relative path (e.g. Documents/NewFolder).
     """
@@ -956,6 +996,7 @@ async def show_folder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Show contents of a folder. Empty path lists top-level files/folders.
+
     Args:
         path: Relative path. Empty = root.
         depth: Directory depth. Defaults to 1.
@@ -973,6 +1014,7 @@ async def move_folder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move or rename a folder and all its contents.
+
     Args:
         source: Source relative path.
         destination: Destination relative path.
@@ -989,6 +1031,7 @@ async def copy_folder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Copy a folder and all its contents.
+
     Args:
         source: Source relative path.
         destination: Destination relative path.
@@ -1004,6 +1047,7 @@ async def delete_folder(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a folder. Errors if the path is a file.
+
     Args:
         path: Relative path to the folder.
     """
@@ -1023,6 +1067,7 @@ async def move_files(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move multiple files into a target directory.
+
     Args:
         files: List of relative paths to files.
         destination: Target directory relative path.
@@ -1046,6 +1091,7 @@ async def list_favorites(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List favorite files.
+
     Args:
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1060,6 +1106,7 @@ async def list_notifications(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all notifications.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1074,6 +1121,7 @@ async def get_notification(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single notification by ID.
+
     Args:
         id: Notification ID. Get this from list_notifications().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1087,6 +1135,7 @@ async def delete_notification(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a notification by ID.
+
     Args:
         id: Notification ID to delete. Get this from list_notifications().
     """
@@ -1113,6 +1162,7 @@ async def create_notification(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a notification for a user (admin only).
+
     Args:
         user_id: ID of the user to notify.
         subject: Subject of the notification, max 255 chars.
@@ -1131,6 +1181,7 @@ async def list_activities(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the activity stream.
+
     Args:
         limit: Maximum results. Defaults to 50.
         sort: Sort order. e.g. 'date' (default), 'subject'.
@@ -1148,6 +1199,7 @@ async def list_activity_filters(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get available activity filters.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1163,6 +1215,7 @@ async def list_activity_filtered(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get filtered activity stream.
+
     Args:
         filter_name: Filter name. Get this from activity_get_filters() (e.g. "all", "self").
         limit: Maximum results. Defaults to 50.
@@ -1178,6 +1231,7 @@ async def list_all_calendars(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all calendars.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1192,6 +1246,7 @@ async def create_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new calendar.
+
     Args:
         display_name: Display name for the calendar.
         color: Calendar color in #RRGGBB format (e.g. #FF0000 for red).
@@ -1208,6 +1263,7 @@ async def update_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a calendar's properties.
+
     Args:
         calendar_uri: URI of the calendar to update. Get this from list_calendars().
         display_name: New display name.
@@ -1223,6 +1279,7 @@ async def delete_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a calendar.
+
     Args:
         calendar_uri: URI of the calendar to delete. Get this from list_calendars().
     """
@@ -1236,6 +1293,7 @@ async def get_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single calendar by URI.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1252,6 +1310,7 @@ async def list_all_events(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List events from ALL calendars.
+
     Args:
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         to_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1281,6 +1340,7 @@ async def list_events_by_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List events in a specific calendar.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1300,6 +1360,7 @@ async def get_event(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single calendar event.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         event_uid: UID of the event. Get this from get_events_by_calendar(calendar_uri).
@@ -1322,6 +1383,7 @@ async def create_event(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new calendar event.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         summary: Event title.
@@ -1350,6 +1412,7 @@ async def update_event(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a calendar event.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         event_uid: UID of the event to update. Get this from get_events_by_calendar(calendar_uri).
@@ -1371,6 +1434,7 @@ async def delete_event(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a calendar event.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         event_uid: UID of the event to delete. Get this from get_events_by_calendar(calendar_uri).
@@ -1390,6 +1454,7 @@ async def create_meeting(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Quickly create a meeting with attendees.
+
     Args:
         summary: Meeting title.
         dtstart: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1412,6 +1477,7 @@ async def find_availability(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Find availability across calendars.
+
     Args:
         calendar_uris: Comma-separated calendar URIs. Get these from list_calendars().
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1427,6 +1493,7 @@ async def list_todos(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List TODO items from ALL calendars.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1450,6 +1517,7 @@ async def list_todos_by_calendar(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List TODO items in a specific calendar.
+
     Args:
         calendar_uri: URI of the calendar. Get this from list_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1469,6 +1537,7 @@ async def create_todo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new TODO item.
+
     Args:
         summary: TODO title.
         description: TODO description.
@@ -1489,6 +1558,7 @@ async def get_todo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single TODO item by UID.
+
     Args:
         todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
@@ -1509,6 +1579,7 @@ async def update_todo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a TODO item.
+
     Args:
         todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
@@ -1529,6 +1600,7 @@ async def delete_todo(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a TODO item.
+
     Args:
         todo_uid: UID of the todo to delete. Get this from todo_get_by_calendar(calendar_uri).
         calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
@@ -1545,6 +1617,7 @@ async def search_todos(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search TODO items by title or description.
+
     Args:
         query: Search term.
         calendar_uri: Calendar URI to search in. Get this from list_calendars(). If omitted, uses default task calendar.
@@ -1561,6 +1634,7 @@ async def list_all_addressbooks(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all address books.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1575,6 +1649,7 @@ async def create_addressbook(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new address book.
+
     Args:
         display_name: Display name.
         description: Description.
@@ -1589,6 +1664,7 @@ async def delete_addressbook(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete an address book.
+
     Args:
         addressbook_uri: URI of the address book to delete. Get this from list_addressbooks().
     """
@@ -1602,6 +1678,7 @@ async def get_addressbook(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single address book by URI.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1617,6 +1694,7 @@ async def update_addressbook(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update an address book's properties.
+
     Args:
         addressbook_uri: URI of the address book to update. Get this from list_addressbooks().
         display_name: New display name.
@@ -1633,6 +1711,7 @@ async def list_all_contacts(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List contacts from ALL address books.
+
     Args:
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1658,6 +1737,7 @@ async def list_contacts_by_addressbook(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List contacts in a specific address book.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         limit: Maximum results. Defaults to 50.
@@ -1675,6 +1755,7 @@ async def get_contact(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single contact by UID.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         contact_uid: UID of the contact. Get this from get_contacts_by_addressbook(addressbook_uri).
@@ -1694,6 +1775,7 @@ async def create_contact(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new contact.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         fn: Full name.
@@ -1718,6 +1800,7 @@ async def update_contact(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a contact.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         contact_uid: UID of the contact to update. Get this from get_contacts_by_addressbook(addressbook_uri).
@@ -1738,6 +1821,7 @@ async def delete_contact(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a contact.
+
     Args:
         addressbook_uri: URI of the address book. Get this from list_addressbooks().
         contact_uid: UID of the contact to delete. Get this from get_contacts_by_addressbook(addressbook_uri).
@@ -1751,6 +1835,7 @@ async def list_notes(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all notes.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1765,6 +1850,7 @@ async def list_notes_by_category(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get notes filtered by category.
+
     Args:
         category: Category to filter by.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1780,6 +1866,7 @@ async def get_note(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single note by ID.
+
     Args:
         id: Note ID. Get this from note_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1795,6 +1882,7 @@ async def create_note(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new note.
+
     Args:
         title: Note title.
         content: Note content.
@@ -1814,6 +1902,7 @@ async def update_note(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a note.
+
     Args:
         id: Note ID. Get this from note_list().
         title: New title.
@@ -1831,6 +1920,7 @@ async def delete_note(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a note by ID.
+
     Args:
         id: Note ID to delete. Get this from note_list().
     """
@@ -1845,6 +1935,7 @@ async def append_note_content(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Append content to an existing note.
+
     Args:
         id: Note ID. Get this from note_list().
         content: Content to append.
@@ -1862,6 +1953,7 @@ async def search_notes(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search notes by title or content.
+
     Args:
         query: Search term.
         limit: Maximum results. Defaults to 50.
@@ -1882,6 +1974,7 @@ async def get_note_attachment(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get an attachment from a note.
+
     Args:
         note_id: Note ID.
         path: Filename of the attachment within the Notes folder.
@@ -1895,6 +1988,7 @@ async def list_deck_boards(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all boards.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1909,6 +2003,7 @@ async def get_deck_board(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single board by ID.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1924,6 +2019,7 @@ async def create_deck_board(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new board.
+
     Args:
         title: Board title.
         color: Display color in #RRGGBB format (e.g. #FF0000 for red).
@@ -1942,6 +2038,7 @@ async def update_deck_board(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a board.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         title: New title.
@@ -1965,6 +2062,7 @@ async def list_deck_stacks(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List stacks in a board.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -1981,6 +2079,7 @@ async def create_deck_stack(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new stack in a board.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         title: Stack title.
@@ -1998,6 +2097,7 @@ async def get_deck_stack(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single stack by ID.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2015,6 +2115,7 @@ async def update_deck_stack(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a stack.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2037,6 +2138,7 @@ async def list_deck_cards(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List cards in a stack.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2055,6 +2157,7 @@ async def get_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single card by ID.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2075,6 +2178,7 @@ async def create_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2100,6 +2204,7 @@ async def update_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2120,6 +2225,7 @@ async def delete_deck_board(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a board by ID.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
     """
@@ -2133,6 +2239,7 @@ async def delete_deck_stack(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a stack by ID.
+
     Args:
         board_id: Board ID the stack belongs to.
         stack_id: Stack ID to delete. Get this from deck_list_stacks(board_id).
@@ -2148,6 +2255,7 @@ async def delete_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a card by ID.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2164,6 +2272,7 @@ async def archive_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Archive a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2180,6 +2289,7 @@ async def unarchive_deck_card(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Unarchive a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2195,6 +2305,7 @@ async def list_deck_labels(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List labels in a board.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2212,6 +2323,7 @@ async def assign_deck_label(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Assign a label to a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2230,6 +2342,7 @@ async def remove_deck_label(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Remove a label from a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2248,6 +2361,7 @@ async def assign_deck_user(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Assign a user to a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2266,6 +2380,7 @@ async def remove_deck_user(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Remove a user from a card.
+
     Args:
         board_id: Board ID. Get this from deck_list_boards().
         stack_id: Stack ID. Get this from deck_list_stacks(board_id).
@@ -2281,6 +2396,7 @@ async def list_all_accounts(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List mail accounts.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2295,6 +2411,7 @@ async def list_mailboxes(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List mailboxes in an account.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2312,6 +2429,7 @@ async def list_messages(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Sync and list messages in a mailbox.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         mailbox_db_id: Mailbox database ID (integer). Get this from list_mailboxes(account_id).
@@ -2330,6 +2448,7 @@ async def get_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single message by its database ID.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
@@ -2345,6 +2464,7 @@ async def get_message_body(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the body of a message by its database ID.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
@@ -2363,6 +2483,7 @@ async def send_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Send an email message.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         subject: Email subject.
@@ -2389,6 +2510,7 @@ async def create_email_draft(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a draft email saved to the IMAP Drafts folder.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         subject: Email subject.
@@ -2410,6 +2532,7 @@ async def set_message_flags(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set flags on a message (read/unread, starred).
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
@@ -2429,6 +2552,7 @@ async def move_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move a message to a different mailbox.
+
     Args:
         account_id: Account ID. Get this from list_accounts().
         message_id: Message database ID to move. Get this from list_messages(account_id, mailbox_db_id).
@@ -2444,6 +2568,7 @@ async def list_talk_rooms(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all Talk conversations available to the current user.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2458,6 +2583,7 @@ async def create_talk_room(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new Talk conversation room.
+
     Args:
         room_type: one-to-one, group, or public room.
         room_name: Name for the room.
@@ -2472,6 +2598,7 @@ async def delete_talk_room(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a Talk conversation room.
+
     Args:
         token: Room token to delete.
     """
@@ -2485,6 +2612,7 @@ async def update_talk_room(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Rename a Talk conversation room.
+
     Args:
         token: Room token to rename.
         room_name: New name for the room (up to 255 characters).
@@ -2499,6 +2627,7 @@ async def set_talk_description(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set the description of a Talk conversation room.
+
     Args:
         token: Room token.
         description: Description text.
@@ -2513,6 +2642,7 @@ async def list_talk_participants(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List participants in a Talk conversation room.
+
     Args:
         token: Room token.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2529,6 +2659,7 @@ async def add_talk_participant(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Add a participant to a Talk conversation room.
+
     Args:
         token: Room token.
         new_participant: User, group, email, or circle to add.
@@ -2544,6 +2675,7 @@ async def remove_talk_participant(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Remove a participant from a Talk conversation room by attendee ID.
+
     Args:
         token: Room token.
         attendee_id: Attendee ID to remove. Get this from talk_list_participants(token).
@@ -2558,6 +2690,7 @@ async def send_chat_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Send a chat message to a Talk conversation.
+
     Args:
         token: Conversation token. Get this from creating a Talk room.
         message: Message text.
@@ -2574,6 +2707,7 @@ async def list_chat_messages(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get chat messages from a Talk conversation.
+
     Args:
         token: Conversation token. Get this from creating a Talk room.
         limit: Maximum results. Defaults to 50.
@@ -2591,6 +2725,7 @@ async def delete_chat_message(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a chat message from a Talk conversation.
+
     Args:
         token: Conversation token. Get this from creating a Talk room.
         message_id: Message ID to delete. Get this from get_chat_messages(token).
@@ -2604,6 +2739,7 @@ async def list_tables(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all tables.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2618,6 +2754,7 @@ async def get_table(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single table by ID.
+
     Args:
         table_id: Table ID. Get this from table_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2633,6 +2770,7 @@ async def create_table(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new table.
+
     Args:
         title: Table title.
         description: Table description.
@@ -2651,6 +2789,7 @@ async def update_table(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a table.
+
     Args:
         table_id: Table ID. Get this from table_list().
         title: New title.
@@ -2667,6 +2806,7 @@ async def delete_table(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a table by ID.
+
     Args:
         table_id: Table ID to delete. Get this from table_list().
     """
@@ -2680,6 +2820,7 @@ async def get_table_schema(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get the schema of a table.
+
     Args:
         table_id: Table ID. Get this from table_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2696,6 +2837,7 @@ async def list_table_rows(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List rows in a table.
+
     Args:
         table_id: Table ID. Get this from table_list().
         limit: Maximum results. Defaults to 50.
@@ -2713,6 +2855,7 @@ async def create_table_row(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Insert a new row in a table.
+
     Args:
         table_id: Table ID. Get this from table_list().
         data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
@@ -2727,6 +2870,7 @@ async def get_table_row(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single row from a table.
+
     Args:
         row_id: Row ID. Get this from table_list_rows(table_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2741,6 +2885,7 @@ async def update_table_row(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update an existing row in a table.
+
     Args:
         row_id: Row ID. Get this from table_list_rows(table_id).
         data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
@@ -2754,6 +2899,7 @@ async def delete_table_row(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a row from a table.
+
     Args:
         row_id: Row ID to delete. Get this from table_list_rows(table_id).
     """
@@ -2766,6 +2912,7 @@ async def list_collectives(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all collectives.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2780,6 +2927,7 @@ async def create_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new collective.
+
     Args:
         name: Collective name.
         emoji: Collective emoji.
@@ -2795,6 +2943,7 @@ async def get_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single collective by ID.
+
     Args:
         id: Collective ID. Get this from collectives_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2810,6 +2959,7 @@ async def update_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a collective's properties.
+
     Args:
         id: Collective ID. Get this from collectives_list().
         name: New name.
@@ -2830,6 +2980,7 @@ async def update_collective_emoji(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a collective's emoji.
+
     Args:
         id: Collective ID. Get this from collectives_list().
         emoji: New emoji.
@@ -2843,6 +2994,7 @@ async def trash_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Soft-delete a collective (move to trash).
+
     Args:
         id: Collective ID. Get this from collectives_list().
     """
@@ -2855,6 +3007,7 @@ async def restore_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Restore a collective from trash.
+
     Args:
         id: Collective ID. Get this from collectives_list().
     """
@@ -2867,6 +3020,7 @@ async def delete_collective(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Permanently delete a collective.
+
     Args:
         id: Collective ID. Get this from collectives_list().
     """
@@ -2879,6 +3033,7 @@ async def list_trashed_collectives(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List trashed collectives.
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2893,6 +3048,7 @@ async def list_collective_pages(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List pages in a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2909,6 +3065,7 @@ async def get_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single page from a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -2925,6 +3082,7 @@ async def create_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new page in a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         title: Page title.
@@ -2941,6 +3099,7 @@ async def trash_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Soft-delete a page (move to trash).
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -2955,6 +3114,7 @@ async def restore_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Restore a page from trash.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -2969,6 +3129,7 @@ async def delete_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Permanently delete a page.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -2988,6 +3149,7 @@ async def move_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Move or copy a page to another collective.
+
     Args:
         collective_id: Source collective ID. Get this from collectives_list().
         page_id: Page ID to move. Get this from collectives_list_pages(collective_id).
@@ -3007,6 +3169,7 @@ async def set_collective_page_emoji(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set the emoji for a page.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -3023,6 +3186,7 @@ async def set_collective_page_full_width(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set the full-width display for a page.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -3042,6 +3206,7 @@ async def update_collective_page(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a page's properties.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -3071,6 +3236,7 @@ async def search_collective_pages(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Search pages within a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         query: Search query.
@@ -3088,6 +3254,7 @@ async def list_collective_tags(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List tags in a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -3104,6 +3271,7 @@ async def get_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a single tag by ID.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
@@ -3120,6 +3288,7 @@ async def create_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a tag in a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         name: Tag name.
@@ -3138,6 +3307,7 @@ async def update_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a tag in a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
@@ -3156,6 +3326,7 @@ async def delete_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a tag from a collective.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
@@ -3172,6 +3343,7 @@ async def assign_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Assign a tag to a page.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -3188,6 +3360,7 @@ async def remove_collective_tag(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Remove a tag from a page.
+
     Args:
         collective_id: Collective ID. Get this from collectives_list().
         page_id: Page ID. Get this from collectives_list_pages(collective_id).
@@ -3202,6 +3375,7 @@ async def list_circles(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all Circles (Teams).
+
     Args:
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -3215,6 +3389,7 @@ async def get_circle(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get a Circle by ID.
+
     Args:
         circle_id: Circle ID.
     """
@@ -3227,6 +3402,7 @@ async def create_circle(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new Circle (Team).
+
     Args:
         name: Circle name.
     """
@@ -3241,6 +3417,7 @@ async def update_circle(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update a Circle's properties.
+
     Args:
         circle_id: Circle ID.
         name: New name for the circle.
@@ -3255,6 +3432,7 @@ async def delete_circle(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Delete a Circle (Team) by ID.
+
     Args:
         circle_id: Circle ID to delete. Get this from list_circles().
     """
@@ -3269,6 +3447,7 @@ async def add_circle_member(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Add a user to a Circle (Team).
+
     Args:
         circle_id: Circle ID. Get this from circle_list().
         user_id: User ID to add to the circle.
@@ -3284,6 +3463,7 @@ async def remove_circle_member(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Remove a member from a Circle (Team).
+
     Args:
         circle_id: Circle ID. Get this from circle_list().
         member_id: Member ID to remove. Get this from circle_list_members().
@@ -3299,6 +3479,7 @@ async def list_circle_members(
     ctx: Context = None
 ) -> dict[str, Any]:
     """List all members of a Circle (Team).
+
     Args:
         circle_id: Circle ID. Get this from circle_list().
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -3316,6 +3497,7 @@ async def update_circle_member_level(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Change a member's level in a Circle (Team).
+
     Args:
         circle_id: Circle ID. Get this from circle_list().
         member_id: Member ID. Get this from circle_list_members().
