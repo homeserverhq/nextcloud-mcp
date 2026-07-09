@@ -769,6 +769,18 @@ class NextcloudClient:
                                    api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self._dav_copy(source, destination, api_key)
 
+    async def webdav_touch_file(self, path: str, api_key: str = None) -> None:
+        try:
+            content = await self._dav_get(path, api_key)
+            props = self._propfind_xml(["d:getcontenttype"])
+            meta = await self._dav_request("PROPFIND", path, api_key, body=props, extra_headers={"Depth": "0"})
+            ct = "application/octet-stream"
+            if isinstance(meta, list) and meta and isinstance(meta[0], dict):
+                ct = meta[0].get("getcontenttype", ct) or ct
+            await self._dav_put(path, content, api_key, content_type=ct)
+        except Exception:
+            pass
+
     async def webdav_search_files(self, query: str, api_key: str = None, 
                                   limit: int = 50, mime_type: str = "",
                                   include_all_fields: bool = False) -> Any:

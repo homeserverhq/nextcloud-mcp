@@ -1092,6 +1092,7 @@ async def move_file(
     dst = await _resolve_path(destination)
     try:
         result = await get_client().webdav_move_resource(src, dst, get_user_token())
+        await get_client().webdav_touch_file(dst, get_user_token())
         return {"status": "success", "message": f"Moved '{source}' to '{destination}'.", **result}
     except Exception as e:
         err = str(e).lower()
@@ -1118,6 +1119,7 @@ async def copy_file(
     dst = await _resolve_path(destination)
     try:
         result = await get_client().webdav_copy_resource(src, dst, get_user_token())
+        await get_client().webdav_touch_file(dst, get_user_token())
         return {"status": "success", "message": f"Copied '{source}' to '{destination}'.", **result}
     except Exception as e:
         err = str(e).lower()
@@ -1275,6 +1277,7 @@ async def move_files(
         dst = dest_base + filename
         try:
             await get_client().webdav_move_resource(src, dst, get_user_token())
+            await get_client().webdav_touch_file(dst, get_user_token())
             results.append({"file": f, "status": "moved"})
         except Exception as e:
             results.append({"file": f, "status": "error", "error": str(e)})
