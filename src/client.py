@@ -345,6 +345,14 @@ class NextcloudClient:
         response.raise_for_status()
         return {"status": response.status_code}
 
+    async def _get_dav_content_type(self, path: str, api_key: str = None) -> str:
+        props = self._propfind_xml(["d:getcontenttype"])
+        meta = await self._dav_request("PROPFIND", path, api_key, body=props, extra_headers={"Depth": "0"})
+        ct = "application/octet-stream"
+        if isinstance(meta, list) and meta and isinstance(meta[0], dict):
+            ct = meta[0].get("getcontenttype", ct) or ct
+        return ct
+
     def _full_dav_url(self, path: str) -> str:
         base = self.base_url.rstrip("/")
         return f"{base}{path}"
@@ -356,6 +364,12 @@ class NextcloudClient:
         response = await self._request_with_retry("MOVE", url, headers, timeout=60.0)
         if response.status_code in (200, 201, 204):
             return {"status": response.status_code}
+        if response.status_code == 403:
+            content = await self._dav_get(source, api_key)
+            ct = await self._get_dav_content_type(source, api_key)
+            await self._dav_put(destination, content, api_key, content_type=ct)
+            await self._dav_delete(source, api_key)
+            return {"status": 201}
         response.raise_for_status()
         return {"status": response.status_code}
 
@@ -366,6 +380,11 @@ class NextcloudClient:
         response = await self._request_with_retry("COPY", url, headers, timeout=60.0)
         if response.status_code in (200, 201, 204):
             return {"status": response.status_code}
+        if response.status_code == 403:
+            content = await self._dav_get(source, api_key)
+            ct = await self._get_dav_content_type(source, api_key)
+            await self._dav_put(destination, content, api_key, content_type=ct)
+            return {"status": 201}
         response.raise_for_status()
         return {"status": response.status_code}
 
@@ -772,11 +791,7 @@ class NextcloudClient:
     async def webdav_touch_file(self, path: str, api_key: str = None) -> None:
         try:
             content = await self._dav_get(path, api_key)
-            props = self._propfind_xml(["d:getcontenttype"])
-            meta = await self._dav_request("PROPFIND", path, api_key, body=props, extra_headers={"Depth": "0"})
-            ct = "application/octet-stream"
-            if isinstance(meta, list) and meta and isinstance(meta[0], dict):
-                ct = meta[0].get("getcontenttype", ct) or ct
+            ct = await self._get_dav_content_type(path, api_key)
             await self._dav_put(path, content, api_key, content_type=ct)
         except Exception:
             pass
