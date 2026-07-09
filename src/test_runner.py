@@ -9,6 +9,7 @@ a real functional test that verifies backend operation succeeded.
 import base64
 import json
 import os
+import re
 import sys
 import time
 import uuid
@@ -169,12 +170,48 @@ def find_message_by_subject(messages_data, subject):
 DT = "2026-12-31T23:59:00+00:00"
 
 
+def _cleanup_test_collectives(session):
+    """Delete orphaned test collectives matching t*-Coll pattern.
+    Returns the number deleted.
+    """
+    count = 0
+    pattern = re.compile(r"^t[a-f0-9]+-Coll$")
+
+    def name_match(item):
+        return pattern.match(item.get("name", "") or item.get("displayName", "") or "")
+
+    # Clean active collectives
+    list_result = session.call_tool("list_collectives", {})
+    list_data = extract_content(list_result)
+    if list_data and isinstance(list_data, dict):
+        items = get_list_items(list_data)
+        for coll in items:
+            if name_match(coll):
+                coll_id = coll["id"]
+                session.call_tool("trash_collective", {"id": coll_id})
+                session.call_tool("delete_collective", {"id": coll_id})
+                count += 1
+
+    # Clean trashed collectives
+    trash_result = session.call_tool("list_trashed_collectives", {})
+    trash_data = extract_content(trash_result)
+    if trash_data and isinstance(trash_data, dict):
+        items = get_list_items(trash_data)
+        for coll in items:
+            if name_match(coll):
+                session.call_tool("delete_collective", {"id": coll["id"]})
+                count += 1
+
+    return count
+
+
 # =============================================================================
 # Main Test Runner
 # =============================================================================
 
 def main():
     global ITERATION
+    global passed_count, failed_count
 
     print(f"# Test Report — Nextcloud MCP Server")
     print(f"\n**Date**: {time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())}")
@@ -191,6 +228,13 @@ def main():
         tool_names = list(map(lambda t: t["name"], tools_list))
         print(f"**Discovered**: {len(tool_names)} tools")
         log(f"Tools: {', '.join(sorted(tool_names))}")
+
+        # ------------------------------------------------------------------
+        # Phase 0A: Pre-Creation Cleanup — delete orphaned test collectives
+        # ------------------------------------------------------------------
+        log("\n=== Phase 0A: Pre-Creation Cleanup ===")
+        _ca_count = _cleanup_test_collectives(session)
+        log(f"  Cleaned {_ca_count} orphaned test collective(s) from .Collectives/")
 
         # ------------------------------------------------------------------
         # Phase 1: Status / Health Checks
@@ -541,7 +585,6 @@ def main():
         c5o_emoji = c5o_data.get("emoji", "")
         emoji_ok = c5o_emoji == "⭐"
         results.append({"label":"5O verify_update_emoji","tool":"list_collectives","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
-        global passed_count, failed_count
         passed_count = passed_count + 1
         failed_count = failed_count + (1, 0)[emoji_ok]
         log(f"  {('FAILED','PASSED')[emoji_ok]} 5O verify_update_emoji")
@@ -673,6 +716,17 @@ def main():
         run_verify_delete(session, "3E verify_delete_board", "get_deck_board", {"board_id": store["Board_id"]})
         run_verify_delete(session, "3E verify_delete_table", "get_table", {"table_id": store["Table_id"]})
         run_verify_delete(session, "3E verify_delete_note", "get_note", {"id": store["Note_id"]})
+
+        # ------------------------------------------------------------------
+        # Phase 3F: Post-Cleanup Leak Detection
+        # ------------------------------------------------------------------
+        log("\n=== Phase 3F: Leak Detection ===")
+        _cf_count = _cleanup_test_collectives(session)
+        _cf_has_leak = _cf_count > 0
+        results.append({"label": "3F leak_check", "tool": "list_collectives", "reason": "", "status": ("FAILED", "PASSED")[not _cf_has_leak], "data": {"leaked": _cf_count}})
+        passed_count = passed_count + 1
+        failed_count = failed_count + (1, 0)[not _cf_has_leak]
+        log(f"  {('FAILED','PASSED')[not _cf_has_leak]} 3F leak_check (leaked={_cf_count})")
 
         # ------------------------------------------------------------------
         # Report Summary

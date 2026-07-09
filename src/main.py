@@ -1,7 +1,10 @@
+import asyncio
 import json
 import os
+import re
 import sys
 import datetime as dt
+from collections.abc import Callable, Awaitable
 from contextvars import ContextVar
 from typing import Any, Optional
 
@@ -72,6 +75,100 @@ async def _get_resource_type(full_path: str) -> str:
     except Exception:
         pass
     return ""
+
+
+# =============================================================================
+# Search Utility Functions
+# =============================================================================
+
+def _tokenize(query: str, min_len: int = 2, max_tokens: int = 5) -> list[str]:
+    tokens = re.findall(r"[a-zA-Z0-9]+", query.lower())
+    tokens = list(dict.fromkeys(tokens))
+    tokens = [t for t in tokens if len(t) >= min_len]
+    return tokens[:max_tokens]
+
+
+def _text_matches(text: str, tokens: list[str]) -> bool:
+    text_lower = text.lower()
+    return all(t in text_lower for t in tokens)
+
+
+def _rank_matches(items: list[dict], tokens: list[str],
+                  fields: list[str]) -> list[tuple[dict, int]]:
+    scored = []
+    for item in items:
+        seen = set()
+        for f in fields:
+            val = item.get(f, "")
+            if isinstance(val, str):
+                val_lower = val.lower()
+                for t in tokens:
+                    if t in val_lower:
+                        seen.add(t)
+        scored.append((item, len(seen)))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored
+
+
+def _get_nested(item: dict, key_path: str):
+    parts = key_path.split(".")
+    val = item
+    for p in parts:
+        if isinstance(val, dict):
+            val = val.get(p)
+        else:
+            return None
+    return val
+
+
+async def _multi_token_search(
+    search_fn: Callable[[str], Awaitable[Any]],
+    query: str,
+    min_len: int = 2,
+    max_tokens: int = 5,
+    id_key: str = "",
+    require_all: bool = True,
+) -> tuple[Any, str]:
+    tokens = _tokenize(query, min_len, max_tokens)
+    if len(tokens) <= 1:
+        return await search_fn(query), ""
+
+    results = await asyncio.gather(*[search_fn(t) for t in tokens])
+
+    if require_all and id_key:
+        id_sets = []
+        for r in results:
+            ids = set()
+            for item in (r or []):
+                vid = _get_nested(item, id_key)
+                if vid is not None:
+                    ids.add(str(vid))
+            id_sets.append(ids)
+
+        common_ids = set.intersection(*id_sets) if id_sets else set()
+        if common_ids:
+            combined = []
+            seen = set()
+            for item in (results[0] or []):
+                vid = str(_get_nested(item, id_key))
+                if vid in common_ids and vid not in seen:
+                    seen.add(vid)
+                    combined.append(item)
+            return combined, ""
+
+    seen_ids = set()
+    combined = []
+    for r in results:
+        for item in (r or []):
+            vid = str(_get_nested(item, id_key)) if id_key else id(item)
+            if vid not in seen_ids:
+                seen_ids.add(vid)
+                combined.append(item)
+
+    msg = ""
+    if require_all and id_key and len(tokens) > 1:
+        msg = "No files matched all search terms. Showing results matching any term."
+    return combined, msg
 
 
 # =============================================================================
@@ -936,10 +1033,19 @@ async def search_files(
         mime_type: Filter by file type (e.g. 'text/plain', 'application/pdf').
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    tokens = _tokenize(query)
+    if len(tokens) <= 1:
+        data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+        msg = ""
+    else:
+        search_fn = lambda t: get_client().webdav_search_files(t, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+        data, msg = await _multi_token_search(search_fn, query, id_key="attributes.fileId")
     if not data:
         return {"status": "empty", "message": f"No files found matching '{query}'. File names are searched, not contents.", "next_steps": "Try different terms or use list_full_files_folders(path='') to browse folders."}
-    return {"status": "success", "message": f"Found {len(data)} file(s) matching '{query}'.", "items": json_to_toon(data)}
+    message = f"Found {len(data)} file(s) matching '{query}'."
+    if msg:
+        message += " " + msg
+    return {"status": "success", "message": message, "items": json_to_toon(data)}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1987,8 +2093,12 @@ async def search_notes(
     """
     data = await get_client().list_notes(get_user_token(), "", include_all_fields if ALLOW_ALL_AGGREGATE else False)
     if isinstance(data, list):
-        q = query.lower()
-        filtered = [n for n in data if q in n.get("title", "").lower() or q in n.get("content", "").lower()]
+        tokens = _tokenize(query)
+        if tokens:
+            filtered = [n for n in data if _text_matches(n.get("title", ""), tokens) or _text_matches(n.get("content", ""), tokens)]
+        else:
+            q = query.lower()
+            filtered = [n for n in data if q in n.get("title", "").lower() or q in n.get("content", "").lower()]
         data = filtered[:limit]
     return {"items": json_to_toon(data)}
 
