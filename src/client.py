@@ -83,7 +83,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "collective_page":  {"id", "title", "emoji", "parentId", "order", "lastModified", "webdav_location"},
     "collective_tag":   {"id", "name", "color"},
     "collection":       {"id", "name", "resources"},
-    "search_result":    {"id", "title", "subline", "link", "icon"},
+    "search_result":    {"title", "subline", "resourceUrl", "attributes", "icon"},
     "search_provider":  {"id", "name", "icon", "inAppSearch"},
     "file_reminder":    {"id", "fileId", "dueDate", "userId"},
     "activity_filter":  {"id", "name", "icon"},
@@ -772,7 +772,8 @@ class NextcloudClient:
         if mime_type:
             params["mime"] = mime_type
         data = await self.get("/ocs/v2.php/search/providers/files/search", api_key, params=params)
-        return self._filter_fields(data, "file", include_all_fields)
+        entries = data.get("entries", []) if isinstance(data, dict) else data
+        return self._filter_fields(entries, "search_result", include_all_fields)
 
     async def webdav_list_favorites(self, api_key: str = None, limit: int = 50,
                                     include_all_fields: bool = False) -> Any:

@@ -672,17 +672,32 @@ async def list_full_files_folders(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Complete overview of every file and folder in Nextcloud.
-    Shows the full directory structure from any path down to the
-    specified depth.
+    """Browse the complete file and folder structure in Nextcloud.
+    Start here to discover all files and folders. Use empty path for
+    root, or specify a subfolder to drill into its contents.
 
     Args:
-        depth: Maximum depth. Defaults to 3.
-        path: Relative path from user root (e.g. Documents/Subfolder). Empty = root.
+        depth: How many levels deep to explore. Defaults to 3.
+        path: Folder to browse (e.g. 'Documents' or 'Documents/Subfolder').
+            Leave empty ('') to see top-level folders.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
-    data = await get_client().get_folder_tree(get_user_token(), depth, path, include_all_fields)
-    return {"tree": json_to_toon(data)}
+    full_path = await _resolve_path(path)
+    if path:
+        resource_type = await _get_resource_type(full_path)
+        if not resource_type:
+            return {"status": "not_found", "message": f"Path '{path}' does not exist. Use list_full_files_folders(path='') to see valid top-level folders."}
+    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    if not data:
+        if path:
+            return {"status": "empty", "message": f"Folder '{path}' exists but has no files or subfolders.", "next_steps": "Try a different folder or use search_files to search by name."}
+        return {"status": "empty", "message": "No files or folders found."}
+    count = len(data)
+    msg = f"Found {count} item{'s' if count != 1 else ''}"
+    if path:
+        msg += f" in '{path}'"
+    msg += "."
+    return {"status": "success", "message": msg, "tree": json_to_toon(data), "next_steps": "Use read_file(path='FOLDER/FILENAME') to read a file, or show_folder(path='FOLDER') for details."}
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
@@ -892,13 +907,15 @@ async def read_file(
     path: str,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Read file content.
+    """Read a file's contents by its path. Use after search_files or
+    show_folder to view the file you found.
 
     Args:
-        path: Relative path (e.g. Documents/notes.txt).
+        path: Full path to the file (e.g. 'Documents/report.pdf').
     """
     full_path = await _resolve_path(path)
-    return {"content": await get_client().webdav_read_file(full_path, get_user_token())}
+    content = await get_client().webdav_read_file(full_path, get_user_token())
+    return {"status": "success", "message": f"Read file '{path}'.", "content": content}
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
@@ -909,16 +926,20 @@ async def search_files(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Search files by name.
+    """Find files in Nextcloud by name. Use this to locate documents,
+    reports, PDFs, images — any file. Searches file names, not contents.
 
     Args:
-        query: Search term.
+        query: What file to find — a name, partial name, or keyword
+            (e.g. 'audit', 'summary', 'report 2026', 'budget').
         limit: Maximum results. Defaults to 50.
-        mime_type: Filter by MIME type.
+        mime_type: Filter by file type (e.g. 'text/plain', 'application/pdf').
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().webdav_search_files(query, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
+    if not data:
+        return {"status": "empty", "message": f"No files found matching '{query}'. File names are searched, not contents.", "next_steps": "Try different terms or use list_full_files_folders(path='') to browse folders."}
+    return {"status": "success", "message": f"Found {len(data)} file(s) matching '{query}'.", "items": json_to_toon(data)}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -995,16 +1016,19 @@ async def show_folder(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Show contents of a folder. Empty path lists top-level files/folders.
+    """Browse a folder's contents in detail — file names, sizes, types,
+    and modification dates. Use after list_full_files_folders to inspect.
 
     Args:
-        path: Relative path. Empty = root.
-        depth: Directory depth. Defaults to 1.
+        path: Folder to browse. Empty = root.
+        depth: How many levels deep. Defaults to 1.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     full_path = await _resolve_path(path)
     data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
+    count = len(data) if data else 0
+    msg = f"Found {count} item{'s' if count != 1 else ''}." if data else "Folder is empty."
+    return {"status": "success" if data else "empty", "message": msg, "items": json_to_toon(data) if data else []}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1090,14 +1114,16 @@ async def list_favorites(
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """List favorite files.
+    """List files the user has starred or marked as favorites. Use when
+    the user mentions a file they saved as important.
 
     Args:
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
+    count = len(data) if data else 0
+    return {"status": "success" if data else "empty", "message": f"Found {count} favorite(s)." if data else "No favorites.", "items": json_to_toon(data) if data else []}
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
