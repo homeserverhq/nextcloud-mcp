@@ -345,9 +345,13 @@ class NextcloudClient:
         response.raise_for_status()
         return {"status": response.status_code}
 
+    def _full_dav_url(self, path: str) -> str:
+        base = self.base_url.rstrip("/")
+        return f"{base}{path}"
+
     async def _dav_move(self, source: str, destination: str, api_key: Optional[str] = None) -> Any:
         headers = self._get_dav_headers(api_key)
-        headers["Destination"] = destination
+        headers["Destination"] = self._full_dav_url(destination)
         url = f"{self.base_url}{source}"
         response = await self._request_with_retry("MOVE", url, headers, timeout=60.0)
         if response.status_code in (200, 201, 204):
@@ -357,7 +361,7 @@ class NextcloudClient:
 
     async def _dav_copy(self, source: str, destination: str, api_key: Optional[str] = None) -> Any:
         headers = self._get_dav_headers(api_key)
-        headers["Destination"] = destination
+        headers["Destination"] = self._full_dav_url(destination)
         url = f"{self.base_url}{source}"
         response = await self._request_with_retry("COPY", url, headers, timeout=60.0)
         if response.status_code in (200, 201, 204):

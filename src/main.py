@@ -1062,7 +1062,16 @@ async def move_file(
     """
     src = await _resolve_path(source)
     dst = await _resolve_path(destination)
-    return await get_client().webdav_move_resource(src, dst, get_user_token())
+    try:
+        result = await get_client().webdav_move_resource(src, dst, get_user_token())
+        return {"status": "success", "message": f"Moved '{source}' to '{destination}'.", **result}
+    except Exception as e:
+        err = str(e).lower()
+        if "404" in err or "not found" in err:
+            return {"status": "not_found", "message": f"Source file '{source}' not found.", "next_steps": "It may have been moved already. Use search_files to locate it."}
+        if "409" in err or "conflict" in err:
+            return {"status": "conflict", "message": f"Destination folder '{destination}' does not exist.", "next_steps": "Create it with create_folder first, then retry."}
+        return {"status": "error", "message": f"Error moving '{source}' to '{destination}': {e}", "next_steps": "The file may have been moved despite this error. Verify with search_files."}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1079,7 +1088,16 @@ async def copy_file(
     """
     src = await _resolve_path(source)
     dst = await _resolve_path(destination)
-    return await get_client().webdav_copy_resource(src, dst, get_user_token())
+    try:
+        result = await get_client().webdav_copy_resource(src, dst, get_user_token())
+        return {"status": "success", "message": f"Copied '{source}' to '{destination}'.", **result}
+    except Exception as e:
+        err = str(e).lower()
+        if "404" in err or "not found" in err:
+            return {"status": "not_found", "message": f"Source file '{source}' not found."}
+        if "409" in err or "conflict" in err:
+            return {"status": "conflict", "message": f"Destination folder '{destination}' does not exist.", "next_steps": "Create it with create_folder first, then retry."}
+        return {"status": "error", "message": f"Error copying '{source}' to '{destination}': {e}"}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1151,7 +1169,16 @@ async def move_folder(
     """
     src = await _resolve_path(source)
     dst = await _resolve_path(destination)
-    return await get_client().webdav_move_resource(src, dst, get_user_token())
+    try:
+        result = await get_client().webdav_move_resource(src, dst, get_user_token())
+        return {"status": "success", "message": f"Moved folder '{source}' to '{destination}'.", **result}
+    except Exception as e:
+        err = str(e).lower()
+        if "404" in err or "not found" in err:
+            return {"status": "not_found", "message": f"Source folder '{source}' not found."}
+        if "409" in err or "conflict" in err:
+            return {"status": "conflict", "message": f"Destination parent '{destination}' does not exist.", "next_steps": "Create it with create_folder first, then retry."}
+        return {"status": "error", "message": f"Error moving folder '{source}' to '{destination}': {e}"}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1168,7 +1195,16 @@ async def copy_folder(
     """
     src = await _resolve_path(source)
     dst = await _resolve_path(destination)
-    return await get_client().webdav_copy_resource(src, dst, get_user_token())
+    try:
+        result = await get_client().webdav_copy_resource(src, dst, get_user_token())
+        return {"status": "success", "message": f"Copied folder '{source}' to '{destination}'.", **result}
+    except Exception as e:
+        err = str(e).lower()
+        if "404" in err or "not found" in err:
+            return {"status": "not_found", "message": f"Source folder '{source}' not found."}
+        if "409" in err or "conflict" in err:
+            return {"status": "conflict", "message": f"Destination parent '{destination}' does not exist.", "next_steps": "Create it with create_folder first, then retry."}
+        return {"status": "error", "message": f"Error copying folder '{source}' to '{destination}': {e}"}
 
 
 @mcp.tool(tags={"write", "basic", "nextcloud"})
@@ -1209,8 +1245,11 @@ async def move_files(
         src = await _resolve_path(f)
         filename = f.rstrip("/").split("/")[-1] or f
         dst = dest_base + filename
-        await get_client().webdav_move_resource(src, dst, get_user_token())
-        results.append({"file": f, "status": "moved"})
+        try:
+            await get_client().webdav_move_resource(src, dst, get_user_token())
+            results.append({"file": f, "status": "moved"})
+        except Exception as e:
+            results.append({"file": f, "status": "error", "error": str(e)})
     return {"results": results}
 
 
