@@ -797,6 +797,34 @@ async def list_full_files_folders(
     return {"status": "success", "message": msg, "tree": json_to_toon(data), "next_steps": "Use read_file(path='FOLDER/FILENAME') to read a file, or show_folder(path='FOLDER') for details."}
 
 
+@mcp.tool(tags={"read", "basic", "nextcloud"})
+async def list_all_folders(
+    path: str = "",
+    depth: int = 3,
+    include_all_fields: bool = False,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Browse only the folder hierarchy in Nextcloud — no files.
+    Use this to navigate the directory tree without file clutter.
+    Start here to discover all folders, then drill into subfolders
+    by specifying a path. Shows folders only — files are hidden.
+
+    Args:
+        path: Folder to browse (e.g. 'Documents'). Leave empty ('')
+            to see top-level folders.
+        depth: How many levels deep to explore. Defaults to 3.
+        include_all_fields: Default False (common fields only). Set True for all fields.
+    """
+    data = await get_client().get_folder_tree(get_user_token(), depth, path, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    if isinstance(data, dict) and "ocs" in data:
+        tree_data = data.get("ocs", {}).get("data", {})
+    else:
+        tree_data = data
+    if not tree_data:
+        return {"status": "empty", "message": "No folders found."}
+    return {"status": "success", "message": f"Folder tree loaded.", "tree": json_to_toon(tree_data), "next_steps": "Use list_all_folders(path='FOLDER') to drill into subfolders, or list_full_files_folders(path='FOLDER') to see files too."}
+
+
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
 async def get_collection_by_id(
     id: str,
