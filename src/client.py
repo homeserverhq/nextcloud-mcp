@@ -51,48 +51,48 @@ def _strip_dav_prefix(uri: str, resource: str) -> str:
     return uri
 
 
-DEFAULT_FIELDS: dict[str, set[str] | None] = {
-    "calendar":         {"href", "displayname", "display_name", "resourcetype", "calendar_uri", "status"},
+COMMON_FIELDS: dict[str, set[str] | None] = {
+    "calendar":         {"href", "displayname", "resourcetype", "calendar_uri"},
     "event":            {"summary", "dtstart", "dtend", "description", "location", "uid", "event_uid", "status"},
     "todo":             {"summary", "description", "due", "priority", "status", "uid", "todo_uid"},
-    "addressbook":      {"href", "displayname", "display_name", "resourcetype", "addressbook_uri", "status", "description"},
-    "contact":          {"fn", "email", "telephone", "organization", "contact_uid", "status"},
+    "addressbook":      {"href", "displayname", "resourcetype", "addressbook_uri"},
+    "contact":          {"fn", "email", "telephone", "organization", "contact_uid"},
     "note":             {"id", "title", "category", "modified", "favorite", "content"},
     "file":             {"href", "displayname", "getcontenttype", "getcontentlength", "getlastmodified", "resourcetype", "fileid"},
-    "share":            {"id", "share_type", "path", "uid_owner", "displayname_owner", "uid_shared_with", "permissions", "expiration", "collection_id", "file_source"},
+    "share":            {"id", "share_type", "path", "uid_owner", "displayname_owner", "share_with", "permissions", "expiration", "file_source"},
     "notification":     {"id", "notification_id", "app", "subject", "message", "datetime", "link"},
     "activity":         {"activity_id", "type", "user", "subject", "object_type", "datetime"},
     "user":             {"id", "display-name", "email", "groups", "enabled", "quota"},
     "user_status":      {"userId", "status", "icon", "message", "clearAt", "messageId"},
-    "ooo":              {"userId", "fromDate", "toDate", "message", "status"},
-    "capabilities":     None,
+    "ooo":              {"userId", "firstDay", "lastDay", "message", "status"},
+    "capabilities":     {"core", "dav", "files", "files_sharing", "theming", "provisioning_api", "systemtags", "user_status", "weather_status"},
     "board":            {"id", "title", "color", "archived"},
     "stack":            {"id", "title", "order"},
     "card":             {"id", "title", "description", "duedate", "type", "archived", "labels"},
     "label":            {"id", "title", "color"},
-    "mail_account":     {"id", "accountId", "name", "emailAddress", "email"},
-    "mailbox":          {"databaseId", "id", "name", "displayName", "unseen", "total", "specialUse"},
+    "mail_account":     {"id", "accountId", "name", "emailAddress"},
+    "mailbox":          {"databaseId", "id", "name", "displayName", "unread", "specialUse"},
     "mail_message":     {"id", "databaseId", "uid", "subject", "from", "to", "dateInt", "flags", "previewText"},
     "talk_message":     {"id", "actorDisplayName", "timestamp", "message", "messageType"},
     "talk_room":        {"token", "displayName", "type", "participantType", "name"},
     "talk_participant": {"attendeeId", "displayName", "participantType", "actorType", "actorId"},
     "table":            {"id", "title", "emoji", "description"},
     "table_schema":     {"title", "emoji", "columns", "description"},
-    "row":              None,
-    "collective":       {"id", "name", "emoji", "pageCount", "trashed", "collective"},
-    "collective_page":  {"id", "title", "emoji", "parentId", "order", "lastModified", "webdav_location", "page"},
+    "row":              {"id", "tableId", "createdBy", "createdAt", "lastEditBy", "lastEditAt", "data"},
+    "collective":       {"id", "name", "emoji", "trashTimestamp", "collective"},
+    "collective_page":  {"id", "title", "emoji", "parentId", "subpageOrder", "timestamp", "webdav_location", "page"},
     "collective_tag":   {"id", "name", "color", "tag"},
     "collection":       {"id", "name", "resources"},
     "search_result":    {"title", "subline", "resourceUrl", "attributes", "icon"},
     "search_provider":  {"id", "name", "icon", "inAppSearch"},
-    "file_reminder":    {"id", "fileId", "dueDate", "userId"},
+    "file_reminder":    {"dueDate"},
     "activity_filter":  {"id", "name", "icon"},
     "predefined_status": {"id", "icon", "message"},
     "circle":           {"id", "name", "displayName", "source", "population", "description", "sanitizedName", "config", "url", "creation"},
     "folder_tree":      {"id", "basename", "displayName", "children"},
     "group":            {"id", "displayname"},
     "group_member":     {"id", "displayname"},
-    "direct_download":  {"url", "id"},
+    "direct_download":  {"url"},
     "freebusy":         None,
 }
 
@@ -119,7 +119,7 @@ class NextcloudClient:
     def _filter_fields(items, entity_type: str, include_all: bool, default_fields: set = None):
         if include_all:
             return items
-        keys = default_fields if default_fields is not None else DEFAULT_FIELDS.get(entity_type)
+        keys = default_fields if default_fields is not None else COMMON_FIELDS.get(entity_type)
         if keys is None:
             return items
 
@@ -1478,10 +1478,10 @@ class NextcloudClient:
                 if isinstance(org_val, list):
                     org_val = "; ".join(str(x) for x in org_val)
                 contact = {"fn": vc.fn.value if hasattr(vc, "fn") else "",
-                          "email": str(vc.email.value) if hasattr(vc, "email") else "",
-                          "telephone": str(vc.tel.value) if hasattr(vc, "tel") else "",
-                          "organization": org_val,
-                          "uid": vc.uid.value if hasattr(vc, "uid") else ""}
+                           "email": str(vc.email.value) if hasattr(vc, "email") else "",
+                           "telephone": str(vc.tel.value) if hasattr(vc, "tel") else "",
+                           "organization": org_val,
+                           "contact_uid": vc.uid.value if hasattr(vc, "uid") else ""}
                 parsed.append(contact)
             except Exception:
                 parsed.append({"href": href})
