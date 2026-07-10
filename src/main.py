@@ -408,6 +408,8 @@ async def list_users(
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().get_users(get_user_token(), search, limit, offset, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    if not data:
+        return {"status": "empty", "message": f"No users found matching '{search}'."}
     return {"items": json_to_toon(data)}
 
 
