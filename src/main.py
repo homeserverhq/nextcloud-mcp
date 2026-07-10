@@ -783,7 +783,7 @@ async def list_full_files_folders(
     if path:
         resource_type = await _get_resource_type(full_path)
         if not resource_type:
-            return {"status": "not_found", "message": f"Path '{path}' does not exist. Use list_full_files_folders(path='') to see valid top-level folders."}
+            return {"status": "not_found", "message": f"Path '{path}' does not exist. Use list_all_folders to browse folders."}
     data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     if not data:
         if path:
@@ -1069,7 +1069,7 @@ async def search_files(
         search_fn = lambda t: get_client().webdav_search_files(t, get_user_token(), limit, mime_type, include_all_fields if ALLOW_ALL_AGGREGATE else False)
         data, msg = await _multi_token_search(search_fn, query, id_key="attributes.fileId")
     if not data:
-        return {"status": "empty", "message": f"No files found matching '{query}'. File names are searched, not contents.", "next_steps": "Try different terms or use list_full_files_folders(path='') to browse folders."}
+        return {"status": "empty", "message": f"No files found matching '{query}'. File names are searched, not contents.", "next_steps": "Try different terms or use list_all_folders to browse folders."}
     message = f"Found {len(data)} file(s) matching '{query}'."
     if msg:
         message += " " + msg
