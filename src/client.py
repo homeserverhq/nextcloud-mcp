@@ -90,6 +90,10 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "predefined_status": {"id", "icon", "message"},
     "circle":           {"id", "name", "displayName", "source", "population", "description", "sanitizedName", "config", "url", "creation"},
     "folder_tree":      {"name", "path", "children"},
+    "group":            {"id", "displayname"},
+    "group_member":     {"id", "displayname"},
+    "direct_download":  {"url", "id"},
+    "freebusy":         None,
 }
 
 
@@ -556,8 +560,8 @@ class NextcloudClient:
             params["search"] = search
         data = await self.get("/ocs/v2.php/cloud/groups", api_key, params=params)
         if isinstance(data, dict) and "groups" in data:
-            return data["groups"]
-        return data
+            return self._filter_fields(data["groups"], "group", include_all_fields)
+        return self._filter_fields(data, "group", include_all_fields)
 
     async def get_group_members(self, group_id: str, api_key: str = None,
                                 limit: int = 100, offset: int = 0,
@@ -565,8 +569,8 @@ class NextcloudClient:
         params = {"limit": limit, "offset": offset}
         data = await self.get(f"/ocs/v2.php/cloud/groups/{quote(group_id, safe='')}/users", api_key, params=params)
         if isinstance(data, dict) and "users" in data:
-            return data["users"]
-        return data
+            return self._filter_fields(data["users"], "group_member", include_all_fields)
+        return self._filter_fields(data, "group_member", include_all_fields)
 
     # =========================================================================
     # Domain: File Sharing
@@ -668,7 +672,8 @@ class NextcloudClient:
         return self._filter_fields(data, "event", include_all_fields)
 
     async def get_direct_download_url(self, file_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
-        return await self.post("/ocs/v2.php/apps/dav/api/v1/direct", api_key, json={"fileId": file_id})
+        data = await self.post("/ocs/v2.php/apps/dav/api/v1/direct", api_key, json={"fileId": file_id})
+        return self._filter_fields(data, "direct_download", include_all_fields)
 
     # =========================================================================
     # Domain: Folder Tree
@@ -781,7 +786,8 @@ class NextcloudClient:
         return self._filter_fields(results, "file", include_all_fields)
 
     async def webdav_read_file(self, path: str, api_key: str = None, include_all_fields: bool = False) -> Any:
-        return await self._dav_get(path, api_key)
+        data = await self._dav_get(path, api_key)
+        return self._filter_fields(data, "file", include_all_fields)
 
     async def webdav_write_file(self, path: str, content: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self._dav_put(path, content, api_key, content_type="application/octet-stream")
@@ -794,11 +800,13 @@ class NextcloudClient:
 
     async def webdav_move_resource(self, source: str, destination: str,
                                    api_key: str = None, include_all_fields: bool = False) -> Any:
-        return await self._dav_move(source, destination, api_key)
+        data = await self._dav_move(source, destination, api_key)
+        return self._filter_fields(data, "file", include_all_fields)
 
     async def webdav_copy_resource(self, source: str, destination: str,
                                    api_key: str = None, include_all_fields: bool = False) -> Any:
-        return await self._dav_copy(source, destination, api_key)
+        data = await self._dav_copy(source, destination, api_key)
+        return self._filter_fields(data, "file", include_all_fields)
 
     async def webdav_touch_file(self, path: str, api_key: str = None) -> None:
         try:
@@ -1247,7 +1255,7 @@ class NextcloudClient:
                     results[cal_uri] = res
                 except Exception as e:
                     results[cal_uri] = {"error": str(e)}
-        return results
+        return self._filter_fields(results, "freebusy", include_all_fields)
 
     # =========================================================================
     # Domain: Todos (CalDAV VTODO)
@@ -1656,7 +1664,7 @@ class NextcloudClient:
                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards",
                                api_key, json=payload, is_ocs=False)
-        return self._filter_fields(data, "board", include_all_fields)
+        return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_update_card(self, board_id: int, stack_id: int, card_id: int,
                                 payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
