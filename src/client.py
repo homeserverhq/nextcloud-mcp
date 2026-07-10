@@ -2047,7 +2047,7 @@ class NextcloudClient:
             await self.collectives_trash(collective_id, api_key)
         except Exception:
             pass
-        return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/trash/{collective_id}", api_key)
+        return await self.delete(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/trash/{collective_id}", api_key, params={"circle": "true"})
 
     async def collectives_list_trashed(self, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.get("/ocs/v2.php/apps/collectives/api/v1.0/collectives/trash", api_key)

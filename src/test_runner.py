@@ -175,7 +175,7 @@ def _cleanup_test_collectives(session):
     Returns the number deleted.
     """
     count = 0
-    pattern = re.compile(r"^t[a-f0-9]+-Coll$")
+    pattern = re.compile(r"^t[a-f0-9]{8}-Coll$")
 
     def name_match(item):
         return pattern.match(item.get("name", "") or item.get("displayName", "") or "")
@@ -205,6 +205,61 @@ def _cleanup_test_collectives(session):
     return count
 
 
+def _cleanup_test_circles(session):
+    """Delete orphaned test circles matching tXXXXXXXX-* pattern.
+    Returns the number deleted.
+    """
+    count = 0
+    pattern = re.compile(r"^t[a-f0-9]{8}-")
+    list_result = session.call_tool("list_circles", {})
+    list_data = extract_content(list_result)
+    if list_data and isinstance(list_data, dict):
+        items = get_list_items(list_data)
+        for c in items:
+            name = c.get("name", "")
+            if pattern.match(name):
+                session.call_tool("delete_circle", {"circle_id": c["id"]})
+                count += 1
+    return count
+
+
+def _cleanup_test_rooms(session):
+    """Delete orphaned test talk rooms matching tXXXXXXXX-* pattern.
+    Returns the number deleted.
+    """
+    count = 0
+    pattern = re.compile(r"^t[a-f0-9]{8}-")
+    list_result = session.call_tool("list_talk_rooms", {})
+    list_data = extract_content(list_result)
+    if list_data and isinstance(list_data, dict):
+        items = get_list_items(list_data)
+        for r in items:
+            name = r.get("displayName", "")
+            if pattern.match(name):
+                session.call_tool("delete_talk_room", {"token": r["token"]})
+                count += 1
+    return count
+
+
+def _cleanup_test_files(session):
+    """Delete orphaned test files matching tXXXXXXXX-* pattern.
+    Returns the number deleted.
+    """
+    count = 0
+    pattern = re.compile(r"^t[a-f0-9]{8}-")
+    # Search root-level files
+    search_result = session.call_tool("search_files", {"query": "t"})
+    search_data = extract_content(search_result)
+    if search_data and isinstance(search_data, dict):
+        items = get_list_items(search_data)
+        for f in items:
+            name = f.get("displayname", "")
+            if pattern.match(name):
+                session.call_tool("delete_file", {"path": f["href"]})
+                count += 1
+    return count
+
+
 # =============================================================================
 # Main Test Runner
 # =============================================================================
@@ -230,11 +285,17 @@ def main():
         log(f"Tools: {', '.join(sorted(tool_names))}")
 
         # ------------------------------------------------------------------
-        # Phase 0A: Pre-Creation Cleanup — delete orphaned test collectives
+        # Phase 0A: Pre-Creation Cleanup — delete orphaned test resources
         # ------------------------------------------------------------------
         log("\n=== Phase 0A: Pre-Creation Cleanup ===")
         _ca_count = _cleanup_test_collectives(session)
         log(f"  Cleaned {_ca_count} orphaned test collective(s) from .Collectives/")
+        _cb_count = _cleanup_test_circles(session)
+        log(f"  Cleaned {_cb_count} orphaned test circle(s)")
+        _cc_count = _cleanup_test_rooms(session)
+        log(f"  Cleaned {_cc_count} orphaned test talk room(s)")
+        _cd_count = _cleanup_test_files(session)
+        log(f"  Cleaned {_cd_count} orphaned test file(s)")
 
         # ------------------------------------------------------------------
         # Phase 1: Status / Health Checks
@@ -721,12 +782,16 @@ def main():
         # Phase 3F: Post-Cleanup Leak Detection
         # ------------------------------------------------------------------
         log("\n=== Phase 3F: Leak Detection ===")
-        _cf_count = _cleanup_test_collectives(session)
-        _cf_has_leak = _cf_count > 0
-        results.append({"label": "3F leak_check", "tool": "list_collectives", "reason": "", "status": ("FAILED", "PASSED")[not _cf_has_leak], "data": {"leaked": _cf_count}})
+        _cf_collectives = _cleanup_test_collectives(session)
+        _cf_circles = _cleanup_test_circles(session)
+        _cf_rooms = _cleanup_test_rooms(session)
+        _cf_files = _cleanup_test_files(session)
+        _cf_has_leak = (_cf_collectives + _cf_circles + _cf_rooms + _cf_files) > 0
+        _cf_details = f"collectives={_cf_collectives} circles={_cf_circles} rooms={_cf_rooms} files={_cf_files}"
+        results.append({"label": "3F leak_check", "tool": "list_collectives", "reason": "", "status": ("FAILED", "PASSED")[not _cf_has_leak], "data": {"leaked": _cf_collectives, "circles": _cf_circles, "rooms": _cf_rooms, "files": _cf_files}})
         passed_count = passed_count + 1
         failed_count = failed_count + (1, 0)[not _cf_has_leak]
-        log(f"  {('FAILED','PASSED')[not _cf_has_leak]} 3F leak_check (leaked={_cf_count})")
+        log(f"  {('FAILED','PASSED')[not _cf_has_leak]} 3F leak_check ({_cf_details})")
 
         # ------------------------------------------------------------------
         # Report Summary
