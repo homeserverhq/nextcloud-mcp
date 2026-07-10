@@ -763,66 +763,22 @@ async def get_direct_download_url(
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
-async def list_full_files_folders(
-    depth: int = 3,
-    path: str = "",
-    include_all_fields: bool = False,
-    ctx: Context = None
-) -> dict[str, Any]:
-    """Browse the complete file and folder structure in Nextcloud.
-    Start here to discover all files and folders. Use empty path for
-    root, or specify a subfolder to drill into its contents.
-
-    Args:
-        depth: How many levels deep to explore. Defaults to 3.
-        path: Folder to browse (e.g. 'Documents' or 'Documents/Subfolder').
-            Leave empty ('') to see top-level folders.
-        include_all_fields: Default False (common fields only). Set True for all fields.
-    """
-    full_path = await _resolve_path(path)
-    if path:
-        resource_type = await _get_resource_type(full_path)
-        if not resource_type:
-            return {"status": "not_found", "message": f"Path '{path}' does not exist. Use list_all_folders to browse folders."}
-    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    if not data:
-        if path:
-            return {"status": "empty", "message": f"Folder '{path}' exists but has no files or subfolders.", "next_steps": "Try a different folder or use search_files to search by name."}
-        return {"status": "empty", "message": "No files or folders found."}
-    count = len(data)
-    msg = f"Found {count} item{'s' if count != 1 else ''}"
-    if path:
-        msg += f" in '{path}'"
-    msg += "."
-    return {"status": "success", "message": msg, "tree": json_to_toon(data), "next_steps": "Use read_file(path='FOLDER/FILENAME') to read a file, or show_folder(path='FOLDER') for details."}
-
-
-@mcp.tool(tags={"read", "basic", "nextcloud"})
 async def list_all_folders(
-    path: str = "",
-    depth: int = 3,
-    include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Browse only the folder hierarchy in Nextcloud — no files.
-    Use this to navigate the directory tree without file clutter.
-    Start here to discover all folders, then drill into subfolders
-    by specifying a path. Shows folders only — files are hidden.
+    """START HERE for file navigation. Shows the full folder hierarchy
+    in Nextcloud (folders only — no files). Gives you the directory
+    structure so you can understand where everything lives.
 
-    Args:
-        path: Folder to browse (e.g. 'Documents'). Leave empty ('')
-            to see top-level folders.
-        depth: How many levels deep to explore. Defaults to 3.
-        include_all_fields: Default False (common fields only). Set True for all fields.
+    Use list_folder_contents after this to see files inside a specific
+    folder, or search_files to find files by name.
+
+    Depth is capped at 5 levels to keep results manageable.
     """
-    data = await get_client().get_folder_tree(get_user_token(), depth, path, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    if isinstance(data, dict) and "ocs" in data:
-        tree_data = data.get("ocs", {}).get("data", {})
-    else:
-        tree_data = data
-    if not tree_data:
+    data = await get_client().get_folder_tree(get_user_token(), depth=5, path="", include_all_fields=False)
+    if not data:
         return {"status": "empty", "message": "No folders found."}
-    return {"status": "success", "message": f"Folder tree loaded.", "tree": json_to_toon(tree_data), "next_steps": "Use list_all_folders(path='FOLDER') to drill into subfolders, or list_full_files_folders(path='FOLDER') to see files too."}
+    return {"status": "success", "message": "Folder tree loaded (depth 5).", "tree": json_to_toon(data), "next_steps": "Use list_folder_contents(path='FOLDER') to see files inside a folder, or search_files to find files by name."}
 
 
 @mcp.tool(tags={"read", "advanced", "nextcloud"})
@@ -916,7 +872,7 @@ async def get_file_reminder(
     """Get the reminder for a file.
 
     Args:
-        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from list_folder_contents() (the oc:fileid field in PROPFIND response).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_file_reminder(file_id, get_user_token(), include_all_fields)
@@ -931,7 +887,7 @@ async def set_file_reminder(
     """Set a reminder on a file.
 
     Args:
-        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from list_folder_contents() (the oc:fileid field in PROPFIND response).
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
     result = await get_client().set_file_reminder(file_id, due_date, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -948,7 +904,7 @@ async def delete_file_reminder(
     """Delete the reminder on a file.
 
     Args:
-        file_id: ID of the file. Get this from show_folder() (the oc:fileid field in PROPFIND response).
+        file_id: ID of the file. Get this from list_folder_contents() (the oc:fileid field in PROPFIND response).
     """
     result = await get_client().delete_file_reminder(file_id, get_user_token())
     if isinstance(result, list):
@@ -1033,7 +989,7 @@ async def read_file(
     ctx: Context = None
 ) -> dict[str, Any]:
     """Read a file's contents by its path. Use after search_files or
-    show_folder to view the file you found.
+    list_folder_contents to view the file you found.
 
     Args:
         path: Full path to the file (e.g. 'Documents/report.pdf').
@@ -1164,22 +1120,32 @@ async def create_folder(
 
 
 @mcp.tool(tags={"read", "basic", "nextcloud"})
-async def show_folder(
+async def list_folder_contents(
     path: str = "",
-    depth: int = 1,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Browse a folder's contents in detail — file names, sizes, types,
-    and modification dates. Use after list_full_files_folders to inspect.
+    """List all files and folders inside a specific folder — filenames,
+    sizes, types, and modification dates. Shows immediate contents only.
+
+    Use AFTER list_all_folders to drill into a folder you found,
+    or search_files to find files by name.
 
     Args:
-        path: Folder to browse. Empty = root.
-        depth: How many levels deep. Defaults to 1.
+        path: Folder to browse (e.g. 'Documents/Reports'). Empty = root.
+            Pass a specific path — don't use this on root or you'll get
+            everything.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     full_path = await _resolve_path(path)
-    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth, include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    data = await get_client().webdav_list_directory(full_path, get_user_token(), depth=1, include_all_fields=include_all_fields if ALLOW_ALL_AGGREGATE else False)
+    if data:
+        for item in data:
+            rt = item.get("resourcetype", [])
+            if isinstance(rt, list) and "collection" in rt:
+                item["type"] = "folder"
+            else:
+                item["type"] = "file"
     count = len(data) if data else 0
     msg = f"Found {count} item{'s' if count != 1 else ''}." if data else "Folder is empty."
     return {"status": "success" if data else "empty", "message": msg, "items": json_to_toon(data) if data else []}

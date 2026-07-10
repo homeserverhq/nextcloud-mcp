@@ -89,7 +89,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "activity_filter":  {"id", "name", "icon"},
     "predefined_status": {"id", "icon", "message"},
     "circle":           {"id", "name", "displayName", "source", "population", "description", "sanitizedName", "config", "url", "creation"},
-    "folder_tree":      None,
+    "folder_tree":      {"name", "path", "children"},
 }
 
 
@@ -118,10 +118,19 @@ class NextcloudClient:
         keys = default_fields if default_fields is not None else DEFAULT_FIELDS.get(entity_type)
         if keys is None:
             return items
+
+        def _filter_single(item):
+            if not isinstance(item, dict):
+                return item
+            result = {k: v for k, v in item.items() if k in keys}
+            if "children" in item and isinstance(item["children"], list):
+                result["children"] = [_filter_single(c) for c in item["children"]]
+            return result
+
         if isinstance(items, dict):
-            return {k: v for k, v in items.items() if k in keys}
-        if isinstance(items, list) and items and isinstance(items[0], dict):
-            return [{k: v for k, v in item.items() if k in keys} for item in items]
+            return _filter_single(items)
+        if isinstance(items, list):
+            return [_filter_single(item) for item in items]
         return items
 
     def _get_headers(self, api_key: Optional[str] = None) -> dict[str, str]:
@@ -670,7 +679,10 @@ class NextcloudClient:
         params = {"depth": depth}
         if path:
             params["path"] = path
-        return await self.get("/ocs/v2.php/apps/files/api/v1/folder-tree", api_key, is_raw_json=True, params=params)
+        data = await self.get("/ocs/v2.php/apps/files/api/v1/folder-tree", api_key, is_raw_json=True, params=params)
+        if isinstance(data, dict) and "ocs" in data:
+            data = data.get("ocs", {}).get("data", {})
+        return self._filter_fields(data, "folder_tree", include_all_fields)
 
     # =========================================================================
     # Domain: Collaboration Collections

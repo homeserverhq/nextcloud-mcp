@@ -252,8 +252,7 @@ def main():
         run_test(session, "B list_predefined_statuses", "list_predefined_statuses", {})
         run_test(session, "B list_user_statuses", "list_user_statuses", {"limit": 5})
         run_test(session, "B list_upcoming_events", "list_upcoming_events", {"limit": 5})
-        run_test(session, "B list_full_files_folders", "list_full_files_folders", {"depth": 1})
-        run_test(session, "B list_all_folders", "list_all_folders", {"depth": 1})
+        run_test(session, "B list_all_folders", "list_all_folders", {})
         run_test(session, "B list_search_providers", "list_search_providers", {})
         run_test(session, "B get_capabilities", "get_capabilities", {})
         run_test(session, "B list_notifications", "list_notifications", {})
@@ -273,7 +272,7 @@ def main():
         run_test(session, "B list_talk_rooms", "list_talk_rooms", {})
         run_test(session, "B get_user", "get_user", {"user_id": API_USER})
         run_test(session, "B list_group_members", "list_group_members", {"group_id": "admin"})
-        run_test(session, "B show_folder_root", "show_folder", {"path": "", "depth": 1})
+        run_test(session, "B list_folder_contents_root", "list_folder_contents", {"path": ""})
 
         # ------------------------------------------------------------------
         # Phase 3: Full CRUD Cycles — flat, no loops, no conditionals
@@ -489,7 +488,7 @@ def main():
         fixture_path = f"t{rid}-fixture.txt"
         run_test(session, "5E create_fixture_file", "write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
         store["fixture_path"] = fixture_path
-        run_test(session, "5E list_fixture", "show_folder", {"path": fixture_path, "depth": 0, "include_all_fields": True})
+        run_test(session, "5E list_fixture", "list_folder_contents", {"path": fixture_path, "include_all_fields": True})
         store["fixture_file_id"] = int(get_list_items(results[-1]["data"])[0]["fileid"])
 
         # ---- Phase 5F: Sharing Tests ----
@@ -639,7 +638,7 @@ def main():
         log("\n=== Phase 5T: Simple File/Folder Operations ===")
         run_test(session, "5T create_folder", "create_folder", {"path": f"t{rid}-simple"})
         run_test(session, "5T write_file", "write_file", {"path": f"t{rid}-simple/test.txt", "content": "Hello World"})
-        run_test(session, "5T show_folder", "show_folder", {"path": f"t{rid}-simple"})
+        run_test(session, "5T list_folder_contents", "list_folder_contents", {"path": f"t{rid}-simple"})
         run_test(session, "5T read_file", "read_file", {"path": f"t{rid}-simple/test.txt"})
         run_test(session, "5T move_file", "move_file", {"source": f"t{rid}-simple/test.txt", "destination": f"t{rid}-moved.txt"})
         run_test(session, "5T verify_moved", "read_file", {"path": f"t{rid}-moved.txt"})
@@ -652,7 +651,7 @@ def main():
         run_test(session, "5T delete_file", "delete_file", {"path": f"t{rid}-renamed/t{rid}-moved.txt"})
         run_test(session, "5T delete_renamed_folder", "delete_folder", {"path": f"t{rid}-renamed"})
         run_test(session, "5T delete_copied_folder", "delete_folder", {"path": f"t{rid}-copiedfolder"})
-        run_test(session, "5T verify_delete", "show_folder", {"path": "", "depth": 1})
+        run_test(session, "5T verify_delete", "list_folder_contents", {"path": ""})
 
         # ---- Phase 6: Circle Member Management Tests ----
         log("\n=== Phase 6: Circle Member Management Tests ===")
