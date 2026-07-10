@@ -89,7 +89,7 @@ DEFAULT_FIELDS: dict[str, set[str] | None] = {
     "activity_filter":  {"id", "name", "icon"},
     "predefined_status": {"id", "icon", "message"},
     "circle":           {"id", "name", "displayName", "source", "population", "description", "sanitizedName", "config", "url", "creation"},
-    "folder_tree":      {"name", "path", "children"},
+    "folder_tree":      {"id", "basename", "displayName", "children"},
     "group":            {"id", "displayname"},
     "group_member":     {"id", "displayname"},
     "direct_download":  {"url", "id"},
