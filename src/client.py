@@ -687,7 +687,19 @@ class NextcloudClient:
         data = await self.get("/ocs/v2.php/apps/files/api/v1/folder-tree", api_key, is_raw_json=True, params=params)
         if isinstance(data, dict) and "ocs" in data:
             data = data.get("ocs", {}).get("data", {})
-        return self._filter_fields(data, "folder_tree", include_all_fields)
+        result = self._filter_fields(data, "folder_tree", include_all_fields)
+        self._inject_paths(result)
+        return result
+
+    @staticmethod
+    def _inject_paths(nodes, parent_path=""):
+        if not isinstance(nodes, list):
+            return
+        for node in nodes:
+            if isinstance(node, dict) and "basename" in node:
+                node_path = parent_path + "/" + node["basename"]
+                node["path"] = node_path
+                NextcloudClient._inject_paths(node.get("children"), node_path)
 
     # =========================================================================
     # Domain: Collaboration Collections
