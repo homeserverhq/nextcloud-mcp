@@ -50,15 +50,13 @@ def get_user_token() -> Optional[str]:
     return _current_user_token.get()
 
 
-_current_username: Optional[str] = None
-
-
 async def _resolve_path(path: str = "") -> str:
-    global _current_username
-    if _current_username is None:
-        data = await get_client().get("/ocs/v2.php/cloud/user", get_user_token())
-        _current_username = data.get("id", "")
-    prefix = f"/remote.php/dav/files/{_current_username}/"
+    token = get_user_token()
+    username = NextcloudClient.extract_username(token) if token else ""
+    if not username:
+        data = await get_client().get("/ocs/v2.php/cloud/user", token)
+        username = data.get("id", "")
+    prefix = f"/remote.php/dav/files/{username}/"
     if not path:
         return prefix
     return prefix + path.lstrip("/")
