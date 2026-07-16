@@ -147,7 +147,43 @@ def run_verify_delete(session, label, get_tool=None, params=None, list_tool=None
 
 
 def get_list_items(data):
-    return toon_to_json(data["items"])
+    if not isinstance(data, dict):
+        return []
+    raw = data.get("items", [])
+    return toon_to_json(raw) if isinstance(raw, str) else (raw or [])
+
+
+def safe_data(key=None, default=None):
+    """Safely read from the last test result's data dict.
+    Returns the whole dict if key is None, or the key's value (default if missing)."""
+    if default is None:
+        default = ""
+    data = results[-1]["data"] if results else {}
+    if key is None:
+        return data
+    return data.get(key, default)
+
+
+def safe_items(data, index=0, key=None):
+    """Safely extract an item from a tool result's items list.
+    Returns the item dict if key is None, or the key's value."""
+    raw = data.get("items", []) if isinstance(data, dict) else []
+    items = toon_to_json(raw) if isinstance(raw, str) else (raw or [])
+    if index < len(items):
+        item = items[index]
+        if key is None:
+            return item
+        return item.get(key, "")
+    return "" if key else {}
+
+
+def safe_call(session, tool, params=None):
+    """Call a tool and return empty dict on failure instead of crashing."""
+    try:
+        result = session.call_tool(tool, params)
+        return extract_content(result)
+    except Exception:
+        return {}
 
 
 def find_mailbox_by_special(mailboxes_data, special_value):
@@ -349,71 +385,70 @@ def main():
         # ------------------------------------------------------------------
         log("\n=== Phase 3A: Create All Resources ===")
         run_test(session, "3A create_note", "create_note", {"title": make_name("Note"), "content": "Hello world", "category": "test"})
-        store["Note"] = results[-1]["data"]
-        store["Note_id"] = store["Note"]["id"]
-        log(f"  => Note ID: {store['Note_id']}")
+        store["Note"] = safe_data()
+        store["Note_id"] = safe_data("id")
+        log(f"  => Note ID: {store['Note_id'] or 0}")
 
         run_test(session, "3A create_table", "create_table", {"title": make_name("Table"), "description": "Test table", "emoji": "📋"})
-        store["Table"] = results[-1]["data"]
-        store["Table_id"] = store["Table"]["id"]
-        log(f"  => Table ID: {store['Table_id']}")
+        store["Table"] = safe_data()
+        store["Table_id"] = safe_data("id")
+        log(f"  => Table ID: {store['Table_id'] or 0}")
 
         run_test(session, "3A create_board", "create_deck_board", {"title": make_name("Board"), "color": "FF0000", "archived": False})
-        store["Board"] = results[-1]["data"]
-        store["Board_id"] = store["Board"]["id"]
-        log(f"  => Board ID: {store['Board_id']}")
+        store["Board"] = safe_data()
+        store["Board_id"] = safe_data("id")
+        log(f"  => Board ID: {store['Board_id'] or 0}")
 
         run_test(session, "3A create_calendar", "create_calendar", {"display_name": make_name("Cal"), "color": "#FF0000"})
-        store["Calendar"] = results[-1]["data"]
-        store["Calendar_id"] = store["Calendar"]["calendar_uri"]
-        log(f"  => Calendar URI: {store['Calendar_id']}")
+        store["Calendar"] = safe_data()
+        store["Calendar_id"] = safe_data("calendar_uri")
+        log(f"  => Calendar URI: {store['Calendar_id'] or ''}")
 
         run_test(session, "3A create_addressbook", "create_addressbook", {"display_name": make_name("Addr"), "description": "Test addressbook"})
-        store["Addressbook"] = results[-1]["data"]
-        store["Addressbook_id"] = store["Addressbook"]["addressbook_uri"]
-        log(f"  => Addressbook URI: {store['Addressbook_id']}")
+        store["Addressbook"] = safe_data()
+        store["Addressbook_id"] = safe_data("addressbook_uri")
+        log(f"  => Addressbook URI: {store['Addressbook_id'] or ''}")
 
         run_test(session, "3A create_collective", "create_collective", {"name": make_name("Coll"), "emoji": "🌟"})
-        coll_data = results[-1]["data"]
-        coll_inner = coll_data["collective"]
+        coll_data = safe_data()
+        coll_inner = coll_data.get("collective", {})
         store["Collective"] = coll_inner
-        store["Collective_id"] = coll_inner["id"]
-        circle_list_result = session.call_tool("list_circles")
-        circle_list_data = extract_content(circle_list_result)
+        store["Collective_id"] = coll_inner.get("id", 0)
+        circle_list_data = safe_call(session, "list_circles")
         circle_list_items = get_list_items(circle_list_data)
-        store["circle_id"] = circle_list_items[0]["id"]
+        store["circle_id"] = circle_list_items[0].get("id", 0) if circle_list_items else 0
 
-        run_test(session, "3A create_stack", "create_deck_stack", {"board_id": store["Board"]["id"], "title": make_name("Stack"), "order": 1})
-        store["Stack"] = results[-1]["data"]
-        store["Stack_id"] = store["Stack"]["id"]
+        run_test(session, "3A create_stack", "create_deck_stack", {"board_id": store.get("Board", {}).get("id", 0), "title": make_name("Stack"), "order": 1})
+        store["Stack"] = safe_data()
+        store["Stack_id"] = safe_data("id")
 
-        run_test(session, "3A create_card", "create_deck_card", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "title": make_name("Card"), "description": "test"})
-        store["Card"] = results[-1]["data"]
-        store["Card_id"] = store["Card"]["id"]
+        run_test(session, "3A create_card", "create_deck_card", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "title": make_name("Card"), "description": "test"})
+        store["Card"] = safe_data()
+        store["Card_id"] = safe_data("id")
 
-        run_test(session, "3A create_event", "create_event", {"calendar_uri": store["Calendar_id"], "summary": make_name("Event"), "dtstart": DT, "dtend": DT, "description": "test"})
-        store["Event"] = results[-1]["data"]
-        store["Event_id"] = store["Event"]["event_uid"]
+        run_test(session, "3A create_event", "create_event", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("Event"), "dtstart": DT, "dtend": DT, "description": "test"})
+        store["Event"] = safe_data()
+        store["Event_id"] = safe_data("event_uid")
 
-        run_test(session, "3A create_todo", "create_todo", {"calendar_uri": store["Calendar_id"], "summary": make_name("Todo"), "description": "test", "due_date": DT})
-        store["Todo"] = results[-1]["data"]
-        store["Todo_id"] = store["Todo"]["todo_uid"]
+        run_test(session, "3A create_todo", "create_todo", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("Todo"), "description": "test", "due_date": DT})
+        store["Todo"] = safe_data()
+        store["Todo_id"] = safe_data("todo_uid")
 
-        run_test(session, "3A create_contact", "create_contact", {"addressbook_uri": store["Addressbook_id"], "fn": make_name("Contact"), "email": "test@example.com", "telephone": "+1234567890", "organization": "TestOrg"})
-        store["Contact"] = results[-1]["data"]
-        store["Contact_id"] = store["Contact"]["contact_uid"]
+        run_test(session, "3A create_contact", "create_contact", {"addressbook_uri": store.get("Addressbook_id", ""), "fn": make_name("Contact"), "email": "test@example.com", "telephone": "+1234567890", "organization": "TestOrg"})
+        store["Contact"] = safe_data()
+        store["Contact_id"] = safe_data("contact_uid")
 
-        run_test(session, "3A create_row", "create_table_row", {"table_id": store["Table"]["id"], "data": {"col1": "val1"}})
-        store["Row"] = results[-1]["data"]
-        store["Row_id"] = store["Row"]["id"]
+        run_test(session, "3A create_row", "create_table_row", {"table_id": store.get("Table", {}).get("id", 0), "data": {"col1": "val1"}})
+        store["Row"] = safe_data()
+        store["Row_id"] = safe_data("id")
 
-        run_test(session, "3A create_page", "create_collective_page", {"collective_id": store["Collective"]["id"], "title": make_name("Page"), "parent_id": 0})
-        store["Page"] = results[-1]["data"]["page"]
-        store["Page_id"] = store["Page"]["id"]
+        run_test(session, "3A create_page", "create_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "title": make_name("Page"), "parent_id": 0})
+        store["Page"] = safe_data("page", {})
+        store["Page_id"] = store.get("Page", {}).get("id", 0)
 
-        run_test(session, "3A create_tag", "create_collective_tag", {"collective_id": store["Collective"]["id"], "name": make_name("Tag"), "color": "FF0000"})
-        store["Tag"] = results[-1]["data"]["tag"]
-        store["Tag_id"] = store["Tag"]["id"]
+        run_test(session, "3A create_tag", "create_collective_tag", {"collective_id": store.get("Collective", {}).get("id", 0), "name": make_name("Tag"), "color": "FF0000"})
+        store["Tag"] = safe_data("tag", {})
+        store["Tag_id"] = store.get("Tag", {}).get("id", 0)
 
         run_test(session, "3A verify_note_in_list", "list_notes", {})
         run_test(session, "3A verify_table_in_list", "list_tables", {})
@@ -421,13 +456,13 @@ def main():
         run_test(session, "3A verify_calendar_in_list", "list_all_calendars", {})
         run_test(session, "3A verify_addressbook_in_list", "list_all_addressbooks", {})
         run_test(session, "3A verify_collective_in_list", "list_collectives", {})
-        run_test(session, "3A verify_stack_in_list", "list_deck_stacks", {"board_id": store["Board_id"]})
-        run_test(session, "3A verify_card_in_list", "list_deck_cards", {"board_id": store["Board_id"], "stack_id": store["Stack_id"]})
-        run_test(session, "3A verify_event_in_list", "list_events_by_calendar", {"calendar_uri": store["Calendar_id"]})
-        run_test(session, "3A verify_todo_in_list", "list_todos_by_calendar", {"calendar_uri": store["Calendar_id"]})
-        run_test(session, "3A verify_contact_in_list", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook_id"]})
-        run_test(session, "3A verify_page_in_list", "list_collective_pages", {"collective_id": store["Collective_id"]})
-        run_test(session, "3A verify_tag_in_list", "list_collective_tags", {"collective_id": store["Collective_id"]})
+        run_test(session, "3A verify_stack_in_list", "list_deck_stacks", {"board_id": store.get("Board_id", 0)})
+        run_test(session, "3A verify_card_in_list", "list_deck_cards", {"board_id": store.get("Board_id", 0), "stack_id": store.get("Stack_id", 0)})
+        run_test(session, "3A verify_event_in_list", "list_events_by_calendar", {"calendar_uri": store.get("Calendar_id", "")})
+        run_test(session, "3A verify_todo_in_list", "list_todos_by_calendar", {"calendar_uri": store.get("Calendar_id", "")})
+        run_test(session, "3A verify_contact_in_list", "list_contacts_by_addressbook", {"addressbook_uri": store.get("Addressbook_id", "")})
+        run_test(session, "3A verify_page_in_list", "list_collective_pages", {"collective_id": store.get("Collective", {}).get("id", 0)})
+        run_test(session, "3A verify_tag_in_list", "list_collective_tags", {"collective_id": store.get("Collective", {}).get("id", 0)})
 
         log("\n=== Phase 3B: Get & Verify All Resources ===")
         run_test(session, "3B get_note", "get_note", {"id": store["Note_id"]})
@@ -466,81 +501,81 @@ def main():
         # ------------------------------------------------------------------
         log("\n=== Phase 3.5: Minimal-Params Create & Delete ===")
         run_test(session, "3.5 create_board", "create_deck_board", {"title": make_name("minBoard")})
-        run_test(session, "3.5 delete_board", "delete_deck_board", {"board_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 delete_board", "delete_deck_board", {"board_id": safe_data("id", 0)})
         run_test(session, "3.5 create_note", "create_note", {"title": make_name("minNote"), "content": "min"})
-        run_test(session, "3.5 delete_note", "delete_note", {"id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 delete_note", "delete_note", {"id": safe_data("id", 0)})
         run_test(session, "3.5 create_table", "create_table", {"title": make_name("minTable"), "description": "min"})
-        run_test(session, "3.5 delete_table", "delete_table", {"table_id": results[-1]["data"]["id"]})
+        run_test(session, "3.5 delete_table", "delete_table", {"table_id": safe_data("id", 0)})
         run_test(session, "3.5 create_calendar", "create_calendar", {"display_name": make_name("minCal")})
-        run_test(session, "3.5 delete_calendar", "delete_calendar", {"calendar_uri": results[-1]["data"]["calendar_uri"]})
+        run_test(session, "3.5 delete_calendar", "delete_calendar", {"calendar_uri": safe_data("calendar_uri", "")})
         run_test(session, "3.5 create_addressbook", "create_addressbook", {"display_name": make_name("minAddr"), "description": "min"})
-        run_test(session, "3.5 delete_addressbook", "delete_addressbook", {"addressbook_uri": results[-1]["data"]["addressbook_uri"]})
+        run_test(session, "3.5 delete_addressbook", "delete_addressbook", {"addressbook_uri": safe_data("addressbook_uri", "")})
         run_test(session, "3.5 create_collective", "create_collective", {"name": make_name("minColl")})
-        c5_inner = results[-1]["data"]["collective"]
-        c5_id = c5_inner["id"]
+        c5_inner = safe_data("collective", {})
+        c5_id = c5_inner.get("id", 0)
         run_test(session, "3.5 delete_collective", "trash_collective", {"id": c5_id})
         run_test(session, "3.5 delete_collective", "delete_collective", {"id": c5_id})
         run_test(session, "3.5 create_circle", "create_circle", {"name": make_name("minCircle")})
-        run_test(session, "3.5 delete_circle", "delete_circle", {"circle_id": results[-1]["data"]["id"]})
-        run_test(session, "3.5 create_stack", "create_deck_stack", {"board_id": store["Board_id"], "title": make_name("minStack")})
-        s5_id = results[-1]["data"]["id"]
-        run_test(session, "3.5 delete_stack", "delete_deck_stack", {"board_id": store["Board_id"], "stack_id": s5_id})
-        run_test(session, "3.5 create_card", "create_deck_card", {"board_id": store["Board_id"], "stack_id": store["Stack_id"], "title": make_name("minCard"), "description": "min"})
-        c5d_id = results[-1]["data"]["id"]
-        run_test(session, "3.5 delete_card", "delete_deck_card", {"board_id": store["Board_id"], "stack_id": store["Stack_id"], "card_id": c5d_id})
-        run_test(session, "3.5 create_event", "create_event", {"calendar_uri": store["Calendar_id"], "summary": make_name("minEvent"), "dtstart": DT, "dtend": DT, "description": "min"})
-        e5_uid = results[-1]["data"]["event_uid"]
-        run_test(session, "3.5 delete_event", "delete_event", {"calendar_uri": store["Calendar_id"], "event_uid": e5_uid})
-        run_test(session, "3.5 create_todo", "create_todo", {"calendar_uri": store["Calendar_id"], "summary": make_name("minTodo"), "description": "min", "due_date": DT})
-        t5_uid = results[-1]["data"]["todo_uid"]
-        run_test(session, "3.5 delete_todo", "delete_todo", {"calendar_uri": store["Calendar_id"], "todo_uid": t5_uid})
-        run_test(session, "3.5 create_contact", "create_contact", {"addressbook_uri": store["Addressbook_id"], "fn": make_name("minContact"), "email": "min@test.com"})
-        c5t_uid = results[-1]["data"]["contact_uid"]
-        run_test(session, "3.5 delete_contact", "delete_contact", {"addressbook_uri": store["Addressbook_id"], "contact_uid": c5t_uid})
-        run_test(session, "3.5 create_row", "create_table_row", {"table_id": store["Table_id"], "data": {"col1": "min"}})
-        run_test(session, "3.5 delete_row", "delete_table_row", {"row_id": results[-1]["data"]["id"]})
-        run_test(session, "3.5 create_page", "create_collective_page", {"collective_id": store["Collective_id"], "title": make_name("minPage"), "parent_id": 0})
-        p5_inner = results[-1]["data"]["page"]
-        run_test(session, "3.5 delete_page", "delete_collective_page", {"collective_id": store["Collective_id"], "page_id": p5_inner["id"]})
-        run_test(session, "3.5 create_tag", "create_collective_tag", {"collective_id": store["Collective_id"], "name": make_name("minTag"), "color": "FF0000"})
-        t5_inner = results[-1]["data"]["tag"]
-        run_test(session, "3.5 delete_tag", "delete_collective_tag", {"tag_id": t5_inner["id"], "collective_id": store["Collective_id"]})
+        run_test(session, "3.5 delete_circle", "delete_circle", {"circle_id": safe_data("id", 0)})
+        run_test(session, "3.5 create_stack", "create_deck_stack", {"board_id": store.get("Board_id", 0), "title": make_name("minStack")})
+        s5_id = safe_data("id", 0)
+        run_test(session, "3.5 delete_stack", "delete_deck_stack", {"board_id": store.get("Board_id", 0), "stack_id": s5_id})
+        run_test(session, "3.5 create_card", "create_deck_card", {"board_id": store.get("Board_id", 0), "stack_id": store.get("Stack_id", 0), "title": make_name("minCard"), "description": "min"})
+        c5d_id = safe_data("id", 0)
+        run_test(session, "3.5 delete_card", "delete_deck_card", {"board_id": store.get("Board_id", 0), "stack_id": store.get("Stack_id", 0), "card_id": c5d_id})
+        run_test(session, "3.5 create_event", "create_event", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("minEvent"), "dtstart": DT, "dtend": DT, "description": "min"})
+        e5_uid = safe_data("event_uid", "")
+        run_test(session, "3.5 delete_event", "delete_event", {"calendar_uri": store.get("Calendar_id", ""), "event_uid": e5_uid})
+        run_test(session, "3.5 create_todo", "create_todo", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("minTodo"), "description": "min", "due_date": DT})
+        t5_uid = safe_data("todo_uid", "")
+        run_test(session, "3.5 delete_todo", "delete_todo", {"calendar_uri": store.get("Calendar_id", ""), "todo_uid": t5_uid})
+        run_test(session, "3.5 create_contact", "create_contact", {"addressbook_uri": store.get("Addressbook_id", ""), "fn": make_name("minContact"), "email": "min@test.com"})
+        c5t_uid = safe_data("contact_uid", "")
+        run_test(session, "3.5 delete_contact", "delete_contact", {"addressbook_uri": store.get("Addressbook_id", ""), "contact_uid": c5t_uid})
+        run_test(session, "3.5 create_row", "create_table_row", {"table_id": store.get("Table_id", 0), "data": {"col1": "min"}})
+        run_test(session, "3.5 delete_row", "delete_table_row", {"row_id": safe_data("id", 0)})
+        run_test(session, "3.5 create_page", "create_collective_page", {"collective_id": store.get("Collective_id", 0), "title": make_name("minPage"), "parent_id": 0})
+        p5_inner = safe_data("page", {})
+        run_test(session, "3.5 delete_page", "delete_collective_page", {"collective_id": store.get("Collective_id", 0), "page_id": p5_inner.get("id", 0)})
+        run_test(session, "3.5 create_tag", "create_collective_tag", {"collective_id": store.get("Collective_id", 0), "name": make_name("minTag"), "color": "FF0000"})
+        t5_inner = safe_data("tag", {})
+        run_test(session, "3.5 delete_tag", "delete_collective_tag", {"tag_id": t5_inner.get("id", 0), "collective_id": store.get("Collective_id", 0)})
         # ------------------------------------------------------------------
         # Phase 4: Post-CRUD Domain Tools
         # ------------------------------------------------------------------
         log("\n=== Phase 4: Post-CRUD Domain Tools ===")
-        run_test(session, "4A list_deck_stacks", "list_deck_stacks", {"board_id": store["Board"]["id"]})
-        run_test(session, "4A list_deck_cards", "list_deck_cards", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"]})
-        run_test(session, "4A list_deck_labels", "list_deck_labels", {"board_id": store["Board"]["id"]})
-        run_test(session, "4A list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
-        run_test(session, "4A list_contacts_by_addressbook", "list_contacts_by_addressbook", {"addressbook_uri": store["Addressbook"]["addressbook_uri"]})
-        run_test(session, "4A list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": store["Calendar"]["calendar_uri"]})
+        run_test(session, "4A list_deck_stacks", "list_deck_stacks", {"board_id": store.get("Board", {}).get("id", 0)})
+        run_test(session, "4A list_deck_cards", "list_deck_cards", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0)})
+        run_test(session, "4A list_deck_labels", "list_deck_labels", {"board_id": store.get("Board", {}).get("id", 0)})
+        run_test(session, "4A list_events_by_calendar", "list_events_by_calendar", {"calendar_uri": store.get("Calendar", {}).get("calendar_uri", "")})
+        run_test(session, "4A list_contacts_by_addressbook", "list_contacts_by_addressbook", {"addressbook_uri": store.get("Addressbook", {}).get("addressbook_uri", "")})
+        run_test(session, "4A list_todos_by_calendar", "list_todos_by_calendar", {"calendar_uri": store.get("Calendar", {}).get("calendar_uri", "")})
         run_test(session, "4A list_notes_by_category", "list_notes_by_category", {"category": "test"})
-        run_test(session, "4A list_collective_pages", "list_collective_pages", {"collective_id": store["Collective"]["id"]})
-        run_test(session, "4A list_collective_tags", "list_collective_tags", {"collective_id": store["Collective"]["id"]})
-        run_test(session, "4A table_get_schema", "get_table_schema", {"table_id": store["Table"]["id"]})
-        run_test(session, "4A list_table_rows", "list_table_rows", {"table_id": store["Table"]["id"]})
+        run_test(session, "4A list_collective_pages", "list_collective_pages", {"collective_id": store.get("Collective", {}).get("id", 0)})
+        run_test(session, "4A list_collective_tags", "list_collective_tags", {"collective_id": store.get("Collective", {}).get("id", 0)})
+        run_test(session, "4A table_get_schema", "get_table_schema", {"table_id": store.get("Table", {}).get("id", 0)})
+        run_test(session, "4A list_table_rows", "list_table_rows", {"table_id": store.get("Table", {}).get("id", 0)})
 
         # ------------------------------------------------------------------
         # Phase 5: Domain Mutation Tests (before deletion, needs resources)
         # ------------------------------------------------------------------
         log("\n=== Phase 5A: Card Archive/Unarchive ===")
-        run_test(session, "5A CardArchive", "archive_deck_card", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"]})
-        run_test(session, "5A CardUnarchive", "unarchive_deck_card", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"]})
-        run_test(session, "5A PageTrash", "trash_collective_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"]})
-        run_test(session, "5A PageRestore", "restore_collective_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"]})
+        run_test(session, "5A CardArchive", "archive_deck_card", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0)})
+        run_test(session, "5A CardUnarchive", "unarchive_deck_card", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0)})
+        run_test(session, "5A PageTrash", "trash_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0)})
+        run_test(session, "5A PageRestore", "restore_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0)})
 
         log("\n=== Phase 5B: Domain Mutation Tools ===")
         run_test(session, "5B set_status", "set_status", {"status_type": "online"})
         run_test(session, "5B clear_message", "clear_message", {})
-        run_test(session, "5B note_append_content", "append_note_content", {"id": store["Note"]["id"], "content": "Appended line"})
+        run_test(session, "5B note_append_content", "append_note_content", {"id": store.get("Note", {}).get("id", 0), "content": "Appended line"})
         run_test(session, "5B note_search", "search_notes", {"query": "Hello"})
         run_test(session, "5B search", "search", {"provider_id": "files", "term": "test"})
-        run_test(session, "5B table_update_row", "update_table_row", {"row_id": store["Row"]["id"], "data": {}})
+        run_test(session, "5B table_update_row", "update_table_row", {"row_id": store.get("Row", {}).get("id", 0), "data": {}})
 
         # ---- Phase 5D: Read-back Verification ----
         log("\n=== Phase 5D: Read-back Verification ===")
-        run_test(session, "5D verify_append_content", "get_note", {"id": store["Note"]["id"]})
+        run_test(session, "5D verify_append_content", "get_note", {"id": store.get("Note", {}).get("id", 0)})
         run_test(session, "5D verify_set_status", "get_user_status", {})
         run_test(session, "5D verify_clear_message", "get_user_status", {})
 
@@ -550,13 +585,14 @@ def main():
         run_test(session, "5E create_fixture_file", "write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
         store["fixture_path"] = fixture_path
         run_test(session, "5E list_fixture", "list_folder_contents", {"path": fixture_path, "include_all_fields": True})
-        store["fixture_file_id"] = int(get_list_items(results[-1]["data"])[0]["fileid"])
+        _fid = safe_items(results[-1]["data"], 0, "fileid")
+        store["fixture_file_id"] = int(str(_fid)) if _fid else 0
 
         # ---- Phase 5F: Sharing Tests ----
         log("\n=== Phase 5F: Sharing Tests ===")
         rel_path = f"/t{rid}-fixture.txt"
         run_test(session, "5F create_share", "create_share", {"path": rel_path, "share_type": "public", "share_with": "", "permissions": "read"})
-        share_id = results[-1]["data"]["id"]
+        share_id = safe_data("id", 0)
         run_test(session, "5F get_share", "get_share", {"id": share_id})
         run_test(session, "5F list_shares_by_path", "list_shares_by_path", {"path": rel_path})
         run_test(session, "5F update_share", "update_share", {"id": share_id, "permissions": "read"})
@@ -564,26 +600,26 @@ def main():
 
         # ---- Phase 5G: Collaboration Tests ----
         log("\n=== Phase 5G: Collaboration Tests ===")
-        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": store["circle_id"], "permissions": "read"})
-        store["share5g_id"] = results[-1]["data"]["id"]
+        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": store.get("circle_id", 0), "permissions": "read"})
+        store["share5g_id"] = safe_data("id", 0)
         run_test(session, "5G list_all_shares", "list_all_shares", {})
-        run_test(session, "5G create_collection", "create_collection", {"resource_type": "file", "resource_id": str(store["fixture_file_id"]), "name": "test-collection-5g"})
-        store["collection_5g_id"] = str(results[-1]["data"]["id"])
+        run_test(session, "5G create_collection", "create_collection", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0)), "name": "test-collection-5g"})
+        store["collection_5g_id"] = str(safe_data("id", 0))
         run_test(session, "5G search_collections", "search_collections", {"search": "test-collection-5g"})
-        run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": store["collection_5g_id"]})
-        run_test(session, "5G list_collections_by_resource", "list_collections_by_resource", {"resource_type": "file", "resource_id": str(store["fixture_file_id"])})
-        run_test(session, "5G delete_circle_share", "delete_share", {"id": store["share5g_id"]})
+        run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": store.get("collection_5g_id", "")})
+        run_test(session, "5G list_collections_by_resource", "list_collections_by_resource", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0))})
+        run_test(session, "5G delete_circle_share", "delete_share", {"id": store.get("share5g_id", 0)})
 
         # ---- Phase 5H: Reminder Tests ----
         log("\n=== Phase 5H: Reminder Tests ===")
-        run_test(session, "5H set_file_reminder", "set_file_reminder", {"file_id": store["fixture_file_id"], "due_date": "2027-01-01T00:00:00+00:00"})
-        run_test(session, "5H get_file_reminder", "get_file_reminder", {"file_id": store["fixture_file_id"]})
-        run_test(session, "5H delete_file_reminder", "delete_file_reminder", {"file_id": store["fixture_file_id"]})
-        run_test(session, "5H verify_reminder_deleted", "get_file_reminder", {"file_id": store["fixture_file_id"]})
+        run_test(session, "5H set_file_reminder", "set_file_reminder", {"file_id": store.get("fixture_file_id", 0), "due_date": "2027-01-01T00:00:00+00:00"})
+        run_test(session, "5H get_file_reminder", "get_file_reminder", {"file_id": store.get("fixture_file_id", 0)})
+        run_test(session, "5H delete_file_reminder", "delete_file_reminder", {"file_id": store.get("fixture_file_id", 0)})
+        run_test(session, "5H verify_reminder_deleted", "get_file_reminder", {"file_id": store.get("fixture_file_id", 0)})
 
         # ---- Phase 5I: Direct Download URL ----
         log("\n=== Phase 5I: Direct Download URL ===")
-        run_test(session, "5I get_direct_download_url", "get_direct_download_url", {"file_id": store["fixture_file_id"]})
+        run_test(session, "5I get_direct_download_url", "get_direct_download_url", {"file_id": store.get("fixture_file_id", 0)})
 
         # ---- Phase 5J: Status Message Tests ----
         log("\n=== Phase 5J: Status Message Tests ===")
@@ -601,81 +637,81 @@ def main():
         # ---- Phase 5L: Mail Tests ----
         log("\n=== Phase 5L: Mail Tests ===")
         run_test(session, "5L list_all_accounts", "list_all_accounts", {})
-        store["mail_account_id"] = toon_to_json(results[-1]["data"]["items"])[0]["id"]
-        run_test(session, "5L list_mailboxes", "list_mailboxes", {"account_id": store["mail_account_id"]})
-        store["mail_drafts_db_id"] = find_mailbox_by_special(results[-1]["data"], "drafts")
-        store["mail_trash_db_id"] = find_mailbox_by_special(results[-1]["data"], "trash")
-        run_test(session, "5L send_message", "send_message", {"account_id": store["mail_account_id"], "subject": f"MCP Test {rid}", "body": "This is a test", "to": "test@example.com"})
-        run_test(session, "5L create_email_draft", "create_email_draft", {"account_id": store["mail_account_id"], "subject": f"MCP Draft {rid}", "body": "This is a test", "to": "test@example.com"})
-        store["mail_message_id"] = results[-1]["data"]["id"]
-        run_test(session, "5L list_messages", "list_messages", {"account_id": store["mail_account_id"], "mailbox_db_id": store["mail_drafts_db_id"], "limit": 5})
-        run_test(session, "5L get_message", "get_message", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"]})
-        run_test(session, "5L get_message_body", "get_message_body", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"]})
-        run_test(session, "5L set_message_flags", "set_message_flags", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"], "seen": True})
-        run_test(session, "5L move_message", "move_message", {"account_id": store["mail_account_id"], "message_id": store["mail_message_id"], "mailbox_db_id": store["mail_trash_db_id"]})
+        store["mail_account_id"] = safe_items(results[-1]["data"], 0, "id")
+        run_test(session, "5L list_mailboxes", "list_mailboxes", {"account_id": store.get("mail_account_id", 0)})
+        store["mail_drafts_db_id"] = find_mailbox_by_special(safe_data(), "drafts")
+        store["mail_trash_db_id"] = find_mailbox_by_special(safe_data(), "trash")
+        run_test(session, "5L send_message", "send_message", {"account_id": store.get("mail_account_id", 0), "subject": f"MCP Test {rid}", "body": "This is a test", "to": "test@example.com"})
+        run_test(session, "5L create_email_draft", "create_email_draft", {"account_id": store.get("mail_account_id", 0), "subject": f"MCP Draft {rid}", "body": "This is a test", "to": "test@example.com"})
+        store["mail_message_id"] = safe_data("id", 0)
+        run_test(session, "5L list_messages", "list_messages", {"account_id": store.get("mail_account_id", 0), "mailbox_db_id": store.get("mail_drafts_db_id", 0), "limit": 5})
+        run_test(session, "5L get_message", "get_message", {"account_id": store.get("mail_account_id", 0), "message_id": store.get("mail_message_id", 0)})
+        run_test(session, "5L get_message_body", "get_message_body", {"account_id": store.get("mail_account_id", 0), "message_id": store.get("mail_message_id", 0)})
+        run_test(session, "5L set_message_flags", "set_message_flags", {"account_id": store.get("mail_account_id", 0), "message_id": store.get("mail_message_id", 0), "seen": True})
+        run_test(session, "5L move_message", "move_message", {"account_id": store.get("mail_account_id", 0), "message_id": store.get("mail_message_id", 0), "mailbox_db_id": store.get("mail_trash_db_id", 0)})
 
         # ---- Phase 5M: Chat Tests ----
         log("\n=== Phase 5M: Chat Tests ===")
         run_test(session, "5M create_room", "create_talk_room", {"room_type": "public", "room_name": f"t{rid}-chat"})
-        store["chat_token"] = results[-1]["data"]["token"]
-        run_test(session, "5M rename_room", "update_talk_room", {"token": store["chat_token"], "room_name": f"t{rid}-renamed"})
-        run_test(session, "5M set_description", "set_talk_description", {"token": store["chat_token"], "description": "Test room description"})
-        run_test(session, "5M add_participant", "add_talk_participant", {"token": store["chat_token"], "new_participant": "shbadmin"})
-        run_test(session, "5M list_participants", "list_talk_participants", {"token": store["chat_token"]})
-        store["attendee_id"] = toon_to_json(results[-1]["data"]["items"])[1]["attendeeId"]
-        run_test(session, "5M remove_participant", "remove_talk_participant", {"token": store["chat_token"], "attendee_id": store["attendee_id"]})
-        run_test(session, "5M send_chat_message", "send_chat_message", {"token": store["chat_token"], "message": "Hello from MCP test"})
-        store["chat_msg_id"] = results[-1]["data"]["id"]
-        run_test(session, "5M list_chat_messages", "list_chat_messages", {"token": store["chat_token"], "limit": 5})
-        run_test(session, "5M delete_chat_message", "delete_chat_message", {"token": store["chat_token"], "message_id": store["chat_msg_id"]})
-        run_test(session, "5M delete_room", "delete_talk_room", {"token": store["chat_token"]})
+        store["chat_token"] = safe_data("token", "")
+        run_test(session, "5M rename_room", "update_talk_room", {"token": store.get("chat_token", ""), "room_name": f"t{rid}-renamed"})
+        run_test(session, "5M set_description", "set_talk_description", {"token": store.get("chat_token", ""), "description": "Test room description"})
+        run_test(session, "5M add_participant", "add_talk_participant", {"token": store.get("chat_token", ""), "new_participant": "shbadmin"})
+        run_test(session, "5M list_participants", "list_talk_participants", {"token": store.get("chat_token", "")})
+        store["attendee_id"] = safe_items(results[-1]["data"], 1, "attendeeId")
+        run_test(session, "5M remove_participant", "remove_talk_participant", {"token": store.get("chat_token", ""), "attendee_id": store.get("attendee_id", 0)})
+        run_test(session, "5M send_chat_message", "send_chat_message", {"token": store.get("chat_token", ""), "message": "Hello from MCP test"})
+        store["chat_msg_id"] = safe_data("id", 0)
+        run_test(session, "5M list_chat_messages", "list_chat_messages", {"token": store.get("chat_token", ""), "limit": 5})
+        run_test(session, "5M delete_chat_message", "delete_chat_message", {"token": store.get("chat_token", ""), "message_id": store.get("chat_msg_id", 0)})
+        run_test(session, "5M delete_room", "delete_talk_room", {"token": store.get("chat_token", "")})
 
         # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")
-        run_test(session, "5N list_deck_labels", "list_deck_labels", {"board_id": store["Board"]["id"]})
-        store["deck_first_label_id"] = toon_to_json(results[-1]["data"]["items"])[0]["id"]
-        run_test(session, "5N deck_assign_label", "assign_deck_label", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "label_id": store["deck_first_label_id"]})
-        run_test(session, "5N deck_remove_label", "remove_deck_label", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "label_id": store["deck_first_label_id"]})
-        run_test(session, "5N deck_assign_user", "assign_deck_user", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "user_id": API_USER})
-        run_test(session, "5N deck_remove_user", "remove_deck_user", {"board_id": store["Board"]["id"], "stack_id": store["Stack"]["id"], "card_id": store["Card"]["id"], "user_id": API_USER})
+        run_test(session, "5N list_deck_labels", "list_deck_labels", {"board_id": store.get("Board", {}).get("id", 0)})
+        store["deck_first_label_id"] = safe_items(results[-1]["data"], 0, "id")
+        run_test(session, "5N deck_assign_label", "assign_deck_label", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0), "label_id": store.get("deck_first_label_id", 0)})
+        run_test(session, "5N deck_remove_label", "remove_deck_label", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0), "label_id": store.get("deck_first_label_id", 0)})
+        run_test(session, "5N deck_assign_user", "assign_deck_user", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0), "user_id": API_USER})
+        run_test(session, "5N deck_remove_user", "remove_deck_user", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "card_id": store.get("Card", {}).get("id", 0), "user_id": API_USER})
 
         # ---- Phase 5O: Collectives Mutation Tests ----
         log("\n=== Phase 5O: Collectives Mutation Tests ===")
-        run_test(session, "5O collectives_update_emoji", "update_collective_emoji", {"id": store["Collective"]["id"], "emoji": "⭐"})
-        c5o_data = extract_content(session.call_tool("get_collective", {"id": store["Collective_id"]}))
+        run_test(session, "5O collectives_update_emoji", "update_collective_emoji", {"id": store.get("Collective", {}).get("id", 0), "emoji": "⭐"})
+        c5o_data = safe_call(session, "get_collective", {"id": store.get("Collective_id", 0)})
         c5o_emoji = c5o_data.get("emoji", "")
         emoji_ok = c5o_emoji == "⭐"
         results.append({"label":"5O verify_update_emoji","tool":"list_collectives","status":("FAILED","PASSED")[emoji_ok],"reason":("",f"Emoji is {c5o_emoji!r}, expected ⭐")[emoji_ok],"data":{}})
         passed_count = passed_count + 1
         failed_count = failed_count + (1, 0)[emoji_ok]
         log(f"  {('FAILED','PASSED')[emoji_ok]} 5O verify_update_emoji")
-        run_test(session, "5O collectives_set_page_emoji", "set_collective_page_emoji", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "emoji": "👍"})
-        c5o_page_data = extract_content(session.call_tool("get_collective_page",{"collective_id":store["Collective"]["id"],"page_id":store["Page"]["id"]}))
-        c5o_page_emoji = c5o_page_data["emoji"]
+        run_test(session, "5O collectives_set_page_emoji", "set_collective_page_emoji", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0), "emoji": "👍"})
+        c5o_page_data = safe_call(session, "get_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0)})
+        c5o_page_emoji = c5o_page_data.get("emoji", "")
         page_ok = c5o_page_emoji == "👍"
         results.append({"label":"5O verify_set_page_emoji","tool":"get_collective_page","status":("FAILED","PASSED")[page_ok],"reason":("",f"Emoji is {c5o_page_emoji!r}, expected 👍")[page_ok],"data":c5o_page_data})
         passed_count = passed_count + 1
         failed_count = failed_count + (1, 0)[page_ok]
         log(f"  {('FAILED','PASSED')[page_ok]} 5O verify_set_page_emoji")
-        run_test(session, "5O collectives_set_page_full_width", "set_collective_page_full_width", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "is_full_width": True})
-        run_test(session, "5O collectives_move_page", "move_collective_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "destination_collective_id": store["Collective"]["id"]})
-        run_test(session, "5O collectives_assign_tag", "assign_collective_tag", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "tag_id": store["Tag"]["id"]})
-        run_test(session, "5O collectives_remove_tag", "remove_collective_tag", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"], "tag_id": store["Tag"]["id"]})
-        run_test(session, "5O collectives_search_pages", "search_collective_pages", {"collective_id": store["Collective"]["id"], "query": make_name("Page")})
-        run_test(session, "5O verify_tag_ops", "get_collective_page", {"collective_id": store["Collective"]["id"], "page_id": store["Page"]["id"]})
+        run_test(session, "5O collectives_set_page_full_width", "set_collective_page_full_width", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0), "is_full_width": True})
+        run_test(session, "5O collectives_move_page", "move_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0), "destination_collective_id": store.get("Collective", {}).get("id", 0)})
+        run_test(session, "5O collectives_assign_tag", "assign_collective_tag", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0), "tag_id": store.get("Tag", {}).get("id", 0)})
+        run_test(session, "5O collectives_remove_tag", "remove_collective_tag", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0), "tag_id": store.get("Tag", {}).get("id", 0)})
+        run_test(session, "5O collectives_search_pages", "search_collective_pages", {"collective_id": store.get("Collective", {}).get("id", 0), "query": make_name("Page")})
+        run_test(session, "5O verify_tag_ops", "get_collective_page", {"collective_id": store.get("Collective", {}).get("id", 0), "page_id": store.get("Page", {}).get("id", 0)})
 
         # ---- Phase 5Q: Notification Tests ----
         log("\n=== Phase 5Q: Notification Tests ===")
         run_test(session, "5Q create_notification", "create_notification", {"user_id": API_USER, "subject": f"MCP test {rid}", "message": "Notification test"})
-        store["notification_id"] = results[-1]["data"]["id"]
+        store["notification_id"] = safe_data("id", 0)
         run_test(session, "5Q list_notifications", "list_notifications", {})
-        run_test(session, "5Q get_notification", "get_notification", {"id": store["notification_id"]})
-        run_test(session, "5Q delete_notification", "delete_notification", {"id": store["notification_id"]})
+        run_test(session, "5Q get_notification", "get_notification", {"id": store.get("notification_id", 0)})
+        run_test(session, "5Q delete_notification", "delete_notification", {"id": store.get("notification_id", 0)})
         run_test(session, "5Q delete_all_notifications", "delete_all_notifications", {})
 
         # ---- Phase 5R: Misc Tests ----
         log("\n=== Phase 5R: Misc Tests ===")
-        cal_uri = store["Calendar_id"]
+        cal_uri = store.get("Calendar_id", "")
         run_test(session, "5R find_availability", "find_availability", {"calendar_uris": cal_uri, "from_date": "2026-07-01T00:00:00+00:00", "to_date": "2026-07-07T00:00:00+00:00"})
         run_test(session, "5R create_meeting", "create_meeting", {"summary": f"t{rid}-Meeting", "dtstart": "2026-07-01T10:00:00+00:00", "dtend": "2026-07-01T11:00:00+00:00", "attendees": "test@example.com", "description": "Test meeting", "calendar_uri": cal_uri})
         run_test(session, "5R search_todos", "search_todos", {"query": make_name("Todo"), "calendar_uri": cal_uri})
@@ -688,7 +724,7 @@ def main():
         attach_note_dir = f"Notes/test/"
         attach_filename = f"t{rid}-attach.txt"
         run_test(session, "5R create_attachment", "write_file", {"path": f"{attach_note_dir}{attach_filename}", "content": "MCP attachment test"})
-        run_test(session, "5R get_attachment", "get_note_attachment", {"note_id": store["Note"]["id"], "path": attach_filename})
+        run_test(session, "5R get_attachment", "get_note_attachment", {"note_id": store.get("Note", {}).get("id", 0), "path": attach_filename})
 
         # ---- Phase 5S: File Fixture Cleanup ----
         log("\n=== Phase 5S: File Fixture Cleanup ===")
@@ -716,27 +752,25 @@ def main():
 
         # ---- Phase 6: Circle Member Management Tests ----
         log("\n=== Phase 6: Circle Member Management Tests ===")
-        whoami = session.call_tool("get_user_status")
-        wd = extract_content(whoami)
-        current_user = wd["userId"]
+        wd = safe_call(session, "get_user_status")
+        current_user = wd.get("userId", "")
         store["current_user"] = current_user
-        all_users = session.call_tool("list_users")
-        ud = extract_content(all_users)
+        ud = safe_call(session, "list_users")
         user_list = get_list_items(ud)
-        second_user = user_list[0]
+        second_user = user_list[0] if user_list else ""
 
         circle_name = make_name("memberTest")
         run_test(session, "6 create_circle", "create_circle", {"name": circle_name})
-        circle_id = results[-1]["data"]["id"]
+        circle_id = safe_data("id", 0)
 
         run_test(session, "6 list_members", "list_circle_members", {"circle_id": circle_id, "include_all_fields": True})
         run_test(session, "6 get_circle", "get_circle", {"circle_id": circle_id})
         run_test(session, "6 update_circle", "update_circle", {"circle_id": circle_id, "name": f"t{rid}-circle-updated"})
         run_test(session, "6 add_member", "add_circle_member", {"circle_id": circle_id, "user_id": second_user})
         run_test(session, "6 list_members_post", "list_circle_members", {"circle_id": circle_id, "include_all_fields": True})
-        store["member_id"] = toon_to_json(results[-1]["data"]["items"])[1]["id"]
-        run_test(session, "6 update_level", "update_circle_member_level", {"circle_id": circle_id, "member_id": store["member_id"], "level": "moderator"})
-        run_test(session, "6 remove_member", "remove_circle_member", {"circle_id": circle_id, "member_id": store["member_id"]})
+        store["member_id"] = safe_items(results[-1]["data"], 1, "id")
+        run_test(session, "6 update_level", "update_circle_member_level", {"circle_id": circle_id, "member_id": store.get("member_id", 0), "level": "moderator"})
+        run_test(session, "6 remove_member", "remove_circle_member", {"circle_id": circle_id, "member_id": store.get("member_id", 0)})
         run_test(session, "6 delete_circle", "delete_circle", {"circle_id": circle_id})
 
         # ------------------------------------------------------------------
