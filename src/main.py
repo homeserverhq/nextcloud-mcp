@@ -9,6 +9,7 @@ from contextvars import ContextVar
 from typing import Any, Optional
 
 from fastmcp import FastMCP, Context
+from mcp.types import ToolAnnotations
 from pydantic import BaseModel
 from toon_mcp import json_to_toon
 
@@ -389,7 +390,7 @@ class MovePageParam(BaseModel):
     destination_parent_id: int = 0
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Users", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_users(
     search: str = "",
     limit: int = 100,
@@ -418,7 +419,7 @@ async def list_users(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get User", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_user(
     user_id: str,
     include_all_fields: bool = False,
@@ -433,7 +434,7 @@ async def get_user(
     return await get_client().get_user(user_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Groups", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_groups(
     limit: int = 100,
     offset: int = 0,
@@ -453,7 +454,7 @@ async def list_groups(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Group Members", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_group_members(
     group_id: str,
     limit: int = 100,
@@ -473,7 +474,7 @@ async def list_group_members(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List All Shares", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_shares(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -487,7 +488,7 @@ async def list_all_shares(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List Shares By Path", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_shares_by_path(
     path: str,
     shared_with_me: bool = False,
@@ -505,7 +506,7 @@ async def list_shares_by_path(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Get Share", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_share(
     id: int,
     include_all_fields: bool = False,
@@ -523,7 +524,7 @@ async def get_share(
     return data
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Create Share", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_share(
     path: str,
     share_type: str,
@@ -550,7 +551,7 @@ async def create_share(
     return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Update Share", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_share(
     id: int,
     permissions: Optional[str] = None,
@@ -573,7 +574,7 @@ async def update_share(
     return await get_client().update_share(id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Delete Share", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_share(
     id: int,
     ctx: Context = None
@@ -589,7 +590,7 @@ async def delete_share(
     return data
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get User Status", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_user_status(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -602,7 +603,7 @@ async def get_user_status(
     return await get_client().get_user_status(get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Status", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_status(
     status_type: str,
     ctx: Context = None
@@ -615,7 +616,7 @@ async def set_status(
     return await get_client().set_status(status_type, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Predefined Message", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_predefined_message(
     message_id: str,
     clear_at: str = "",
@@ -630,7 +631,7 @@ async def set_predefined_message(
     return await get_client().set_predefined_message(message_id, get_user_token(), clear_at, ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Custom Message", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_custom_message(
     message: str,
     status_icon: str,
@@ -647,14 +648,14 @@ async def set_custom_message(
     return await get_client().set_custom_message(message, status_icon, get_user_token(), clear_at, ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Clear Message", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def clear_message(ctx: Context) -> dict[str, Any]:
     """Clear the current status message."""
     result = await get_client().clear_message(get_user_token(), ALLOW_ALL_AGGREGATE)
     return {"status": "cleared", "result": result}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Predefined Statuses", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_predefined_statuses(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -668,7 +669,7 @@ async def list_predefined_statuses(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List User Statuses", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_user_statuses(
     limit: int = 100,
     include_all_fields: bool = False,
@@ -684,7 +685,7 @@ async def list_user_statuses(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get Ooo", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_ooo(
     user_id: str,
     include_all_fields: bool = False,
@@ -699,7 +700,7 @@ async def get_ooo(
     return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set Ooo", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_ooo(
     first_day: str,
     last_day: str,
@@ -724,7 +725,7 @@ async def set_ooo(
     return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Clear Ooo", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def clear_ooo(
     user_id: str,
     ctx: Context = None
@@ -738,7 +739,7 @@ async def clear_ooo(
     return {"success": True, "data": data}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Upcoming Events", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_upcoming_events(
     location: str = "",
     limit: int = 20,
@@ -756,7 +757,7 @@ async def list_upcoming_events(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Get Direct Download Url", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_direct_download_url(
     file_id: int,
     ctx: Context = None
@@ -769,7 +770,7 @@ async def get_direct_download_url(
     return await get_client().get_direct_download_url(file_id, get_user_token())
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List All Folders", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_folders(
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -788,7 +789,7 @@ async def list_all_folders(
     return {"status": "success", "message": "Complete folder structure loaded — every folder in your account is shown above.", "tree": json_to_toon(data), "next_steps": "Use list_folder_contents(path='FOLDER') to see files inside a folder, or search_files to find files by name."}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get Collection By Id", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_collection_by_id(
     id: str,
     include_all_fields: bool = False,
@@ -803,7 +804,7 @@ async def get_collection_by_id(
     return await get_client().list_collection(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Search Collections", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_collections(
     search: str = "",
     limit: int = 50,
@@ -821,7 +822,7 @@ async def search_collections(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Search Collections Raw", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_collections_raw(
     search: str = "",
     ctx: Context = None
@@ -835,7 +836,7 @@ async def search_collections_raw(
     return {"items": data}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Collections By Resource", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_collections_by_resource(
     resource_type: str,
     resource_id: str,
@@ -853,7 +854,7 @@ async def list_collections_by_resource(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Create Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_collection(
     resource_type: str = "file",
     resource_id: str = "",
@@ -870,7 +871,7 @@ async def create_collection(
     return await get_client().create_collection_on_resource(resource_type, resource_id, name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get File Reminder", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_file_reminder(
     file_id: int,
     include_all_fields: bool = False,
@@ -885,7 +886,7 @@ async def get_file_reminder(
     return await get_client().get_file_reminder(file_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set File Reminder", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_file_reminder(
     file_id: int,
     due_date: str,
@@ -903,7 +904,7 @@ async def set_file_reminder(
     return result
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete File Reminder", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_file_reminder(
     file_id: int,
     ctx: Context = None
@@ -919,7 +920,7 @@ async def delete_file_reminder(
     return result
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Search Providers", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_search_providers(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -933,7 +934,7 @@ async def list_search_providers(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Search", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search(
     provider_id: str,
     term: str,
@@ -955,7 +956,7 @@ async def search(
     return {"results": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get Capabilities", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_capabilities(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -974,7 +975,7 @@ async def get_capabilities(
 
 # --- File Operations (CRUD) ---
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Write File", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def write_file(
     path: str,
     content: str,
@@ -990,7 +991,7 @@ async def write_file(
     return await get_client().webdav_write_file(full_path, content, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Read File", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def read_file(
     path: str,
     ctx: Context = None
@@ -1006,7 +1007,7 @@ async def read_file(
     return {"status": "success", "message": f"Read file '{path}'.", "content": content}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Search Files", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_files(
     query: str,
     limit: int = 50,
@@ -1039,7 +1040,7 @@ async def search_files(
     return {"status": "success", "message": message, "items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Move File", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def move_file(
     source: str,
     destination: str,
@@ -1066,7 +1067,7 @@ async def move_file(
         return {"status": "error", "message": f"Error moving '{source}' to '{destination}': {e}", "next_steps": "The file may have been moved despite this error. Verify with search_files."}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Copy File", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def copy_file(
     source: str,
     destination: str,
@@ -1093,7 +1094,7 @@ async def copy_file(
         return {"status": "error", "message": f"Error copying '{source}' to '{destination}': {e}"}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Delete File", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_file(
     path: str,
     ctx: Context = None
@@ -1112,7 +1113,7 @@ async def delete_file(
 
 # --- Folder Operations (CRUD) ---
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Create Folder", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_folder(
     path: str,
     ctx: Context = None
@@ -1126,7 +1127,7 @@ async def create_folder(
     return await get_client().webdav_create_directory(full_path, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List Folder Contents", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_folder_contents(
     path: str = "",
     include_all_fields: bool = False,
@@ -1158,7 +1159,7 @@ async def list_folder_contents(
     return {"status": "success" if data else "empty", "message": msg, "items": json_to_toon(data) if data else []}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Move Folder", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def move_folder(
     source: str,
     destination: str,
@@ -1184,7 +1185,7 @@ async def move_folder(
         return {"status": "error", "message": f"Error moving folder '{source}' to '{destination}': {e}"}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Copy Folder", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def copy_folder(
     source: str,
     destination: str,
@@ -1210,7 +1211,7 @@ async def copy_folder(
         return {"status": "error", "message": f"Error copying folder '{source}' to '{destination}': {e}"}
 
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Delete Folder", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_folder(
     path: str,
     ctx: Context = None
@@ -1229,7 +1230,7 @@ async def delete_folder(
 
 # --- Bulk Operations ---
 
-@mcp.tool(tags={"write", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Move Files", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def move_files(
     files: list[str],
     destination: str,
@@ -1257,7 +1258,7 @@ async def move_files(
     return {"results": results}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List Favorites", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_favorites(
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1275,7 +1276,7 @@ async def list_favorites(
     return {"status": "success" if data else "empty", "message": f"Found {count} favorite(s)." if data else "No favorites.", "items": json_to_toon(data) if data else []}
 
 
-@mcp.tool(tags={"read", "basic", "nextcloud"})
+@mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List Notifications", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_notifications(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1289,7 +1290,7 @@ async def list_notifications(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Notification", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_notification(
     id: int,
     include_all_fields: bool = False,
@@ -1304,7 +1305,7 @@ async def get_notification(
     return await get_client().get_notification(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Notification", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_notification(
     id: int,
     ctx: Context = None
@@ -1320,7 +1321,7 @@ async def delete_notification(
     return result
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete All Notifications", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
     """Delete all notifications."""
     result = await get_client().delete_all_notifications(get_user_token())
@@ -1329,7 +1330,7 @@ async def delete_all_notifications(ctx: Context) -> dict[str, Any]:
     return result
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Create Notification", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_notification(
     user_id: str,
     subject: str,
@@ -1346,7 +1347,7 @@ async def create_notification(
     return await get_client().create_notification(user_id, subject, message, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Activities", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_activities(
     limit: int = 50,
     sort: str = "",
@@ -1368,7 +1369,7 @@ async def list_activities(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Activity Filters", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_activity_filters(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1382,7 +1383,7 @@ async def list_activity_filters(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Activity Filtered", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_activity_filtered(
     filter_name: str,
     limit: int = 50,
@@ -1400,7 +1401,7 @@ async def list_activity_filtered(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Calendars", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_calendars(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1414,7 +1415,7 @@ async def list_all_calendars(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Calendar", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_calendar(
     display_name: str,
     color: str = "",
@@ -1430,7 +1431,7 @@ async def create_calendar(
     return await get_client().create_calendar(params.display_name, params.color, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Calendar", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_calendar(
     calendar_uri: str,
     display_name: str,
@@ -1448,7 +1449,7 @@ async def update_calendar(
     return {"status": "updated", "result": result}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Calendar", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_calendar(
     calendar_uri: str,
     ctx: Context = None
@@ -1461,7 +1462,7 @@ async def delete_calendar(
     return await get_client().delete_calendar(calendar_uri, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Calendar", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1476,7 +1477,7 @@ async def get_calendar(
     return await get_client().get_calendar(calendar_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Events", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_events(
     from_date: str = "",
     to_date: str = "",
@@ -1505,7 +1506,7 @@ async def list_all_events(
     return {"items": json_to_toon(all_events[:limit])}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Events By Calendar", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_events_by_calendar(
     calendar_uri: str,
     from_date: str = "",
@@ -1527,7 +1528,7 @@ async def list_events_by_calendar(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Event", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_event(
     calendar_uri: str,
     event_uid: str,
@@ -1544,7 +1545,7 @@ async def get_event(
     return await get_client().get_event(calendar_uri, event_uid, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Event", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_event(
     calendar_uri: str,
     summary: str,
@@ -1574,7 +1575,7 @@ async def create_event(
                                            description, location, rrule, timezone, api_key=get_user_token(), attendees=attendees, include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Event", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_event(
     calendar_uri: str,
     event_uid: str,
@@ -1602,7 +1603,7 @@ async def update_event(
                                            dtend, description, location, get_user_token(), attendees=attendees or "", include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Event", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_event(
     calendar_uri: str,
     event_uid: str,
@@ -1617,7 +1618,7 @@ async def delete_event(
     return await get_client().delete_event(calendar_uri, event_uid, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Meeting", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_meeting(
     summary: str,
     dtstart: str,
@@ -1643,7 +1644,7 @@ async def create_meeting(
                                              location, calendar_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Find Availability", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def find_availability(
     calendar_uris: str,
     from_date: str,
@@ -1662,7 +1663,7 @@ async def find_availability(
     return await get_client().find_availability(calendar_uris, from_date, to_date, timezone, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Todos", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_todos(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1685,7 +1686,7 @@ async def list_todos(
     return {"items": json_to_toon(all_todos)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Todos By Calendar", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_todos_by_calendar(
     calendar_uri: str,
     include_all_fields: bool = False,
@@ -1701,7 +1702,7 @@ async def list_todos_by_calendar(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Todo", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_todo(
     summary: str,
     description: str,
@@ -1725,7 +1726,7 @@ async def create_todo(
                                           status, calendar_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Todo", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_todo(
     todo_uid: str,
     calendar_uri: str,
@@ -1742,7 +1743,7 @@ async def get_todo(
     return await get_client().get_todo(todo_uid, calendar_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Todo", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_todo(
     todo_uid: str,
     calendar_uri: str,
@@ -1768,7 +1769,7 @@ async def update_todo(
                                           priority, due_date, status, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Todo", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_todo(
     todo_uid: str,
     calendar_uri: str,
@@ -1783,7 +1784,7 @@ async def delete_todo(
     return await get_client().delete_todo(todo_uid, calendar_uri, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Search Todos", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_todos(
     query: str,
     calendar_uri: str = "",
@@ -1803,7 +1804,7 @@ async def search_todos(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Addressbooks", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_addressbooks(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1817,7 +1818,7 @@ async def list_all_addressbooks(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Addressbook", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_addressbook(
     display_name: str,
     description: str,
@@ -1833,7 +1834,7 @@ async def create_addressbook(
     return await get_client().create_addressbook(params.display_name, params.description, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Addressbook", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_addressbook(
     addressbook_uri: str,
     ctx: Context = None
@@ -1846,7 +1847,7 @@ async def delete_addressbook(
     return await get_client().delete_addressbook(addressbook_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Addressbook", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_addressbook(
     addressbook_uri: str,
     include_all_fields: bool = False,
@@ -1861,7 +1862,7 @@ async def get_addressbook(
     return await get_client().get_addressbook(addressbook_uri, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Addressbook", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_addressbook(
     addressbook_uri: str,
     display_name: str,
@@ -1879,7 +1880,7 @@ async def update_addressbook(
     return {"status": "updated", "result": result}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Contacts", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_contacts(
     limit: int = 50,
     include_all_fields: bool = False,
@@ -1904,7 +1905,7 @@ async def list_all_contacts(
     return {"items": json_to_toon(all_contacts[:limit])}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Contacts By Addressbook", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_contacts_by_addressbook(
     addressbook_uri: str,
     limit: int = 50,
@@ -1922,7 +1923,7 @@ async def list_contacts_by_addressbook(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Contact", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -1939,7 +1940,7 @@ async def get_contact(
     return await get_client().get_contact(addressbook_uri, contact_uid, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Contact", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_contact(
     addressbook_uri: str,
     fn: str,
@@ -1963,7 +1964,7 @@ async def create_contact(
                                              organization, adr, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Contact", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -1989,7 +1990,7 @@ async def update_contact(
                                              telephone, organization, adr, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Contact", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_contact(
     addressbook_uri: str,
     contact_uid: str,
@@ -2004,7 +2005,7 @@ async def delete_contact(
     return await get_client().delete_contact(addressbook_uri, contact_uid, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Notes", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_notes(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2018,7 +2019,7 @@ async def list_notes(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Notes By Category", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_notes_by_category(
     category: str,
     include_all_fields: bool = False,
@@ -2034,7 +2035,7 @@ async def list_notes_by_category(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Note", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_note(
     id: int,
     include_all_fields: bool = False,
@@ -2049,7 +2050,7 @@ async def get_note(
     return await get_client().get_note(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Note", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_note(
     title: str,
     content: str,
@@ -2067,7 +2068,7 @@ async def create_note(
     return await get_client().create_note(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Note", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_note(
     id: int,
     title: Optional[str] = None,
@@ -2089,7 +2090,7 @@ async def update_note(
     return await get_client().update_note(id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Note", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_note(
     id: int,
     ctx: Context = None
@@ -2103,7 +2104,7 @@ async def delete_note(
     return {"status": "deleted", "id": id}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Append Note Content", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def append_note_content(
     id: int,
     content: str,
@@ -2120,7 +2121,7 @@ async def append_note_content(
     return await get_client().update_note(id, {"content": combined}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Search Notes", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_notes(
     query: str,
     limit: int = 50,
@@ -2146,7 +2147,7 @@ async def search_notes(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Note Attachment", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_note_attachment(
     note_id: int,
     path: str,
@@ -2161,7 +2162,7 @@ async def get_note_attachment(
     return await get_client().get_attachment(note_id, path, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Deck Boards", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_deck_boards(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2175,7 +2176,7 @@ async def list_deck_boards(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Deck Board", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_deck_board(
     board_id: int,
     include_all_fields: bool = False,
@@ -2190,7 +2191,7 @@ async def get_deck_board(
     return await get_client().deck_get_board(board_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Deck Board", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_deck_board(
     title: str,
     color: str = "",
@@ -2208,7 +2209,7 @@ async def create_deck_board(
     return await get_client().deck_create_board(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Deck Board", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_deck_board(
     board_id: int,
     title: Optional[str] = None,
@@ -2234,7 +2235,7 @@ async def update_deck_board(
     return await get_client().deck_update_board(board_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Deck Stacks", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_deck_stacks(
     board_id: int,
     include_all_fields: bool = False,
@@ -2250,7 +2251,7 @@ async def list_deck_stacks(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Deck Stack", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_deck_stack(
     board_id: int,
     title: str,
@@ -2268,7 +2269,7 @@ async def create_deck_stack(
     return await get_client().deck_create_stack(board_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Deck Stack", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_deck_stack(
     board_id: int,
     stack_id: int,
@@ -2285,7 +2286,7 @@ async def get_deck_stack(
     return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Deck Stack", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_deck_stack(
     board_id: int,
     stack_id: int,
@@ -2309,7 +2310,7 @@ async def update_deck_stack(
     return await get_client().deck_update_stack(board_id, stack_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Deck Cards", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_deck_cards(
     board_id: int,
     stack_id: int,
@@ -2327,7 +2328,7 @@ async def list_deck_cards(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Deck Card", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_deck_card(
     board_id: int,
     stack_id: int,
@@ -2346,7 +2347,7 @@ async def get_deck_card(
     return await get_client().deck_get_card(board_id, stack_id, card_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Deck Card", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_deck_card(
     board_id: int,
     stack_id: int,
@@ -2371,7 +2372,7 @@ async def create_deck_card(
     return await get_client().deck_create_card(board_id, stack_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Deck Card", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_deck_card(
     board_id: int,
     stack_id: int,
@@ -2398,7 +2399,7 @@ async def update_deck_card(
     return await get_client().deck_update_card(board_id, stack_id, card_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Deck Board", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_deck_board(
     board_id: int,
     ctx: Context = None
@@ -2411,7 +2412,7 @@ async def delete_deck_board(
     return await get_client().deck_delete_board(board_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Deck Stack", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_deck_stack(
     board_id: int,
     stack_id: int,
@@ -2426,7 +2427,7 @@ async def delete_deck_stack(
     return await get_client().deck_delete_stack(board_id, stack_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Deck Card", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_deck_card(
     board_id: int,
     stack_id: int,
@@ -2443,7 +2444,7 @@ async def delete_deck_card(
     return await get_client().deck_delete_card(board_id, stack_id, card_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Archive Deck Card", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def archive_deck_card(
     board_id: int,
     stack_id: int,
@@ -2460,7 +2461,7 @@ async def archive_deck_card(
     return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Unarchive Deck Card", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def unarchive_deck_card(
     board_id: int,
     stack_id: int,
@@ -2477,7 +2478,7 @@ async def unarchive_deck_card(
     return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Deck Labels", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_deck_labels(
     board_id: int,
     include_all_fields: bool = False,
@@ -2493,7 +2494,7 @@ async def list_deck_labels(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Assign Deck Label", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def assign_deck_label(
     board_id: int,
     stack_id: int,
@@ -2512,7 +2513,7 @@ async def assign_deck_label(
     return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Remove Deck Label", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def remove_deck_label(
     board_id: int,
     stack_id: int,
@@ -2531,7 +2532,7 @@ async def remove_deck_label(
     return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Assign Deck User", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def assign_deck_user(
     board_id: int,
     stack_id: int,
@@ -2550,7 +2551,7 @@ async def assign_deck_user(
     return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Remove Deck User", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def remove_deck_user(
     board_id: int,
     stack_id: int,
@@ -2569,7 +2570,7 @@ async def remove_deck_user(
     return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Accounts", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_accounts(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2583,7 +2584,7 @@ async def list_all_accounts(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Mailboxes", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_mailboxes(
     account_id: int,
     include_all_fields: bool = False,
@@ -2599,7 +2600,7 @@ async def list_mailboxes(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Messages", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_messages(
     account_id: int,
     mailbox_db_id: int,
@@ -2619,7 +2620,7 @@ async def list_messages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Message", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_message(
     account_id: int,
     message_id: int,
@@ -2636,7 +2637,7 @@ async def get_message(
     return await get_client().mail_get_message(account_id, message_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Message Body", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_message_body(
     account_id: int,
     message_id: int,
@@ -2651,7 +2652,7 @@ async def get_message_body(
     return await get_client().mail_get_message_body(account_id, message_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Send Message", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def send_message(
     account_id: int,
     subject: str,
@@ -2678,7 +2679,7 @@ async def send_message(
         return {"status": "error", "error": str(e)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Email Draft", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_email_draft(
     account_id: int,
     subject: str,
@@ -2702,7 +2703,7 @@ async def create_email_draft(
     return {"id": result.get("id") if isinstance(result, dict) else None, "status": "draft_created"}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Message Flags", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_message_flags(
     account_id: int,
     message_id: int,
@@ -2723,7 +2724,7 @@ async def set_message_flags(
     return {"status": "ok", "flags": result}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Move Message", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def move_message(
     account_id: int,
     message_id: int,
@@ -2741,7 +2742,7 @@ async def move_message(
     return {"status": "moved", "result": result}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Talk Rooms", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_talk_rooms(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2755,7 +2756,7 @@ async def list_talk_rooms(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Talk Room", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_talk_room(
     room_type: str,
     room_name: str,
@@ -2771,7 +2772,7 @@ async def create_talk_room(
     return await get_client().talk_create_room(room_type_map[room_type], room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Talk Room", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_talk_room(
     token: str,
     ctx: Context = None
@@ -2784,7 +2785,7 @@ async def delete_talk_room(
     return await get_client().talk_delete_room(token, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Talk Room", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_talk_room(
     token: str,
     room_name: str,
@@ -2799,7 +2800,7 @@ async def update_talk_room(
     return await get_client().talk_update_room(token, room_name, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Talk Description", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_talk_description(
     token: str,
     description: str,
@@ -2814,7 +2815,7 @@ async def set_talk_description(
     return await get_client().talk_set_description(token, description, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Talk Participants", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_talk_participants(
     token: str,
     include_all_fields: bool = False,
@@ -2830,7 +2831,7 @@ async def list_talk_participants(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Add Talk Participant", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def add_talk_participant(
     token: str,
     new_participant: str,
@@ -2847,7 +2848,7 @@ async def add_talk_participant(
     return await get_client().talk_add_participant(token, new_participant, source, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Remove Talk Participant", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def remove_talk_participant(
     token: str,
     attendee_id: int,
@@ -2862,7 +2863,7 @@ async def remove_talk_participant(
     return await get_client().talk_remove_participant(token, attendee_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Send Chat Message", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def send_chat_message(
     token: str,
     message: str,
@@ -2877,7 +2878,7 @@ async def send_chat_message(
     return await get_client().talk_send_message(token, message, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Chat Messages", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_chat_messages(
     token: str,
     limit: int = 50,
@@ -2897,7 +2898,7 @@ async def list_chat_messages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Chat Message", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_chat_message(
     token: str,
     message_id: int,
@@ -2912,7 +2913,7 @@ async def delete_chat_message(
     return await get_client().talk_delete_message(token, message_id, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Tables", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_tables(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -2926,7 +2927,7 @@ async def list_tables(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Table", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_table(
     table_id: int,
     include_all_fields: bool = False,
@@ -2941,7 +2942,7 @@ async def get_table(
     return await get_client().tables_get_table(table_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Create Table", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_table(
     title: str,
     description: str,
@@ -2959,7 +2960,7 @@ async def create_table(
     return await get_client().tables_create_table(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Table", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_table(
     table_id: int,
     title: Optional[str] = None,
@@ -2979,7 +2980,7 @@ async def update_table(
     return await get_client().tables_update_table(table_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Table", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_table(
     table_id: int,
     ctx: Context = None
@@ -2992,7 +2993,7 @@ async def delete_table(
     return await get_client().tables_delete_table(table_id, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Table Schema", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_table_schema(
     table_id: int,
     include_all_fields: bool = False,
@@ -3007,7 +3008,7 @@ async def get_table_schema(
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Table Rows", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_table_rows(
     table_id: int,
     limit: int = 50,
@@ -3027,7 +3028,7 @@ async def list_table_rows(
     return {"rows": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Table Row", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_table_row(
     table_id: int,
     data: dict[str, Any],
@@ -3042,7 +3043,7 @@ async def create_table_row(
     return await get_client().tables_create_row(table_id, json.dumps(data), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Table Row", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_table_row(
     row_id: int,
     include_all_fields: bool = False,
@@ -3057,7 +3058,7 @@ async def get_table_row(
     return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Table Row", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_table_row(
     row_id: int,
     data: Optional[dict[str, Any]] = None,
@@ -3072,7 +3073,7 @@ async def update_table_row(
     return await get_client().tables_update_row(row_id, json.dumps(data) if data is not None else None, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Delete Table Row", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_table_row(
     row_id: int,
     ctx: Context = None
@@ -3085,7 +3086,7 @@ async def delete_table_row(
     return await get_client().tables_delete_row(row_id, get_user_token())
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Collectives", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_collectives(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3099,7 +3100,7 @@ async def list_collectives(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Create Collective", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_collective(
     name: str,
     emoji: str = "",
@@ -3115,7 +3116,7 @@ async def create_collective(
     return await get_client().collectives_create(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Collective", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_collective(
     id: int,
     include_all_fields: bool = False,
@@ -3130,7 +3131,7 @@ async def get_collective(
     return await get_client().collectives_get_collective(id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Collective", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_collective(
     id: int,
     name: Optional[str] = None,
@@ -3152,7 +3153,7 @@ async def update_collective(
     return await get_client().collectives_update_collective(id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Collective Emoji", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_collective_emoji(
     id: int,
     emoji: str,
@@ -3167,7 +3168,7 @@ async def update_collective_emoji(
     return await get_client().collectives_update_emoji(id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Trash Collective", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def trash_collective(
     id: int,
     ctx: Context = None
@@ -3180,7 +3181,7 @@ async def trash_collective(
     return await get_client().collectives_trash(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Restore Collective", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def restore_collective(
     id: int,
     ctx: Context = None
@@ -3193,7 +3194,7 @@ async def restore_collective(
     return await get_client().collectives_restore(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Collective", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_collective(
     id: int,
     ctx: Context = None
@@ -3206,7 +3207,7 @@ async def delete_collective(
     return await get_client().collectives_delete(id, get_user_token())
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Trashed Collectives", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_trashed_collectives(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3220,7 +3221,7 @@ async def list_trashed_collectives(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Collective Pages", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_collective_pages(
     collective_id: int,
     include_all_fields: bool = False,
@@ -3236,7 +3237,7 @@ async def list_collective_pages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Collective Page", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_collective_page(
     collective_id: int,
     page_id: int,
@@ -3253,7 +3254,7 @@ async def get_collective_page(
     return await get_client().collectives_get_page(collective_id, page_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Collective Page", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_collective_page(
     collective_id: int,
     title: str,
@@ -3271,7 +3272,7 @@ async def create_collective_page(
                                                        {"title": title}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Trash Collective Page", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def trash_collective_page(
     collective_id: int,
     page_id: int,
@@ -3286,7 +3287,7 @@ async def trash_collective_page(
     return await get_client().collectives_trash_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Restore Collective Page", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def restore_collective_page(
     collective_id: int,
     page_id: int,
@@ -3301,7 +3302,7 @@ async def restore_collective_page(
     return await get_client().collectives_restore_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Collective Page", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_collective_page(
     collective_id: int,
     page_id: int,
@@ -3319,7 +3320,7 @@ async def delete_collective_page(
     return result
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Move Collective Page", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def move_collective_page(
     collective_id: int,
     page_id: int,
@@ -3340,7 +3341,7 @@ async def move_collective_page(
                                                      get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set Collective Page Emoji", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_collective_page_emoji(
     collective_id: int,
     page_id: int,
@@ -3357,7 +3358,7 @@ async def set_collective_page_emoji(
     return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set Collective Page Full Width", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_collective_page_full_width(
     collective_id: int,
     page_id: int,
@@ -3374,7 +3375,7 @@ async def set_collective_page_full_width(
     return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Collective Page", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_collective_page(
     collective_id: int,
     page_id: int,
@@ -3406,7 +3407,7 @@ async def update_collective_page(
     return await get_client().collectives_update_page(collective_id, page_id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Search Collective Pages", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def search_collective_pages(
     collective_id: int,
     query: str,
@@ -3426,7 +3427,7 @@ async def search_collective_pages(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Collective Tags", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_collective_tags(
     collective_id: int,
     include_all_fields: bool = False,
@@ -3442,7 +3443,7 @@ async def list_collective_tags(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Collective Tag", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_collective_tag(
     collective_id: int,
     tag_id: int,
@@ -3459,7 +3460,7 @@ async def get_collective_tag(
     return await get_client().collectives_get_tag(collective_id, tag_id, get_user_token(), include_all_fields)
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Collective Tag", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_collective_tag(
     collective_id: int,
     name: str,
@@ -3477,7 +3478,7 @@ async def create_collective_tag(
     return await get_client().collectives_create_tag(collective_id, {"name": name, "color": color}, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Collective Tag", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_collective_tag(
     collective_id: int,
     tag_id: int,
@@ -3498,7 +3499,7 @@ async def update_collective_tag(
                                                       get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Collective Tag", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_collective_tag(
     collective_id: int,
     tag_id: int,
@@ -3514,7 +3515,7 @@ async def delete_collective_tag(
     return {"status": "deleted", "result": result}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Assign Collective Tag", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def assign_collective_tag(
     collective_id: int,
     page_id: int,
@@ -3531,7 +3532,7 @@ async def assign_collective_tag(
     return await get_client().collectives_assign_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Remove Collective Tag", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def remove_collective_tag(
     collective_id: int,
     page_id: int,
@@ -3548,7 +3549,7 @@ async def remove_collective_tag(
     return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Circles", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_circles(
     include_all_fields: bool = False,
     ctx: Context = None
@@ -3562,7 +3563,7 @@ async def list_circles(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Get Circle", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_circle(
     circle_id: str,
     ctx: Context = None
@@ -3575,7 +3576,7 @@ async def get_circle(
     return await get_client().circles_get(circle_id, get_user_token())
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Circle", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_circle(
     name: str,
     ctx: Context = None
@@ -3588,7 +3589,7 @@ async def create_circle(
     return await get_client().circles_create(name, circle_type=1, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Circle", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_circle(
     circle_id: str,
     name: Optional[str] = None,
@@ -3605,7 +3606,7 @@ async def update_circle(
     return await get_client().circles_update(circle_id, name=name, description=description, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Delete Circle", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def delete_circle(
     circle_id: str,
     ctx: Context = None
@@ -3619,7 +3620,7 @@ async def delete_circle(
     return {"status": "deleted", "result": result}
 
 
-@mcp.tool(tags={"write", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Add Circle Member", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def add_circle_member(
     circle_id: str,
     user_id: str,
@@ -3635,7 +3636,7 @@ async def add_circle_member(
     return {"success": True, "data": result}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Remove Circle Member", readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False))
 async def remove_circle_member(
     circle_id: str,
     member_id: str,
@@ -3651,7 +3652,7 @@ async def remove_circle_member(
     return {"success": True, "data": result}
 
 
-@mcp.tool(tags={"read", "primary", "nextcloud"})
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Circle Members", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_circle_members(
     circle_id: str,
     include_all_fields: bool = False,
@@ -3668,7 +3669,7 @@ async def list_circle_members(
     return {"items": json_to_toon(data)}
 
 
-@mcp.tool(tags={"write", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Circle Member Level", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_circle_member_level(
     circle_id: str,
     member_id: str,
@@ -3687,7 +3688,7 @@ async def update_circle_member_level(
                                                            get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
-@mcp.tool(tags={"read", "advanced", "nextcloud"})
+@mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Check Server Status", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def check_server_status(ctx: Context) -> dict[str, Any]:
     """Check connectivity to the Nextcloud backend."""
     try:
