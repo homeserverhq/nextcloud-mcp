@@ -1,15 +1,15 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **185 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **186 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 185 tools mapped to Nextcloud API endpoints across 22 resource domains.
+- **📊 Full Nextcloud Coverage** — 186 tools mapped to Nextcloud API endpoints across 22 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
-- **🧪 Comprehensive Testing** — 270 automated tests covering all tool domains, run via the test runner pipeline.
+- **🧪 Comprehensive Testing** — 272 automated tests covering all tool domains, run via the test runner pipeline.
 - **🏷️ Tool Annotations** — All tools expose standard MCP ToolAnnotations hints (readOnlyHint, destructiveHint, idempotentHint, openWorldHint). The tags field carries grouping metadata (basic/primary/advanced + nextcloud).
 
 ## 🔧 Environment Variables
@@ -59,7 +59,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 185 MCP tools organized into the following categories:
+The server implements 186 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
@@ -220,7 +220,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `set_message_flags` — Set message flags
 - `move_message` — Move a message to another mailbox
 
-### 💬 Talk (11 tools)
+### 💬 Talk (12 tools)
 - `list_talk_rooms` — List all Talk conversations
 - `create_talk_room` — Create a new Talk conversation room
 - `update_talk_room` — Rename a Talk conversation room
@@ -229,6 +229,7 @@ The server implements 185 MCP tools organized into the following categories:
 - `add_talk_participant` — Add a participant to a Talk conversation room
 - `remove_talk_participant` — Remove a participant from a Talk conversation room
 - `delete_talk_room` — Delete a Talk conversation room
+- `send_direct_message` — Send a direct message (DM) to a user; auto-resolves the recipient and creates the 1:1 chat
 - `send_chat_message` — Send a chat message
 - `list_chat_messages` — Get chat messages from a room
 - `delete_chat_message` — Delete a chat message
