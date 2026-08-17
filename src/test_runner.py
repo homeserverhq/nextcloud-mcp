@@ -296,6 +296,19 @@ def _cleanup_test_files(session):
     return count
 
 
+def _pick_dm_recipient(session):
+    """Pick a reliable direct-message recipient: the first user that is not
+    the current API user, so the DM targets a real peer. Falls back to the
+    current user only if no other user exists."""
+    ud = safe_call(session, "list_users")
+    items = get_list_items(ud)
+    for u in items:
+        uid = u.get("id", "") if isinstance(u, dict) else str(u)
+        if uid and uid != API_USER:
+            return uid
+    return API_USER
+
+
 # =============================================================================
 # Main Test Runner
 # =============================================================================
@@ -665,6 +678,11 @@ def main():
         run_test(session, "5M list_chat_messages", "list_chat_messages", {"token": store.get("chat_token", ""), "limit": 5})
         run_test(session, "5M delete_chat_message", "delete_chat_message", {"token": store.get("chat_token", ""), "message_id": store.get("chat_msg_id", 0)})
         run_test(session, "5M delete_room", "delete_talk_room", {"token": store.get("chat_token", "")})
+
+        # ---- Phase 5U: Direct Message (one-shot DM tool) ----
+        log("\n=== Phase 5U: Direct Message ===")
+        dm_recipient = _pick_dm_recipient(session)
+        run_test(session, "5U send_direct_message", "send_direct_message", {"recipient": dm_recipient, "message": f"Direct message test {rid}"})
 
         # ---- Phase 5N: Deck Label/User Operations ----
         log("\n=== Phase 5N: Deck Label/User Operations ===")

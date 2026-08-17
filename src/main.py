@@ -428,7 +428,7 @@ async def get_user(
     """Get a single user by ID.
 
     Args:
-        user_id: ID of the user. Get this from get_users().
+        user_id: ID of the user. Get this from list_users().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_user(user_id, get_user_token(), include_all_fields)
@@ -465,7 +465,7 @@ async def list_group_members(
     """Get members of a group.
 
     Args:
-        group_id: ID of the group. Get this from get_groups().
+        group_id: ID of the group. Get this from list_groups().
         limit: Maximum results. Defaults to 100.
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -625,7 +625,7 @@ async def set_predefined_message(
     """Set a predefined status message.
 
     Args:
-        message_id: ID of the predefined message. Get this from get_predefined_statuses() (e.g. "meeting", "commuting").
+        message_id: ID of the predefined message. Get this from list_predefined_statuses() (e.g. "meeting", "commuting").
         clear_at: ISO 8601 format (2026-06-22T15:00:00-04:00).
     """
     return await get_client().set_predefined_message(message_id, get_user_token(), clear_at, ALLOW_ALL_AGGREGATE)
@@ -694,7 +694,7 @@ async def get_ooo(
     """Get out-of-office settings for a user.
 
     Args:
-        user_id: ID of the user. Get this from get_users().
+        user_id: ID of the user. Get this from list_users().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
@@ -733,7 +733,7 @@ async def clear_ooo(
     """Clear out-of-office for a user.
 
     Args:
-        user_id: ID of the user. Get this from get_users().
+        user_id: ID of the user. Get this from list_users().
     """
     data = await get_client().clear_ooo(user_id, get_user_token())
     return {"success": True, "data": data}
@@ -946,7 +946,7 @@ async def search(
     """Unified search across Nextcloud.
 
     Args:
-        provider_id: Search provider ID. Get this from get_search_providers() (e.g. "files", "calendar", "deck").
+        provider_id: Search provider ID. Get this from list_search_providers() (e.g. "files", "calendar", "deck").
         term: Search term.
         limit: Maximum results. Defaults to 50.
         cursor: Pagination cursor.
@@ -1393,7 +1393,7 @@ async def list_activity_filtered(
     """Get filtered activity stream.
 
     Args:
-        filter_name: Filter name. Get this from activity_get_filters() (e.g. "all", "self").
+        filter_name: Filter name. Get this from list_activity_filters() (e.g. "all", "self").
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1441,7 +1441,7 @@ async def update_calendar(
     """Update a calendar's properties.
 
     Args:
-        calendar_uri: URI of the calendar to update. Get this from list_calendars().
+        calendar_uri: URI of the calendar to update. Get this from list_all_calendars().
         display_name: New display name.
         color: New calendar color in #RRGGBB format (e.g. #FF0000 for red).
     """
@@ -1457,7 +1457,7 @@ async def delete_calendar(
     """Delete a calendar.
 
     Args:
-        calendar_uri: URI of the calendar to delete. Get this from list_calendars().
+        calendar_uri: URI of the calendar to delete. Get this from list_all_calendars().
     """
     return await get_client().delete_calendar(calendar_uri, get_user_token())
 
@@ -1471,7 +1471,7 @@ async def get_calendar(
     """Get a single calendar by URI.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_calendar(calendar_uri, get_user_token(), include_all_fields)
@@ -1518,7 +1518,7 @@ async def list_events_by_calendar(
     """List events in a specific calendar.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         to_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         limit: Maximum results. Defaults to 50.
@@ -1538,8 +1538,8 @@ async def get_event(
     """Get a single calendar event.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
-        event_uid: UID of the event. Get this from get_events_by_calendar(calendar_uri).
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
+        event_uid: UID of the event. Get this from list_events_by_calendar(calendar_uri).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_event(calendar_uri, event_uid, get_user_token(), include_all_fields)
@@ -1561,7 +1561,7 @@ async def create_event(
     """Create a new calendar event.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
         summary: Event title.
         dtstart: ISO 8601 format (2026-06-22T15:00:00-04:00).
         dtend: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1590,8 +1590,8 @@ async def update_event(
     """Update a calendar event.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
-        event_uid: UID of the event to update. Get this from get_events_by_calendar(calendar_uri).
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
+        event_uid: UID of the event to update. Get this from list_events_by_calendar(calendar_uri).
         summary: New event title.
         dtstart: ISO 8601 format (2026-06-22T15:00:00-04:00).
         dtend: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -1612,8 +1612,8 @@ async def delete_event(
     """Delete a calendar event.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
-        event_uid: UID of the event to delete. Get this from get_events_by_calendar(calendar_uri).
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
+        event_uid: UID of the event to delete. Get this from list_events_by_calendar(calendar_uri).
     """
     return await get_client().delete_event(calendar_uri, event_uid, get_user_token())
 
@@ -1655,7 +1655,7 @@ async def find_availability(
     """Find availability across calendars.
 
     Args:
-        calendar_uris: Comma-separated calendar URIs. Get these from list_calendars().
+        calendar_uris: Comma-separated calendar URIs. Get these from list_all_calendars() (field calendar_uri).
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         to_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         timezone: Timezone for availability.
@@ -1695,7 +1695,7 @@ async def list_todos_by_calendar(
     """List TODO items in a specific calendar.
 
     Args:
-        calendar_uri: URI of the calendar. Get this from list_calendars().
+        calendar_uri: URI of the calendar. Get this from list_all_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().list_todos(get_user_token(), calendar_uri, include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -1718,7 +1718,7 @@ async def create_todo(
         summary: TODO title.
         description: TODO description.
         due_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
-        calendar_uri: Calendar URI to add the todo to. Get this from list_calendars(). If omitted, uses default task calendar.
+        calendar_uri: Calendar URI to add the todo to. Get this from list_all_calendars(). If omitted, uses default task calendar.
         priority: 0-9. Lower = more urgent (1=highest, 9=lowest). 0=no priority. Defaults to 0.
         status: Status (NEEDS-ACTION, IN-PROCESS, COMPLETED). Defaults to NEEDS-ACTION.
     """
@@ -1736,8 +1736,8 @@ async def get_todo(
     """Get a single TODO item by UID.
 
     Args:
-        todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri).
-        calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
+        todo_uid: UID of the todo. Get this from list_todos_by_calendar(calendar_uri).
+        calendar_uri: Calendar URI where the todo is stored. Get this from list_all_calendars().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_todo(todo_uid, calendar_uri, get_user_token(), include_all_fields)
@@ -1757,8 +1757,8 @@ async def update_todo(
     """Update a TODO item.
 
     Args:
-        todo_uid: UID of the todo. Get this from todo_get_by_calendar(calendar_uri).
-        calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
+        todo_uid: UID of the todo. Get this from list_todos_by_calendar(calendar_uri).
+        calendar_uri: Calendar URI where the todo is stored. Get this from list_all_calendars().
         summary: New title.
         description: New description.
         priority: New priority (0-9). Lower = more urgent (1=highest, 9=lowest). 0=no priority.
@@ -1778,8 +1778,8 @@ async def delete_todo(
     """Delete a TODO item.
 
     Args:
-        todo_uid: UID of the todo to delete. Get this from todo_get_by_calendar(calendar_uri).
-        calendar_uri: Calendar URI where the todo is stored. Get this from list_calendars().
+        todo_uid: UID of the todo to delete. Get this from list_todos_by_calendar(calendar_uri).
+        calendar_uri: Calendar URI where the todo is stored. Get this from list_all_calendars().
     """
     return await get_client().delete_todo(todo_uid, calendar_uri, get_user_token())
 
@@ -1796,7 +1796,7 @@ async def search_todos(
 
     Args:
         query: Search term.
-        calendar_uri: Calendar URI to search in. Get this from list_calendars(). If omitted, uses default task calendar.
+        calendar_uri: Calendar URI to search in. Get this from list_all_calendars(). If omitted, uses default task calendar.
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1842,7 +1842,7 @@ async def delete_addressbook(
     """Delete an address book.
 
     Args:
-        addressbook_uri: URI of the address book to delete. Get this from list_addressbooks().
+        addressbook_uri: URI of the address book to delete. Get this from list_all_addressbooks().
     """
     return await get_client().delete_addressbook(addressbook_uri, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -1856,7 +1856,7 @@ async def get_addressbook(
     """Get a single address book by URI.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_addressbook(addressbook_uri, get_user_token(), include_all_fields)
@@ -1872,7 +1872,7 @@ async def update_addressbook(
     """Update an address book's properties.
 
     Args:
-        addressbook_uri: URI of the address book to update. Get this from list_addressbooks().
+        addressbook_uri: URI of the address book to update. Get this from list_all_addressbooks().
         display_name: New display name.
         description: New description.
     """
@@ -1915,7 +1915,7 @@ async def list_contacts_by_addressbook(
     """List contacts in a specific address book.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -1933,8 +1933,8 @@ async def get_contact(
     """Get a single contact by UID.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
-        contact_uid: UID of the contact. Get this from get_contacts_by_addressbook(addressbook_uri).
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
+        contact_uid: UID of the contact. Get this from list_contacts_by_addressbook(addressbook_uri).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_contact(addressbook_uri, contact_uid, get_user_token(), include_all_fields)
@@ -1953,7 +1953,7 @@ async def create_contact(
     """Create a new contact.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
         fn: Full name.
         email: Email address.
         telephone: Phone number.
@@ -1978,8 +1978,8 @@ async def update_contact(
     """Update a contact.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
-        contact_uid: UID of the contact to update. Get this from get_contacts_by_addressbook(addressbook_uri).
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
+        contact_uid: UID of the contact to update. Get this from list_contacts_by_addressbook(addressbook_uri).
         fn: New full name.
         email: New email.
         telephone: New phone number.
@@ -1999,8 +1999,8 @@ async def delete_contact(
     """Delete a contact.
 
     Args:
-        addressbook_uri: URI of the address book. Get this from list_addressbooks().
-        contact_uid: UID of the contact to delete. Get this from get_contacts_by_addressbook(addressbook_uri).
+        addressbook_uri: URI of the address book. Get this from list_all_addressbooks().
+        contact_uid: UID of the contact to delete. Get this from list_contacts_by_addressbook(addressbook_uri).
     """
     return await get_client().delete_contact(addressbook_uri, contact_uid, get_user_token())
 
@@ -2044,7 +2044,7 @@ async def get_note(
     """Get a single note by ID.
 
     Args:
-        id: Note ID. Get this from note_list().
+        id: Note ID. Get this from list_notes().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().get_note(id, get_user_token(), include_all_fields)
@@ -2080,7 +2080,7 @@ async def update_note(
     """Update a note.
 
     Args:
-        id: Note ID. Get this from note_list().
+        id: Note ID. Get this from list_notes().
         title: New title.
         content: New content.
         category: New category.
@@ -2098,7 +2098,7 @@ async def delete_note(
     """Delete a note by ID.
 
     Args:
-        id: Note ID to delete. Get this from note_list().
+        id: Note ID to delete. Get this from list_notes().
     """
     await get_client().delete_note(id, get_user_token())
     return {"status": "deleted", "id": id}
@@ -2113,7 +2113,7 @@ async def append_note_content(
     """Append content to an existing note.
 
     Args:
-        id: Note ID. Get this from note_list().
+        id: Note ID. Get this from list_notes().
         content: Content to append.
     """
     existing = await get_client().get_note(id, get_user_token())
@@ -2185,7 +2185,7 @@ async def get_deck_board(
     """Get a single board by ID.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().deck_get_board(board_id, get_user_token(), include_all_fields)
@@ -2220,7 +2220,7 @@ async def update_deck_board(
     """Update a board.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
         title: New title.
         color: New display color in #RRGGBB format (e.g. #FF0000 for red).
         archived: Whether the board is archived.
@@ -2244,7 +2244,7 @@ async def list_deck_stacks(
     """List stacks in a board.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().deck_list_stacks(board_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -2261,7 +2261,7 @@ async def create_deck_stack(
     """Create a new stack in a board.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
         title: Stack title.
         order: Display order. Defaults to 0.
     """
@@ -2279,8 +2279,8 @@ async def get_deck_stack(
     """Get a single stack by ID.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().deck_get_stack(board_id, stack_id, get_user_token(), include_all_fields)
@@ -2297,8 +2297,8 @@ async def update_deck_stack(
     """Update a stack.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
         title: New title.
         order: New display order.
     """
@@ -2320,8 +2320,8 @@ async def list_deck_cards(
     """List cards in a stack.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().deck_list_cards(board_id, stack_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -2339,9 +2339,9 @@ async def get_deck_card(
     """Get a single card by ID.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().deck_get_card(board_id, stack_id, card_id, get_user_token(), include_all_fields)
@@ -2360,8 +2360,8 @@ async def create_deck_card(
     """Create a new card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
         title: Card title.
         description: Card description.
         duedate: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -2386,9 +2386,9 @@ async def update_deck_card(
     """Update a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
         title: New title.
         description: New description.
         duedate: ISO 8601 format (2026-06-22T15:00:00-04:00).
@@ -2407,7 +2407,7 @@ async def delete_deck_board(
     """Delete a board by ID.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
     """
     return await get_client().deck_delete_board(board_id, get_user_token())
 
@@ -2422,7 +2422,7 @@ async def delete_deck_stack(
 
     Args:
         board_id: Board ID the stack belongs to.
-        stack_id: Stack ID to delete. Get this from deck_list_stacks(board_id).
+        stack_id: Stack ID to delete. Get this from list_deck_stacks(board_id).
     """
     return await get_client().deck_delete_stack(board_id, stack_id, get_user_token())
 
@@ -2437,9 +2437,9 @@ async def delete_deck_card(
     """Delete a card by ID.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID to delete. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID to delete. Get this from list_deck_cards(board_id, stack_id).
     """
     return await get_client().deck_delete_card(board_id, stack_id, card_id, get_user_token())
 
@@ -2454,9 +2454,9 @@ async def archive_deck_card(
     """Archive a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
     """
     return await get_client().deck_archive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -2471,9 +2471,9 @@ async def unarchive_deck_card(
     """Unarchive a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
     """
     return await get_client().deck_unarchive_card(board_id, stack_id, card_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -2487,7 +2487,7 @@ async def list_deck_labels(
     """List labels in a board.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
+        board_id: Board ID. Get this from list_deck_boards().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().deck_list_labels(board_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -2505,10 +2505,10 @@ async def assign_deck_label(
     """Assign a label to a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
-        label_id: Label ID. Get this from deck_list_labels(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
+        label_id: Label ID. Get this from list_deck_labels(board_id).
     """
     return await get_client().deck_assign_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -2524,10 +2524,10 @@ async def remove_deck_label(
     """Remove a label from a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
-        label_id: Label ID. Get this from deck_list_labels(board_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
+        label_id: Label ID. Get this from list_deck_labels(board_id).
     """
     return await get_client().deck_remove_label(board_id, stack_id, card_id, label_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -2543,9 +2543,9 @@ async def assign_deck_user(
     """Assign a user to a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
         user_id: User ID to assign.
     """
     return await get_client().deck_assign_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -2562,9 +2562,9 @@ async def remove_deck_user(
     """Remove a user from a card.
 
     Args:
-        board_id: Board ID. Get this from deck_list_boards().
-        stack_id: Stack ID. Get this from deck_list_stacks(board_id).
-        card_id: Card ID. Get this from deck_list_cards(board_id, stack_id).
+        board_id: Board ID. Get this from list_deck_boards().
+        stack_id: Stack ID. Get this from list_deck_stacks(board_id).
+        card_id: Card ID. Get this from list_deck_cards(board_id, stack_id).
         user_id: User ID to remove.
     """
     return await get_client().deck_remove_user(board_id, stack_id, card_id, user_id, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -2593,7 +2593,7 @@ async def list_mailboxes(
     """List mailboxes in an account.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().mail_list_mailboxes(account_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -2611,7 +2611,7 @@ async def list_messages(
     """Sync and list messages in a mailbox.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         mailbox_db_id: Mailbox database ID (integer). Get this from list_mailboxes(account_id).
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2630,7 +2630,7 @@ async def get_message(
     """Get a single message by its database ID.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
@@ -2646,7 +2646,7 @@ async def get_message_body(
     """Get the body of a message by its database ID.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
     """
     return await get_client().mail_get_message_body(account_id, message_id, get_user_token())
@@ -2665,7 +2665,7 @@ async def send_message(
     """Send an email message.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         subject: Email subject.
         body: Email body.
         to: Recipient email address.
@@ -2692,7 +2692,7 @@ async def create_email_draft(
     """Create a draft email saved to the IMAP Drafts folder.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         subject: Email subject.
         body: Email body.
         to: Recipient email address.
@@ -2714,7 +2714,7 @@ async def set_message_flags(
     """Set flags on a message (read/unread, starred).
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         message_id: Message database ID. Get this from list_messages(account_id, mailbox_db_id).
         seen: Mark as seen/unseen.
         flagged: Mark as flagged/unflagged.
@@ -2734,7 +2734,7 @@ async def move_message(
     """Move a message to a different mailbox.
 
     Args:
-        account_id: Account ID. Get this from list_accounts().
+        account_id: Account ID. Get this from list_all_accounts().
         message_id: Message database ID to move. Get this from list_messages(account_id, mailbox_db_id).
         mailbox_db_id: Destination mailbox database ID. Get this from list_mailboxes(account_id).
     """
@@ -2858,9 +2858,28 @@ async def remove_talk_participant(
 
     Args:
         token: Room token.
-        attendee_id: Attendee ID to remove. Get this from talk_list_participants(token).
+        attendee_id: Attendee ID to remove. Get this from list_talk_participants(token).
     """
     return await get_client().talk_remove_participant(token, attendee_id, get_user_token())
+
+
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Send Direct Message (DM)", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def send_direct_message(
+    recipient: str,
+    message: str,
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Send a direct message (DM), one-to-one (1:1), or private message to a single user over Nextcloud Talk.
+
+    Auto-resolves the recipient from a username or display name, finds or creates
+    the user's one-to-one (1:1) chat conversation, and sends the message — all in
+    one call. This is the simplest way to message a specific person.
+
+    Args:
+        recipient: Username or display name of the person to message (e.g. 'solo' or 'Han Solo').
+        message: Message text to send.
+    """
+    return await get_client().send_direct_message(recipient, message, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Send Chat Message", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -2872,7 +2891,7 @@ async def send_chat_message(
     """Send a chat message to a Talk conversation.
 
     Args:
-        token: Conversation token. Get this from creating a Talk room.
+        token: Conversation (room) token. Get this from list_talk_rooms (field token).
         message: Message text.
     """
     return await get_client().talk_send_message(token, message, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -2889,7 +2908,7 @@ async def list_chat_messages(
     """Get chat messages from a Talk conversation.
 
     Args:
-        token: Conversation token. Get this from creating a Talk room.
+        token: Conversation (room) token. Get this from list_talk_rooms (field token).
         limit: Maximum results. Defaults to 50.
         look_into_future: Wait for new messages (1) or not (0).
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -2907,8 +2926,8 @@ async def delete_chat_message(
     """Delete a chat message from a Talk conversation.
 
     Args:
-        token: Conversation token. Get this from creating a Talk room.
-        message_id: Message ID to delete. Get this from get_chat_messages(token).
+        token: Conversation (room) token. Get this from list_talk_rooms (field token).
+        message_id: Message ID to delete. Get this from list_chat_messages(token).
     """
     return await get_client().talk_delete_message(token, message_id, get_user_token())
 
@@ -2936,7 +2955,7 @@ async def get_table(
     """Get a single table by ID.
 
     Args:
-        table_id: Table ID. Get this from table_list().
+        table_id: Table ID. Get this from list_tables().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().tables_get_table(table_id, get_user_token(), include_all_fields)
@@ -2971,7 +2990,7 @@ async def update_table(
     """Update a table.
 
     Args:
-        table_id: Table ID. Get this from table_list().
+        table_id: Table ID. Get this from list_tables().
         title: New title.
         description: New description.
         emoji: New emoji.
@@ -2988,7 +3007,7 @@ async def delete_table(
     """Delete a table by ID.
 
     Args:
-        table_id: Table ID to delete. Get this from table_list().
+        table_id: Table ID to delete. Get this from list_tables().
     """
     return await get_client().tables_delete_table(table_id, get_user_token())
 
@@ -3002,7 +3021,7 @@ async def get_table_schema(
     """Get the schema of a table.
 
     Args:
-        table_id: Table ID. Get this from table_list().
+        table_id: Table ID. Get this from list_tables().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
@@ -3019,7 +3038,7 @@ async def list_table_rows(
     """List rows in a table.
 
     Args:
-        table_id: Table ID. Get this from table_list().
+        table_id: Table ID. Get this from list_tables().
         limit: Maximum results. Defaults to 50.
         offset: Pagination offset. Defaults to 0.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -3037,8 +3056,8 @@ async def create_table_row(
     """Insert a new row in a table.
 
     Args:
-        table_id: Table ID. Get this from table_list().
-        data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
+        table_id: Table ID. Get this from list_tables().
+        data: Column values keyed by column title or ID. Use get_table_schema() to discover available columns.
     """
     return await get_client().tables_create_row(table_id, json.dumps(data), get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3052,7 +3071,7 @@ async def get_table_row(
     """Get a single row from a table.
 
     Args:
-        row_id: Row ID. Get this from table_list_rows(table_id).
+        row_id: Row ID. Get this from list_table_rows(table_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().tables_get_row(row_id, get_user_token(), include_all_fields)
@@ -3067,8 +3086,8 @@ async def update_table_row(
     """Update an existing row in a table.
 
     Args:
-        row_id: Row ID. Get this from table_list_rows(table_id).
-        data: Column values keyed by column title or ID. Use table_get_schema() to discover available columns.
+        row_id: Row ID. Get this from list_table_rows(table_id).
+        data: Column values keyed by column title or ID. Use get_table_schema() to discover available columns.
     """
     return await get_client().tables_update_row(row_id, json.dumps(data) if data is not None else None, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3081,7 +3100,7 @@ async def delete_table_row(
     """Delete a row from a table.
 
     Args:
-        row_id: Row ID to delete. Get this from table_list_rows(table_id).
+        row_id: Row ID to delete. Get this from list_table_rows(table_id).
     """
     return await get_client().tables_delete_row(row_id, get_user_token())
 
@@ -3125,7 +3144,7 @@ async def get_collective(
     """Get a single collective by ID.
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().collectives_get_collective(id, get_user_token(), include_all_fields)
@@ -3141,7 +3160,7 @@ async def update_collective(
     """Update a collective's properties.
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
         name: New name.
         emoji: New emoji.
     """
@@ -3162,7 +3181,7 @@ async def update_collective_emoji(
     """Update a collective's emoji.
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
         emoji: New emoji.
     """
     return await get_client().collectives_update_emoji(id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -3176,7 +3195,7 @@ async def trash_collective(
     """Soft-delete a collective (move to trash).
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
     """
     return await get_client().collectives_trash(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3189,7 +3208,7 @@ async def restore_collective(
     """Restore a collective from trash.
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
     """
     return await get_client().collectives_restore(id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3202,7 +3221,7 @@ async def delete_collective(
     """Permanently delete a collective.
 
     Args:
-        id: Collective ID. Get this from collectives_list().
+        id: Collective ID. Get this from list_collectives().
     """
     return await get_client().collectives_delete(id, get_user_token())
 
@@ -3230,7 +3249,7 @@ async def list_collective_pages(
     """List pages in a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
+        collective_id: Collective ID. Get this from list_collectives().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().collectives_list_pages(collective_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -3247,8 +3266,8 @@ async def get_collective_page(
     """Get a single page from a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().collectives_get_page(collective_id, page_id, get_user_token(), include_all_fields)
@@ -3264,7 +3283,7 @@ async def create_collective_page(
     """Create a new page in a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
+        collective_id: Collective ID. Get this from list_collectives().
         title: Page title.
         parent_id: Parent page ID. Defaults to 0 (root).
     """
@@ -3281,8 +3300,8 @@ async def trash_collective_page(
     """Soft-delete a page (move to trash).
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
     """
     return await get_client().collectives_trash_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3296,8 +3315,8 @@ async def restore_collective_page(
     """Restore a page from trash.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
     """
     return await get_client().collectives_restore_page(collective_id, page_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3311,8 +3330,8 @@ async def delete_collective_page(
     """Permanently delete a page.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
     """
     result = await get_client().collectives_delete_page(collective_id, page_id, get_user_token())
     if isinstance(result, list):
@@ -3331,9 +3350,9 @@ async def move_collective_page(
     """Move or copy a page to another collective.
 
     Args:
-        collective_id: Source collective ID. Get this from collectives_list().
-        page_id: Page ID to move. Get this from collectives_list_pages(collective_id).
-        destination_collective_id: Destination collective ID. Get this from collectives_list().
+        collective_id: Source collective ID. Get this from list_collectives().
+        page_id: Page ID to move. Get this from list_collective_pages(collective_id).
+        destination_collective_id: Destination collective ID. Get this from list_collectives().
         destination_parent_id: Destination parent page ID.
     """
     return await get_client().collectives_move_page(collective_id, page_id,
@@ -3351,8 +3370,8 @@ async def set_collective_page_emoji(
     """Set the emoji for a page.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
         emoji: Emoji to set.
     """
     return await get_client().collectives_set_page_emoji(collective_id, page_id, emoji, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -3368,8 +3387,8 @@ async def set_collective_page_full_width(
     """Set the full-width display for a page.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
         is_full_width: Whether the page should be displayed full-width.
     """
     return await get_client().collectives_set_page_full_width(collective_id, page_id, is_full_width, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -3388,8 +3407,8 @@ async def update_collective_page(
     """Update a page's properties.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
         title: New title.
         emoji: New emoji.
         is_full_width: Whether page should display full-width.
@@ -3418,7 +3437,7 @@ async def search_collective_pages(
     """Search pages within a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
+        collective_id: Collective ID. Get this from list_collectives().
         query: Search query.
         limit: Maximum results. Defaults to 50.
         include_all_fields: Default False (common fields only). Set True for all fields.
@@ -3436,7 +3455,7 @@ async def list_collective_tags(
     """List tags in a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
+        collective_id: Collective ID. Get this from list_collectives().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().collectives_list_tags(collective_id, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
@@ -3453,8 +3472,8 @@ async def get_collective_tag(
     """Get a single tag by ID.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        tag_id: Tag ID. Get this from list_collective_tags(collective_id).
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     return await get_client().collectives_get_tag(collective_id, tag_id, get_user_token(), include_all_fields)
@@ -3470,7 +3489,7 @@ async def create_collective_tag(
     """Create a tag in a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
+        collective_id: Collective ID. Get this from list_collectives().
         name: Tag name.
         color: Tag color.
     """
@@ -3489,8 +3508,8 @@ async def update_collective_tag(
     """Update a tag in a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        tag_id: Tag ID. Get this from list_collective_tags(collective_id).
         name: New tag name.
         color: New tag color.
     """
@@ -3508,8 +3527,8 @@ async def delete_collective_tag(
     """Delete a tag from a collective.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        tag_id: Tag ID. Get this from list_collective_tags(collective_id).
     """
     result = await get_client().collectives_delete_tag(collective_id, tag_id, get_user_token())
     return {"status": "deleted", "result": result}
@@ -3525,9 +3544,9 @@ async def assign_collective_tag(
     """Assign a tag to a page.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
-        tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
+        tag_id: Tag ID. Get this from list_collective_tags(collective_id).
     """
     return await get_client().collectives_assign_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3542,9 +3561,9 @@ async def remove_collective_tag(
     """Remove a tag from a page.
 
     Args:
-        collective_id: Collective ID. Get this from collectives_list().
-        page_id: Page ID. Get this from collectives_list_pages(collective_id).
-        tag_id: Tag ID. Get this from collectives_list_tags(collective_id).
+        collective_id: Collective ID. Get this from list_collectives().
+        page_id: Page ID. Get this from list_collective_pages(collective_id).
+        tag_id: Tag ID. Get this from list_collective_tags(collective_id).
     """
     return await get_client().collectives_remove_tag(collective_id, page_id, tag_id, get_user_token(), ALLOW_ALL_AGGREGATE)
 
@@ -3629,7 +3648,7 @@ async def add_circle_member(
     """Add a user to a Circle (Team).
 
     Args:
-        circle_id: Circle ID. Get this from circle_list().
+        circle_id: Circle ID. Get this from list_circles().
         user_id: User ID to add to the circle.
     """
     result = await get_client().circles_add_member(circle_id, user_id, api_key=get_user_token(), include_all_fields=ALLOW_ALL_AGGREGATE)
@@ -3645,8 +3664,8 @@ async def remove_circle_member(
     """Remove a member from a Circle (Team).
 
     Args:
-        circle_id: Circle ID. Get this from circle_list().
-        member_id: Member ID to remove. Get this from circle_list_members().
+        circle_id: Circle ID. Get this from list_circles().
+        member_id: Member ID to remove. Get this from list_circle_members().
     """
     result = await get_client().circles_remove_member(circle_id, member_id, get_user_token())
     return {"success": True, "data": result}
@@ -3661,7 +3680,7 @@ async def list_circle_members(
     """List all members of a Circle (Team).
 
     Args:
-        circle_id: Circle ID. Get this from circle_list().
+        circle_id: Circle ID. Get this from list_circles().
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
     data = await get_client().circles_list_members(circle_id, get_user_token(),
@@ -3679,8 +3698,8 @@ async def update_circle_member_level(
     """Change a member's level in a Circle (Team).
 
     Args:
-        circle_id: Circle ID. Get this from circle_list().
-        member_id: Member ID. Get this from circle_list_members().
+        circle_id: Circle ID. Get this from list_circles().
+        member_id: Member ID. Get this from list_circle_members().
         level: Member, Moderator, Admin, or Owner.
     """
     level_map = {"member": 1, "moderator": 4, "admin": 8, "owner": 9}

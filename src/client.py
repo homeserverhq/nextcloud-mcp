@@ -1916,6 +1916,137 @@ class NextcloudClient:
         except Exception as e:
             return {"error": str(e)}
 
+    @staticmethod
+    def _norm(s: str) -> str:
+        """Normalize a string for forgiving recipient matching."""
+        import unicodedata
+        if not s:
+            return ""
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        return " ".join(s.lower().split())
+
+    async def talk_create_one_to_one(self, user_id: str, api_key: str = None,
+                                     include_all_fields: bool = False) -> Any:
+        """Create a one-to-one (1:1) Talk conversation with a single user."""
+        data = await self.post("/ocs/v2.php/apps/spreed/api/v4/room",
+                              api_key, json={"roomType": 1, "invite": user_id})
+        return self._filter_fields(data, "talk_room", include_all_fields)
+
+    async def _collect_talk_participants(self, api_key: str = None) -> list[dict]:
+        """Gather every participant across existing Talk rooms (for recipient lookup)."""
+        rooms = await self.talk_list_rooms(api_key=api_key, include_all_fields=True)
+        rooms = rooms if isinstance(rooms, list) else []
+        out: list[dict] = []
+        for room in rooms:
+            try:
+                parts = await self.talk_list_participants(room.get("token"), api_key=api_key, include_all_fields=True)
+            except Exception:
+                parts = []
+            if isinstance(parts, list):
+                out.extend(parts)
+        return out
+
+    async def resolve_talk_recipient(self, recipient: str,
+                                     api_key: str = None) -> dict[str, Any]:
+        """Resolve a username or display name to a single unique Talk recipient.
+
+        Matches in order: exact username, exact display name (case-insensitive),
+        then a unique substring match. If more than one user matches, raises an
+        error listing the candidates instead of guessing (avoids wrong DM).
+        """
+        norm = self._norm(recipient)
+        users = await self.get_users(api_key=api_key, search=recipient, limit=50)
+        users = users if isinstance(users, list) else []
+        candidates: list[dict] = []
+        for u in users:
+            # get_users may return a list of user-ID strings, or a list of dicts.
+            if isinstance(u, dict):
+                uid = u.get("id") or ""
+                disp = u.get("display-name") or ""
+            else:
+                uid = str(u)
+                disp = ""
+            n_uid, n_disp = self._norm(uid), self._norm(disp)
+            if n_uid and n_uid == norm:
+                return {"id": uid, "displayName": disp or uid}
+            if n_disp and n_disp == norm and disp:
+                return {"id": uid, "displayName": disp}
+            if n_uid and norm and norm in n_uid:
+                candidates.append({"id": uid, "displayName": disp or uid})
+            elif n_disp and norm and norm in n_disp:
+                candidates.append({"id": uid, "displayName": disp or uid})
+
+        if not candidates:
+            # Fall back to scanning Talk participants (covers display names not
+            # matched by the users search).
+            for p in await self._collect_talk_participants(api_key):
+                actor = p.get("actorId") or ""
+                disp = p.get("displayName") or ""
+                n_actor, n_disp = self._norm(actor), self._norm(disp)
+                if n_actor and n_actor == norm:
+                    return {"id": actor, "displayName": disp}
+                if n_disp and n_disp == norm:
+                    return {"id": actor, "displayName": disp}
+                if n_actor and norm and norm in n_actor:
+                    candidates.append({"id": actor, "displayName": disp})
+                elif n_disp and norm and norm in n_disp:
+                    candidates.append({"id": actor, "displayName": disp})
+
+        if not candidates:
+            raise Exception(f"No Nextcloud user found matching {recipient!r}")
+
+        uniq: list[dict] = []
+        seen: set = set()
+        for c in candidates:
+            cid = c["id"]
+            if cid and cid not in seen:
+                seen.add(cid)
+                uniq.append(c)
+        if len(uniq) == 1:
+            return uniq[0]
+        names = ", ".join(f"{c['id']} ({c['displayName']})" for c in uniq)
+        raise Exception(f"Ambiguous recipient {recipient!r} — matched: {names}")
+
+    async def talk_find_or_create_dm_room(self, user_id: str, api_key: str = None,
+                                          include_all_fields: bool = False) -> dict[str, Any]:
+        """Return the existing 1:1 room for a user, or create one."""
+        norm = self._norm(user_id)
+        rooms = await self.talk_list_rooms(api_key=api_key, include_all_fields=True)
+        rooms = rooms if isinstance(rooms, list) else []
+        for room in rooms:
+            if room.get("type") != 1:
+                continue
+            parts = await self.talk_list_participants(room.get("token"), api_key=api_key, include_all_fields=True)
+            parts = parts if isinstance(parts, list) else []
+            for p in parts:
+                if self._norm(p.get("actorId") or "") == norm or self._norm(p.get("displayName") or "") == norm:
+                    return {"token": room.get("token"),
+                            "room_name": room.get("displayName") or room.get("name") or "",
+                            "created": False}
+        created = await self.talk_create_one_to_one(user_id, api_key=api_key,
+                                                    include_all_fields=include_all_fields)
+        created_dict = created if isinstance(created, dict) else {}
+        return {"token": created_dict.get("token"),
+                "room_name": created_dict.get("displayName") or created_dict.get("name") or "",
+                "created": True}
+
+    async def send_direct_message(self, recipient: str, message: str,
+                                  api_key: str = None,
+                                  include_all_fields: bool = False) -> dict[str, Any]:
+        """Resolve a recipient and send them a Talk direct message, one call."""
+        resolved = await self.resolve_talk_recipient(recipient, api_key)
+        room = await self.talk_find_or_create_dm_room(resolved["id"], api_key=api_key,
+                                                      include_all_fields=include_all_fields)
+        sent = await self.talk_send_message(room["token"], message, api_key=api_key,
+                                            include_all_fields=include_all_fields)
+        result = sent if isinstance(sent, dict) else {}
+        return {**result,
+                "recipient": resolved,
+                "room_token": room["token"],
+                "room_name": room["room_name"],
+                "room_created": room["created"]}
+
 
     # =========================================================================
     # Domain: Tables (OCS)
