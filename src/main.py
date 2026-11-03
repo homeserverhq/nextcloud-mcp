@@ -63,6 +63,17 @@ async def _resolve_path(path: str = "") -> str:
     return prefix + path.lstrip("/")
 
 
+async def _resolve_attachment_path(path: str) -> str:
+    path = (path or "").strip()
+    if not path:
+        raise ValueError("Attachment path is empty.")
+    if ".." in path.split("/"):
+        raise ValueError(f"Invalid attachment path: {path}")
+    if path.startswith("/remote.php/dav/files/"):
+        return path
+    return await _resolve_path(path)
+
+
 async def _get_resource_type(full_path: str) -> str:
     try:
         results = await get_client().webdav_list_directory(full_path, get_user_token(), depth=0, include_all_fields=True)
@@ -2660,9 +2671,10 @@ async def send_message(
     to: str,
     cc: str = "",
     bcc: str = "",
+    attachment_paths: Optional[list[str]] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Send an email message.
+    """Send an email message, optionally attaching files stored in Nextcloud.
 
     Args:
         account_id: Account ID. Get this from list_all_accounts().
@@ -2671,12 +2683,27 @@ async def send_message(
         to: Recipient email address.
         cc: CC recipient email.
         bcc: BCC recipient email.
+        attachment_paths: Nextcloud file paths to attach (e.g. ['/Documents/report.pdf']).
+            Paths may be relative to the user's root or full DAV paths. File contents
+            are downloaded by the server and never returned to the caller.
     """
+    token = get_user_token()
+    temp_files: list[tuple[str, str, str]] = []
     try:
-        result = await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, get_user_token(), ALLOW_ALL_AGGREGATE)
+        if attachment_paths:
+            for path in attachment_paths:
+                dav_path = await _resolve_attachment_path(path)
+                temp_files.append(await get_client().download_dav_file_to_temp(dav_path, token))
+        result = await get_client().mail_send_message(account_id, subject, body, to, cc, bcc, token, ALLOW_ALL_AGGREGATE, attachment_files=temp_files or None)
         return {"status": "sent", "data": result if isinstance(result, dict) else {}}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+    finally:
+        for temp_path, _, _ in temp_files:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
 
 
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Email Draft", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))

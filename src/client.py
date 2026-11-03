@@ -1,7 +1,10 @@
 import asyncio
+import contextlib
+import mimetypes
 import os
 import re
 import datetime as dt
+import tempfile
 import uuid
 import xml.etree.ElementTree as ET
 from typing import Any, Optional
@@ -153,6 +156,28 @@ class NextcloudClient:
             headers["Authorization"] = f"Basic {api_key}"
         return headers
 
+    @staticmethod
+    def _rewind_upload_files(files: Any) -> None:
+        if isinstance(files, dict):
+            entries = files.values()
+        elif isinstance(files, list):
+            entries = files
+        else:
+            return
+        for entry in entries:
+            file_obj = None
+            if isinstance(entry, tuple):
+                if len(entry) >= 2 and isinstance(entry[1], tuple):
+                    file_obj = entry[1][1]
+                elif len(entry) >= 2:
+                    file_obj = entry[1]
+            seek = getattr(file_obj, "seek", None)
+            if callable(seek):
+                try:
+                    seek(0)
+                except Exception:
+                    pass
+
     async def _request_with_retry(
         self,
         method: str,
@@ -163,6 +188,8 @@ class NextcloudClient:
         **kwargs: Any,
     ) -> httpx.Response:
         for attempt in range(1, retries + 1):
+            if kwargs.get("files"):
+                self._rewind_upload_files(kwargs["files"])
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.request(method, url, headers=headers, **kwargs)
             is_rate_limited = (
@@ -214,8 +241,11 @@ class NextcloudClient:
             headers = self._get_dav_headers(api_key)
         if "headers" in kwargs:
             headers.update(kwargs.pop("headers"))
+        if kwargs.get("files"):
+            headers.pop("Content-Type", None)
 
-        response = await self._request_with_retry(method, url, headers, timeout=60.0, **kwargs)
+        timeout = kwargs.pop("timeout", 60.0)
+        response = await self._request_with_retry(method, url, headers, timeout=timeout, **kwargs)
         response.raise_for_status()
         if response.status_code == 204:
             return {}
@@ -338,6 +368,33 @@ class NextcloudClient:
         response = await self._request_with_retry("GET", url, headers, timeout=60.0)
         response.raise_for_status()
         return response.text
+
+    async def download_dav_file_to_temp(self, path: str, api_key: Optional[str] = None) -> tuple[str, str, str]:
+        headers = self._get_dav_headers(api_key)
+        url = f"{self.base_url}{path}"
+        filename = os.path.basename(path.rstrip("/")) or "attachment"
+        tmp = tempfile.NamedTemporaryFile(prefix="nc-mcp-att-", suffix=f"_{filename}", delete=False)
+        tmp_path = tmp.name
+        try:
+            async with httpx.AsyncClient(timeout=300.0) as client:
+                async with client.stream("GET", url, headers=headers) as response:
+                    response.raise_for_status()
+                    content_type = response.headers.get("content-type", "").split(";")[0].strip()
+                    async for chunk in response.aiter_bytes():
+                        tmp.write(chunk)
+            tmp.close()
+            if not content_type or content_type == "application/octet-stream":
+                guessed, _ = mimetypes.guess_type(filename)
+                if guessed:
+                    content_type = guessed
+            return tmp_path, filename, content_type or "application/octet-stream"
+        except Exception:
+            tmp.close()
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     async def _dav_put(self, path: str, body: str, api_key: Optional[str] = None, content_type: str = "text/calendar; charset=utf-8") -> Any:
         headers = self._get_dav_headers(api_key)
@@ -1794,7 +1851,9 @@ class NextcloudClient:
 
     async def mail_send_message(self, account_id: int, subject: str, body: str,
                                 to: str, cc: str = "", bcc: str = "",
-                                api_key: str = None, include_all_fields: bool = False) -> Any:
+                                api_key: str = None, include_all_fields: bool = False,
+                                attachment_files: Optional[list[tuple[str, str, str]]] = None,
+                                timeout: float = 300.0) -> Any:
         from_email = ""
         try:
             accts = await self.mail_list_accounts(api_key)
@@ -1803,16 +1862,38 @@ class NextcloudClient:
                              accts[0].get("email") or "")
         except Exception:
             pass
-        data = await self.post("/ocs/v2.php/apps/mail/message/send",
-                             api_key,
-                             json={"accountId": account_id,
-                                   "fromEmail": from_email,
-                                   "subject": subject,
-                                   "body": body,
-                                   "isHtml": False,
-                                   "to": [{"email": to, "label": to}],
-                                   "cc": [{"email": cc, "label": cc}] if cc else [],
-                                   "bcc": [{"email": bcc, "label": bcc}] if bcc else []})
+        if attachment_files:
+            form = {"accountId": str(account_id),
+                    "fromEmail": from_email,
+                    "subject": subject,
+                    "body": body,
+                    "isHtml": "false"}
+            for field, value in (("to", to), ("cc", cc), ("bcc", bcc)):
+                if value:
+                    form[f"{field}[0][email]"] = value
+                    form[f"{field}[0][label]"] = value
+            with contextlib.ExitStack() as stack:
+                files = []
+                for temp_path, filename, content_type in attachment_files:
+                    handle = stack.enter_context(open(temp_path, "rb"))
+                    files.append(("attachments[]", (filename, handle, content_type or "application/octet-stream")))
+                data = await self.post("/ocs/v2.php/apps/mail/message/send",
+                                     api_key,
+                                     data=form,
+                                     files=files,
+                                     timeout=timeout)
+        else:
+            data = await self.post("/ocs/v2.php/apps/mail/message/send",
+                                 api_key,
+                                 json={"accountId": account_id,
+                                       "fromEmail": from_email,
+                                       "subject": subject,
+                                       "body": body,
+                                       "isHtml": False,
+                                       "to": [{"email": to, "label": to}],
+                                       "cc": [{"email": cc, "label": cc}] if cc else [],
+                                       "bcc": [{"email": bcc, "label": bcc}] if bcc else []},
+                                 timeout=timeout)
         return self._filter_fields(data, "mail_message", include_all_fields)
 
     async def mail_save_draft(self, account_id: int, subject: str, body: str,

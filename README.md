@@ -216,7 +216,7 @@ The server implements 186 MCP tools organized into the following categories:
 - `list_messages` — List messages in a mailbox
 - `get_message` — Get a message by ID
 - `get_message_body` — Get the body of a message
-- `send_message` — Send a new message
+- `send_message` — Send a new message, optionally attaching files stored in Nextcloud by path
 - `set_message_flags` — Set message flags
 - `move_message` — Move a message to another mailbox
 
