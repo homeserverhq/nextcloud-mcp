@@ -478,7 +478,8 @@ class NextcloudClient:
                           description: str = "", location: str = "",
                           rrule: str = "", timezone: str = "",
                           uid: str = "",
-                          attendees: list[dict] = None) -> str:
+                          attendees: list[dict] = None,
+                          status: str = "CONFIRMED") -> str:
         cal = ICal()
         cal.add("prodid", "-//Nextcloud MCP//nextcloud-mcp//EN")
         cal.add("version", "2.0")
@@ -486,6 +487,8 @@ class NextcloudClient:
         event.add("summary", summary)
         event.add("dtstart", dt.datetime.fromisoformat(dtstart))
         event.add("dtend", dt.datetime.fromisoformat(dtend))
+        if status:
+            event.add("status", status)
         if description:
             event.add("description", description)
         if location:
@@ -1139,6 +1142,7 @@ class NextcloudClient:
         final_dtend = dtend or current.get("dtend", "")
         final_desc = description if description is not None else current.get("description", "")
         final_loc = location if location is not None else current.get("location", "")
+        final_status = current.get("status") or "CONFIRMED"
         if attendees:
             final_attendees = await self._resolve_attendees(attendees, api_key)
         else:
@@ -1146,7 +1150,7 @@ class NextcloudClient:
         new_ics = self._create_ics_event(
             final_summary, final_dtstart, final_dtend,
             final_desc, final_loc, "", "", event_uid,
-            attendees=final_attendees)
+            attendees=final_attendees, status=final_status)
         data = await self._dav_put(path, new_ics, api_key)
         return self._filter_fields(data, "event", include_all_fields)
 
@@ -1245,6 +1249,7 @@ class NextcloudClient:
         event.add("summary", summary)
         event.add("dtstart", dt.datetime.fromisoformat(dtstart))
         event.add("dtend", dt.datetime.fromisoformat(dtend))
+        event.add("status", "CONFIRMED")
         if description:
             event.add("description", description)
         if location:
