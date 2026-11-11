@@ -487,11 +487,28 @@ class NextcloudClient:
     # iCal Helpers
     # =========================================================================
 
+    @staticmethod
+    def _build_organizer_address(organizer: dict) -> vCalAddress:
+        address = vCalAddress(f"mailto:{organizer['email']}")
+        address.params["CN"] = vText(organizer.get("cn") or organizer["email"])
+        return address
+
+    @staticmethod
+    def _build_attendee_address(attendee: dict) -> vCalAddress:
+        address = vCalAddress(f"mailto:{attendee['email']}")
+        address.params["CN"] = vText(attendee.get("cn") or "")
+        address.params["CUTYPE"] = vText(attendee.get("cutype") or "INDIVIDUAL")
+        address.params["PARTSTAT"] = vText(attendee.get("partstat") or "NEEDS-ACTION")
+        address.params["ROLE"] = vText(attendee.get("role") or "REQ-PARTICIPANT")
+        address.params["RSVP"] = vText(attendee.get("rsvp") or "TRUE")
+        return address
+
     def _create_ics_event(self, summary: str, dtstart: str, dtend: str,
                           description: str = "", location: str = "",
                           rrule: str = "", timezone: str = "",
                           uid: str = "",
                           attendees: list[dict] = None,
+                          organizer: dict = None,
                           status: str = "CONFIRMED") -> str:
         cal = ICal()
         cal.add("prodid", "-//Nextcloud MCP//nextcloud-mcp//EN")
@@ -510,15 +527,11 @@ class NextcloudClient:
             event.add("rrule", rrule)
         if uid:
             event.add("uid", uid)
+        if organizer:
+            event.add("organizer", self._build_organizer_address(organizer))
         if attendees:
             for att in attendees:
-                a = vCalAddress(f"mailto:{att['email']}")
-                a.params["CN"] = vText(att.get("cn", ""))
-                a.params["CUTYPE"] = vText("INDIVIDUAL")
-                a.params["PARTSTAT"] = vText("NEEDS-ACTION")
-                a.params["ROLE"] = vText("REQ-PARTICIPANT")
-                a.params["RSVP"] = vText("TRUE")
-                event.add("attendee", a)
+                event.add("attendee", self._build_attendee_address(att))
         cal.add_component(event)
         return cal.to_ical().decode("utf-8")
 
@@ -1123,10 +1136,11 @@ class NextcloudClient:
                            attendees: str = "", include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
         resolved = await self._resolve_attendees(attendees, api_key)
+        organizer = await self._get_organizer(api_key) if resolved else None
         euid = uid or uuid.uuid4().hex
         ics = self._create_ics_event(summary, dtstart, dtend, description,
                                       location, rrule, timezone, euid,
-                                      attendees=resolved)
+                                      attendees=resolved, organizer=organizer)
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
             ics, api_key)
@@ -1148,22 +1162,58 @@ class NextcloudClient:
                 raise
             path = href
             ics = await self._dav_get(path, api_key)
-        existing = self._parse_ics_events(ics)
-        current = existing[0] if existing else {}
-        final_summary = summary or current.get("summary", "")
-        final_dtstart = dtstart or current.get("dtstart", "")
-        final_dtend = dtend or current.get("dtend", "")
-        final_desc = description if description is not None else current.get("description", "")
-        final_loc = location if location is not None else current.get("location", "")
-        final_status = current.get("status") or "CONFIRMED"
+
+        # Patch the existing component in place so properties we don't expose
+        # as update parameters (RRULE, VTIMEZONE/TZID, SEQUENCE, VALARMs, ...)
+        # are preserved instead of being dropped by a full rebuild.
+        cal = ICal.from_ical(ics)
+        component = next((c for c in cal.walk() if c.name == "VEVENT"), None)
+        if component is None:
+            raise ValueError(f"No VEVENT found for event {event_uid}")
+
+        if summary is not None:
+            component["SUMMARY"] = summary
+        if dtstart:
+            component["DTSTART"] = _to_utc_datetime(dtstart)
+        if dtend:
+            component["DTEND"] = _to_utc_datetime(dtend)
+        if description is not None:
+            if description:
+                component["DESCRIPTION"] = description
+            else:
+                component.pop("DESCRIPTION", None)
+        if location is not None:
+            if location:
+                component["LOCATION"] = location
+            else:
+                component.pop("LOCATION", None)
+
         if attendees:
-            final_attendees = await self._resolve_attendees(attendees, api_key)
-        else:
-            final_attendees = self._parse_attendees_from_ics(ics)
-        new_ics = self._create_ics_event(
-            final_summary, final_dtstart, final_dtend,
-            final_desc, final_loc, "", "", event_uid,
-            attendees=final_attendees, status=final_status)
+            resolved = await self._resolve_attendees(attendees, api_key)
+            existing = component.get("ATTENDEE", [])
+            if not isinstance(existing, list):
+                existing = [existing]
+            existing_by_email = {
+                str(att).replace("mailto:", "").strip().lower(): att
+                for att in existing
+            }
+            component.pop("ATTENDEE", None)
+            for att in resolved:
+                email = att["email"].strip().lower()
+                # Reuse the original property so PARTSTAT/ROLE/RSVP/CN survive.
+                prop = existing_by_email.get(email)
+                if prop is not None:
+                    component.add("attendee", prop)
+                else:
+                    component.add("attendee", self._build_attendee_address(att))
+
+        if component.get("ATTENDEE"):
+            organizer = await self._get_organizer(api_key)
+            if organizer:
+                component.pop("ORGANIZER", None)
+                component.add("organizer", self._build_organizer_address(organizer))
+
+        new_ics = cal.to_ical().decode("utf-8")
         data = await self._dav_put(path, new_ics, api_key)
         return self._filter_fields(data, "event", include_all_fields)
 
@@ -1185,6 +1235,26 @@ class NextcloudClient:
                 return await self._dav_delete(f"{base_path}-deleted.ics", api_key)
             except Exception:
                 raise
+
+    async def _get_organizer(self, api_key: str = None) -> Optional[dict]:
+        """Build the ORGANIZER for the authenticated user (the token owner).
+
+        Returns None when the token doesn't identify a user so callers never
+        emit an invalid ``mailto:@localhost`` organizer.
+        """
+        username = self.extract_username(api_key) if api_key else ""
+        if not username:
+            return None
+        common_name = username
+        email = f"{username}@localhost"
+        try:
+            user_info = await self.get_user(username, api_key)
+            if isinstance(user_info, dict):
+                common_name = user_info.get("display-name") or username
+                email = user_info.get("email") or email
+        except Exception:
+            pass
+        return {"cn": common_name, "email": email}
 
     async def _resolve_attendees(self, attendees_str: str,
                                  api_key: str = None) -> list[dict]:
@@ -1267,29 +1337,12 @@ class NextcloudClient:
             event.add("description", description)
         if location:
             event.add("location", location)
-        username = self.extract_username(api_key) if api_key else ""
-        org_cn = username
-        org_email = f"{username}@localhost"
-        if username:
-            try:
-                user_info = await self.get_user(username, api_key)
-                if isinstance(user_info, dict):
-                    org_cn = user_info.get("display-name", username)
-                    org_email = user_info.get("email", f"{username}@localhost")
-            except Exception:
-                pass
-        organizer = vCalAddress(f"mailto:{org_email}")
-        organizer.params["CN"] = vText(org_cn)
-        event["organizer"] = organizer
         resolved = await self._resolve_attendees(attendees, api_key)
+        organizer = await self._get_organizer(api_key) if resolved else None
+        if organizer:
+            event["organizer"] = self._build_organizer_address(organizer)
         for att in resolved:
-            a = vCalAddress(f"mailto:{att['email']}")
-            a.params["CN"] = vText(att.get("cn", ""))
-            a.params["CUTYPE"] = vText("INDIVIDUAL")
-            a.params["PARTSTAT"] = vText("NEEDS-ACTION")
-            a.params["ROLE"] = vText("REQ-PARTICIPANT")
-            a.params["RSVP"] = vText("TRUE")
-            event.add("attendee", a)
+            event.add("attendee", self._build_attendee_address(att))
         euid = uuid.uuid4().hex
         event.add("uid", euid)
         cal.add_component(event)
