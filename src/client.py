@@ -44,6 +44,19 @@ def _to_dav_datetime(value: str) -> str:
         return value.replace("-", "").replace(":", "").replace("+", "")[:15]
 
 
+def _to_utc_datetime(value: str) -> dt.datetime:
+    """Parse an ISO 8601 datetime, normalizing offset-aware values to UTC.
+
+    icalendar otherwise serializes numeric offsets such as -06:00 as
+    TZID="UTC-06:00", which CalDAV clients using node-ical (e.g. Twenty)
+    cannot parse, causing the event to be skipped during sync.
+    """
+    parsed = dt.datetime.fromisoformat(value)
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(dt.timezone.utc)
+    return parsed
+
+
 def _strip_dav_prefix(uri: str, resource: str) -> str:
     """Strip /remote.php/dav/{resource}/ prefix from a URI if it's already present.
     Allows callers to pass either short form (user/cal) or full DAV href
@@ -485,8 +498,8 @@ class NextcloudClient:
         cal.add("version", "2.0")
         event = Event()
         event.add("summary", summary)
-        event.add("dtstart", dt.datetime.fromisoformat(dtstart))
-        event.add("dtend", dt.datetime.fromisoformat(dtend))
+        event.add("dtstart", _to_utc_datetime(dtstart))
+        event.add("dtend", _to_utc_datetime(dtend))
         if status:
             event.add("status", status)
         if description:
@@ -1247,8 +1260,8 @@ class NextcloudClient:
         cal.add("version", "2.0")
         event = Event()
         event.add("summary", summary)
-        event.add("dtstart", dt.datetime.fromisoformat(dtstart))
-        event.add("dtend", dt.datetime.fromisoformat(dtend))
+        event.add("dtstart", _to_utc_datetime(dtstart))
+        event.add("dtend", _to_utc_datetime(dtend))
         event.add("status", "CONFIRMED")
         if description:
             event.add("description", description)
