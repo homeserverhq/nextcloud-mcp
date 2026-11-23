@@ -88,7 +88,8 @@ def _to_epoch(value: str, field: str = "datetime") -> int:
     return int(_to_utc_datetime(value, field).timestamp())
 
 
-ICAL_DATETIME_KEYS = {"DTSTART", "DTEND", "DUE", "DTSTAMP", "CREATED", "LAST-MODIFIED"}
+ICAL_DATETIME_KEYS = {"DTSTART", "DTEND", "DUE", "DTSTAMP", "CREATED",
+                      "LAST-MODIFIED", "RECURRENCE-ID"}
 
 
 def _ical_value_to_iso(value: Any) -> Optional[str]:
@@ -355,19 +356,30 @@ class NextcloudClient:
   </d:prop>
 </d:propfind>"""
 
-    def _calendar_query_xml(self, filters: dict[str, str] = None, comp_filter: str = "VEVENT") -> str:
+    def _calendar_query_xml(self, filters: dict[str, str] = None,
+                            comp_filter: str = "VEVENT",
+                            expand: bool = True) -> str:
         time_range = ""
+        expand_xml = ""
         if filters:
             start = filters.get("start", "")
             end = filters.get("end", "")
             if start and end:
                 time_range = f"""          <c:time-range start="{start}" end="{end}"/>"""
+                # Ask the server to expand recurring events into concrete
+                # occurrences. Without this, a recurring event is returned as
+                # its master with the original (possibly ancient) DTSTART.
+                # SabreDAV's VTODO expansion drops DUE, so only expand VEVENT.
+                if comp_filter == "VEVENT" and expand:
+                    expand_xml = f"""
+      <c:expand start="{start}" end="{end}"/>"""
         return f"""<?xml version="1.0" encoding="utf-8"?>
 <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
   <d:prop>
     <d:getetag/>
     <d:resourcetype/>
-    <c:calendar-data/>
+    <c:calendar-data>{expand_xml}
+    </c:calendar-data>
   </d:prop>
   <c:filter>
     <c:comp-filter name="VCALENDAR">
@@ -597,7 +609,8 @@ class NextcloudClient:
             if component.name == "VEVENT":
                 event = {}
                 for key in ("SUMMARY", "DTSTART", "DTEND", "DESCRIPTION",
-                            "LOCATION", "UID", "RRULE", "STATUS", "DTSTAMP"):
+                            "LOCATION", "UID", "RRULE", "STATUS", "DTSTAMP",
+                            "RECURRENCE-ID"):
                     val = component.get(key)
                     if val:
                         if key in ICAL_DATETIME_KEYS:
@@ -608,6 +621,8 @@ class NextcloudClient:
                             event[key.lower()] = val.to_ical().decode("utf-8")
                         else:
                             event[key.lower()] = str(val)
+                if "recurrence-id" in event:
+                    event["recurrence_id"] = event.pop("recurrence-id")
                 events.append(event)
         return events
 
@@ -639,7 +654,7 @@ class NextcloudClient:
             if component.name == "VTODO":
                 todo = {}
                 for key in ("SUMMARY", "DESCRIPTION", "DUE", "PRIORITY",
-                            "STATUS", "UID", "DTSTAMP"):
+                            "STATUS", "UID", "DTSTAMP", "RECURRENCE-ID"):
                     val = component.get(key)
                     if val:
                         if key in ICAL_DATETIME_KEYS:
@@ -650,6 +665,8 @@ class NextcloudClient:
                             todo[key.lower()] = val.to_ical().decode("utf-8")
                         else:
                             todo[key.lower()] = str(val)
+                if "recurrence-id" in todo:
+                    todo["recurrence_id"] = todo.pop("recurrence-id")
                 todos.append(todo)
         return todos
 
@@ -821,14 +838,203 @@ class NextcloudClient:
     async def clear_ooo(self, user_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
 
-    async def get_upcoming_events(self, api_key: str = None, 
-                                  location: str = "", limit: int = 20,
-                                  include_all_fields: bool = False) -> Any:
-        params = {"limit": limit}
-        if location:
-            params["location"] = location
-        data = await self.get("/ocs/v2.php/apps/dav/api/v1/events/upcoming", api_key, params=params)
-        return self._filter_fields(data, "event", include_all_fields)
+    async def get_upcoming_items(self, api_key: str = None,
+                                 from_date: str = "", to_date: str = "",
+                                 location: str = "", limit: int = 50,
+                                 include_deck: bool = True,
+                                 include_all_fields: bool = False) -> dict[str, Any]:
+        """Aggregate upcoming events, CalDAV tasks, and Deck cards in one pass.
+
+        Calendar events and tasks are read from every real calendar (inbox,
+        outbox, trashbin, and Deck-generated calendars are skipped) with a
+        server-side date range so recurring items are expanded. Deck cards come
+        from the Deck API because due dates are not mirrored to CalDAV.
+        """
+        now = dt.datetime.now(dt.timezone.utc).replace(second=0, microsecond=0)
+        start = _to_utc_datetime(from_date, "from_date") if from_date else now
+        end = (_to_utc_datetime(to_date, "to_date") if to_date
+               else start + dt.timedelta(days=30))
+        if end <= start:
+            raise ValueError("to_date must be later than from_date.")
+        start_iso, end_iso = start.isoformat(), end.isoformat()
+
+        def _as_utc(value: Any, field: str = "datetime") -> str:
+            if not isinstance(value, str) or not value:
+                return ""
+            try:
+                return _to_utc_datetime(value, field).isoformat()
+            except Exception:
+                return ""
+
+        items: list[dict[str, Any]] = []
+        warnings: list[str] = []
+
+        try:
+            calendars = await self.list_calendars(api_key, True)
+        except Exception as exc:
+            warnings.append(f"calendars: {exc}")
+            calendars = []
+        for cal in calendars if isinstance(calendars, list) else []:
+            href = cal.get("href", "") or ""
+            if "/remote.php/dav/calendars/" not in href:
+                continue
+            uri = href.split("/remote.php/dav/calendars/", 1)[1].rstrip("/")
+            parts = uri.split("/")
+            if len(parts) != 2 or not parts[1]:
+                continue
+            leaf = parts[1]
+            if leaf in {"inbox", "outbox", "trashbin"} or leaf.startswith("app-generated--deck--"):
+                continue
+            cal_name = cal.get("displayname") or leaf
+
+            events: Any = []
+            todos: Any = []
+            if location:
+                try:
+                    events = await self.list_events(uri, api_key, start_iso, end_iso, 0, True)
+                except Exception as exc:
+                    warnings.append(f"calendar {cal_name}: {exc}")
+            else:
+                event_result, todo_result = await asyncio.gather(
+                    self.list_events(uri, api_key, start_iso, end_iso, 0, True),
+                    self.list_todos_in_range(uri, start_iso, end_iso, api_key, True),
+                    return_exceptions=True,
+                )
+                if isinstance(event_result, Exception):
+                    warnings.append(f"calendar {cal_name}: {event_result}")
+                else:
+                    events = event_result
+                if isinstance(todo_result, Exception):
+                    # Some servers reject time-range VTODO queries; a plain
+                    # listing plus client-side filtering is equivalent.
+                    try:
+                        todos = await self.list_todos(api_key, uri, True)
+                    except Exception as fallback_exc:
+                        warnings.append(f"tasks {cal_name}: {fallback_exc}")
+                else:
+                    todos = todo_result
+            for ev in events:
+                at = _as_utc(ev.get("dtstart", ""), "dtstart")
+                if not at or not (start_iso <= at <= end_iso):
+                    continue
+                if location and location.lower() not in (ev.get("location") or "").lower():
+                    continue
+                item = {
+                    "type": "calendar_event",
+                    "title": ev.get("summary") or "",
+                    "at": at,
+                    "end": _as_utc(ev.get("dtend", ""), "dtend"),
+                    "source": cal_name,
+                    "location": ev.get("location") or "",
+                    "status": ev.get("status") or "",
+                    "id": ev.get("uid") or "",
+                    "calendar_uri": uri,
+                    "board_id": "",
+                    "stack_id": "",
+                    "card_id": "",
+                }
+                if include_all_fields:
+                    item["description"] = ev.get("description") or ""
+                items.append(item)
+
+            if location:
+                # A location filter is meaningful for events only; tasks and
+                # Deck cards carry no location, so leave them out.
+                continue
+
+            for td in todos:
+                due = _as_utc(td.get("due", ""), "due")
+                if not due or not (start_iso <= due <= end_iso):
+                    continue
+                if (td.get("status") or "").upper() in {"COMPLETED", "CANCELLED"}:
+                    continue
+                item = {
+                    "type": "task",
+                    "title": td.get("summary") or "",
+                    "at": due,
+                    "end": "",
+                    "source": cal_name,
+                    "location": "",
+                    "status": td.get("status") or "",
+                    "id": td.get("uid") or "",
+                    "calendar_uri": uri,
+                    "board_id": "",
+                    "stack_id": "",
+                    "card_id": "",
+                }
+                if include_all_fields:
+                    item["description"] = td.get("description") or ""
+                items.append(item)
+
+        if include_deck and not location:
+            try:
+                boards = await self.deck_list_boards(api_key, True)
+            except Exception as exc:
+                warnings.append(f"deck: {exc}")
+                boards = []
+            for board in boards if isinstance(boards, list) else []:
+                if board.get("archived") or board.get("deletedAt"):
+                    continue
+                board_id = board.get("id")
+                if board_id is None:
+                    continue
+                try:
+                    stacks = await self.get(
+                        f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks",
+                        api_key, is_ocs=False)
+                except Exception as exc:
+                    # Inaccessible/deleted boards are common leftovers and are
+                    # not relevant to the agenda; only surface other failures.
+                    status = getattr(getattr(exc, "response", None), "status_code", None)
+                    if status not in (403, 404):
+                        warnings.append(
+                            f"deck board {board.get('title') or board_id}: {exc}")
+                    continue
+                for stack in stacks if isinstance(stacks, list) else []:
+                    for card in stack.get("cards") or []:
+                        if card.get("archived") or card.get("done"):
+                            continue
+                        due = _as_utc(
+                            card.get("duedate") or card.get("startdate") or "",
+                            "duedate")
+                        if not due or not (start_iso <= due <= end_iso):
+                            continue
+                        item = {
+                            "type": "deck_task",
+                            "title": card.get("title") or "",
+                            "at": due,
+                            "end": "",
+                            "source": " / ".join(
+                                x for x in (board.get("title"), stack.get("title")) if x),
+                            "location": "",
+                            "status": "",
+                            "id": card.get("id", ""),
+                            "calendar_uri": "",
+                            "board_id": board_id,
+                            "stack_id": stack.get("id", ""),
+                            "card_id": card.get("id", ""),
+                        }
+                        if include_all_fields:
+                            item["description"] = card.get("description") or ""
+                        items.append(item)
+
+        items.sort(key=lambda item: (item.get("at") or "", item.get("type") or ""))
+        total = len(items)
+        if limit and limit > 0:
+            items = items[:limit]
+        result: dict[str, Any] = {
+            "from": start_iso,
+            "to": end_iso,
+            "count": len(items),
+            "total": total,
+            "calendar_events": sum(1 for i in items if i["type"] == "calendar_event"),
+            "tasks": sum(1 for i in items if i["type"] == "task"),
+            "deck_tasks": sum(1 for i in items if i["type"] == "deck_task"),
+            "items": items,
+        }
+        if warnings:
+            result["warnings"] = warnings
+        return result
 
     async def get_direct_download_url(self, file_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.post("/ocs/v2.php/apps/dav/api/v1/direct", api_key, json={"fileId": file_id})
@@ -1180,9 +1386,20 @@ class NextcloudClient:
         if to_date:
             filters["end"] = _to_dav_datetime(to_date)
         body = self._calendar_query_xml(filters if filters else None, "VEVENT")
-        results = await self._dav_request("REPORT",
-            f"/remote.php/dav/calendars/{calendar_uri}/", api_key, body=body,
-            extra_headers={"Depth": "1"})
+        path = f"/remote.php/dav/calendars/{calendar_uri}/"
+        try:
+            results = await self._dav_request(
+                "REPORT", path, api_key, body=body,
+                extra_headers={"Depth": "1"})
+        except Exception:
+            if not filters:
+                raise
+            # Very old DAV backends do not implement <c:expand>; retry the
+            # plain query so listings still work (without recurrence expansion).
+            body = self._calendar_query_xml(filters, "VEVENT", expand=False)
+            results = await self._dav_request(
+                "REPORT", path, api_key, body=body,
+                extra_headers={"Depth": "1"})
         parsed = []
         for r in results:
             cal_data = r.get("calendar-data", "")
@@ -1503,6 +1720,26 @@ class NextcloudClient:
             if cal_data:
                 todos = self._parse_ics_todos(cal_data)
                 parsed.extend(todos)
+        return self._filter_fields(parsed, "todo", include_all_fields)
+
+    async def list_todos_in_range(self, calendar_uri: str, from_date: str,
+                                  to_date: str, api_key: str = None,
+                                  include_all_fields: bool = False) -> Any:
+        """List VTODOs whose DTSTART/DUE falls inside a date range."""
+        calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
+        filters = {
+            "start": _to_dav_datetime(from_date, "from_date"),
+            "end": _to_dav_datetime(to_date, "to_date"),
+        }
+        body = self._calendar_query_xml(filters, "VTODO")
+        results = await self._dav_request("REPORT",
+            f"/remote.php/dav/calendars/{calendar_uri}/", api_key, body=body,
+            extra_headers={"Depth": "1"})
+        parsed = []
+        for r in results:
+            cal_data = r.get("calendar-data", "")
+            if cal_data:
+                parsed.extend(self._parse_ics_todos(cal_data))
         return self._filter_fields(parsed, "todo", include_all_fields)
 
     async def get_todo(self, todo_uid: str, calendar_uri: str,

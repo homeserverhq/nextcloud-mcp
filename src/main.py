@@ -765,22 +765,55 @@ async def clear_ooo(
     return {"success": True, "data": data}
 
 
-@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Upcoming Events", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Upcoming Items", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_upcoming_events(
+    from_date: ISODateTime = "",
+    to_date: ISODateTime = "",
     location: str = "",
-    limit: int = 20,
+    limit: int = 50,
+    include_deck: bool = True,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Get upcoming events.
+    """List upcoming items across calendars, tasks, and Deck.
+
+    Returns calendar events, calendar tasks (VTODO), and Deck cards with due
+    dates, merged and sorted by time. Use this before telling a user their
+    schedule is empty.
 
     Args:
-        location: Location to filter events by.
-        limit: Maximum results. Defaults to 20.
-        include_all_fields: Default False (common fields only). Set True for all fields.
+        from_date: ISO 8601 format (2026-06-22T15:00:00-04:00). Defaults to now.
+        to_date: ISO 8601 format (2026-06-22T15:00:00-04:00). Defaults to 30 days after from_date.
+        location: Case-insensitive filter on calendar event location (returns events only).
+        limit: Maximum items returned. Defaults to 50. Use 0 for no limit.
+        include_deck: Include Deck cards with due dates. Defaults to True.
+        include_all_fields: Include item descriptions. Default False.
     """
-    data = await get_client().get_upcoming_events(get_user_token(), location, limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
-    return {"items": json_to_toon(data)}
+    data = await get_client().get_upcoming_items(
+        get_user_token(), from_date, to_date, location, limit,
+        include_deck, include_all_fields,
+    )
+    items = data.get("items", [])
+    result: dict[str, Any] = {
+        "from": data.get("from", ""),
+        "to": data.get("to", ""),
+        "count": data.get("count", len(items)),
+        "calendar_events": data.get("calendar_events", 0),
+        "tasks": data.get("tasks", 0),
+        "deck_tasks": data.get("deck_tasks", 0),
+        "items": json_to_toon(items),
+    }
+    if data.get("total", len(items)) > len(items):
+        result["total"] = data["total"]
+        result["truncated"] = True
+    if data.get("warnings"):
+        result["warnings"] = data["warnings"]
+    if not items:
+        result["message"] = (
+            f"No upcoming calendar events, calendar tasks, or Deck cards found "
+            f"between {result['from']} and {result['to']}."
+        )
+    return result
 
 
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Get Direct Download Url", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))

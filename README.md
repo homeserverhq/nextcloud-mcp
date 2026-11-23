@@ -9,7 +9,7 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 - **📊 Full Nextcloud Coverage** — 187 tools mapped to Nextcloud API endpoints across 21 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
-- **🧪 Comprehensive Testing** — 289 automated tests covering all tool domains, run via the test runner pipeline.
+- **🧪 Comprehensive Testing** — 299 automated tests covering all tool domains, run via the test runner pipeline.
 - **🏷️ Tool Annotations** — All tools expose standard MCP ToolAnnotations hints (readOnlyHint, destructiveHint, idempotentHint, openWorldHint). The tags field carries grouping metadata (basic/primary/advanced + nextcloud).
 
 ## 🔧 Environment Variables
@@ -92,7 +92,7 @@ The server implements 187 MCP tools organized into the following categories:
 - `get_ooo` — Get out-of-office settings for a user
 - `set_ooo` — Set out-of-office settings
 - `clear_ooo` — Clear out-of-office settings
-- `list_upcoming_events` — Get upcoming events from calendars
+- `list_upcoming_events` — Upcoming calendar events, calendar tasks, and Deck cards with due dates
 - `get_direct_download_url` — Get a direct download URL for a file
 
 ### 📁 File/Folder Operations (14 tools)

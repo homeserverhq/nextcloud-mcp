@@ -400,6 +400,10 @@ def main():
         run_test(session, "B list_predefined_statuses", "list_predefined_statuses", {})
         run_test(session, "B list_user_statuses", "list_user_statuses", {"limit": 5})
         run_test(session, "B list_upcoming_events", "list_upcoming_events", {"limit": 5})
+        upcoming_raw = safe_data("items")
+        run_check("B list_upcoming_events returns a parseable item list",
+                  isinstance(upcoming_raw, str) and upcoming_raw.strip().startswith("["),
+                  f"got {upcoming_raw!r}")
         run_test(session, "B list_all_folders", "list_all_folders", {})
         run_test(session, "B list_search_providers", "list_search_providers", {})
         run_test(session, "B get_capabilities", "get_capabilities", {})
@@ -540,6 +544,48 @@ def main():
         run_test(session, "3A verify_contact_in_list", "list_contacts_by_addressbook", {"addressbook_uri": store.get("Addressbook_id", "")})
         run_test(session, "3A verify_page_in_list", "list_collective_pages", {"collective_id": store.get("Collective", {}).get("id", 0)})
         run_test(session, "3A verify_tag_in_list", "list_collective_tags", {"collective_id": store.get("Collective", {}).get("id", 0)})
+
+        # ---- Upcoming agenda regression checks (events + tasks + Deck) ----
+        run_test(session, "3A upcoming includes test Deck card", "list_upcoming_events",
+                 {"from_date": "2026-11-25T00:00:00-06:00",
+                  "to_date": "2026-11-25T23:59:59-06:00"})
+        upcoming_card_items = get_list_items(safe_data())
+        run_check("3A upcoming returns test Deck card",
+                  any(item.get("type") == "deck_task" and item.get("title") == store["Card"].get("title")
+                      for item in upcoming_card_items),
+                  f"got {[item.get('title') for item in upcoming_card_items]}")
+
+        run_test(session, "3A upcoming includes test event and task", "list_upcoming_events",
+                 {"from_date": "2026-12-31T00:00:00-06:00",
+                  "to_date": "2027-01-01T00:00:00-06:00",
+                  "include_deck": False})
+        upcoming_event_items = get_list_items(safe_data())
+        run_check("3A upcoming returns test calendar event",
+                  any(item.get("type") == "calendar_event" and item.get("title") == make_name("Event")
+                      for item in upcoming_event_items),
+                  f"got {[item.get('title') for item in upcoming_event_items]}")
+        run_check("3A upcoming returns test calendar task",
+                  any(item.get("type") == "task" and item.get("title") == make_name("Todo")
+                      for item in upcoming_event_items),
+                  f"got {[item.get('title') for item in upcoming_event_items]}")
+
+        run_test(session, "3A create_recurring_event", "create_event",
+                 {"calendar_uri": store.get("Calendar_id", ""),
+                  "summary": make_name("Recurring"),
+                  "dtstart": "2026-12-31T18:59:00-05:00",
+                  "dtend": "2026-12-31T19:59:00-05:00",
+                  "description": "recurring", "rrule": "FREQ=WEEKLY;COUNT=2"})
+        store["Recurring_event_id"] = safe_data("event_uid")
+        run_test(session, "3A upcoming expands recurring event", "list_upcoming_events",
+                 {"from_date": "2026-12-31T00:00:00-06:00",
+                  "to_date": "2027-01-15T00:00:00-06:00",
+                  "include_deck": False})
+        recurring_items = get_list_items(safe_data())
+        recurring_count = sum(1 for item in recurring_items
+                              if item.get("type") == "calendar_event"
+                              and item.get("title") == make_name("Recurring"))
+        run_check("3A upcoming returns two recurring occurrences", recurring_count == 2,
+                  f"got {recurring_count} of {[item.get('title') for item in recurring_items]}")
 
         log("\n=== Phase 3B: Get & Verify All Resources ===")
         run_test(session, "3B get_note", "get_note", {"id": store["Note_id"]})
@@ -875,6 +921,7 @@ def main():
         run_test(session, "3D delete_contact", "delete_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"]})
         run_test(session, "3D delete_todo", "delete_todo", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
         run_test(session, "3D delete_event", "delete_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"]})
+        run_test(session, "3D delete_recurring_event", "delete_event", {"event_uid": store.get("Recurring_event_id", ""), "calendar_uri": store.get("Calendar_id", "")})
         run_test(session, "3D delete_card", "delete_deck_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]})
         run_test(session, "3D delete_stack", "delete_deck_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]})
         run_test(session, "3D delete_collective", "trash_collective", {"id": store["Collective_id"]})
