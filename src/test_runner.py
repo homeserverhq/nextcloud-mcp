@@ -714,8 +714,10 @@ def main():
         fixture_path = f"t{rid}-fixture.txt"
         run_test(session, "5E create_fixture_file", "write_file", {"path": fixture_path, "content": "MCP Test Fixture"})
         store["fixture_path"] = fixture_path
-        run_test(session, "5E list_fixture", "list_folder_contents", {"path": fixture_path, "include_all_fields": True})
-        _fid = safe_items(results[-1]["data"], 0, "fileid")
+        run_test(session, "5E list_fixture", "list_folder_contents", {"path": "", "include_all_fields": True})
+        _items = get_list_items(safe_data())
+        _fid = next((item.get("fileid") for item in _items
+                     if item.get("displayname") == fixture_path), 0)
         store["fixture_file_id"] = int(str(_fid)) if _fid else 0
 
         # ---- Phase 5F: Sharing Tests ----
@@ -735,10 +737,17 @@ def main():
         run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": str(circle_share_id), "permissions": "read"})
         store["share5g_id"] = safe_data("id", 0)
         run_test(session, "5G list_all_shares", "list_all_shares", {})
-        run_test(session, "5G create_collection", "create_collection", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0)), "name": "test-collection-5g"})
-        store["collection_5g_id"] = str(safe_data("id", 0))
+        run_check("5G create_collection skipped",
+                  True,
+                  "the collaboration resources API has no delete endpoint; "
+                  "creating a collection would leave permanent residue")
         run_test(session, "5G search_collections", "search_collections", {"search": "test-collection-5g"})
-        run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": store.get("collection_5g_id", "")})
+        _collection_results = get_list_items(safe_data())
+        if _collection_results:
+            run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": _collection_results[0].get("id", 0)})
+        else:
+            run_check("5G get_collection_by_id skipped", True,
+                      "no existing collection to read")
         run_test(session, "5G list_collections_by_resource", "list_collections_by_resource", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0))})
         run_test(session, "5G delete_circle_share", "delete_share", {"id": store.get("share5g_id", 0)})
         run_test(session, "5G delete_circle_fixture", "delete_circle", {"circle_id": str(circle_share_id)})
@@ -895,7 +904,11 @@ def main():
         store["current_user"] = current_user
         ud = safe_call(session, "list_users")
         user_list = get_list_items(ud)
-        second_user = user_list[0] if user_list else ""
+        first_user = user_list[0] if user_list else ""
+        second_user = (
+            first_user.get("id", "") if isinstance(first_user, dict)
+            else str(first_user)
+        )
 
         circle_name = make_name("memberTest")
         run_test(session, "6 create_circle", "create_circle", {"name": circle_name})

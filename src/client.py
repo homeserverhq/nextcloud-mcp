@@ -14,6 +14,7 @@ import httpx
 from icalendar import Calendar as ICal, Event, Todo, vCalAddress, vText
 import vobject
 from vobject import vCard as VCard, readOne as vcard_read
+from vobject.vcard import Address as VCardAddress
 
 
 # DAV XML namespaces
@@ -127,16 +128,16 @@ COMMON_FIELDS: dict[str, set[str] | None] = {
     "contact":          {"fn", "email", "telephone", "organization", "contact_uid"},
     "note":             {"id", "title", "category", "favorite", "content"},
     "file":             {"href", "displayname", "getcontenttype", "getcontentlength", "resourcetype", "fileid"},
-    "share":            {"id", "share_type", "path", "uid_owner", "displayname_owner", "share_with", "permissions", "file_source"},
+    "share":            {"id", "share_type", "path", "uid_owner", "displayname_owner", "share_with", "permissions", "file_source", "token", "url"},
     "notification":     {"id", "notification_id", "app", "subject"},
     "activity":         {"activity_id", "type", "user", "subject", "object_type", "datetime"},
     "user":             {"id", "display-name", "email", "groups", "enabled"},
-    "user_status":      {"userId", "status", "icon", "messageId"},
-    "ooo":              {"userId", "firstDay", "lastDay", "status"},
+    "user_status":      {"userId", "status", "icon", "messageId", "message", "clearAt"},
+    "ooo":              {"userId", "firstDay", "lastDay", "status", "message"},
     "capabilities":     {"core", "dav", "files", "files_sharing", "theming", "provisioning_api", "systemtags", "user_status", "weather_status"},
     "board":            {"id", "title", "color", "archived"},
     "stack":            {"id", "title", "order"},
-    "card":             {"id", "title", "duedate", "type", "archived", "labels"},
+    "card":             {"id", "title", "description", "duedate", "startdate", "type", "archived", "done", "labels", "assignedUsers"},
     "label":            {"id", "title", "color"},
     "mail_account":     {"id", "accountId", "name", "emailAddress"},
     "mailbox":          {"databaseId", "id", "name", "unread", "specialUse"},
@@ -144,7 +145,7 @@ COMMON_FIELDS: dict[str, set[str] | None] = {
     "talk_message":     {"id", "actorDisplayName", "timestamp", "message", "messageType"},
     "talk_room":        {"token", "displayName", "type", "participantType", "name"},
     "talk_participant": {"attendeeId", "displayName", "participantType", "actorType", "actorId"},
-    "table":            {"id", "title", "emoji"},
+    "table":            {"id", "title", "emoji", "description"},
     "table_schema":     {"title", "emoji", "columns"},
     "row":              {"id", "tableId", "createdBy", "data"},
     "collective":       {"id", "name", "emoji", "collective"},
@@ -693,10 +694,26 @@ class NextcloudClient:
         if organization:
             card.add("org").value = [organization]
         if adr:
-            card.add("adr").value = adr
+            card.add("adr").value = VCardAddress(street=adr)
         if uid:
             card.add("uid").value = uid
         return card.serialize()
+
+    @staticmethod
+    def _address_text(value: Any) -> str:
+        """Serialize a vobject Address without leaking a Python repr."""
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        parts = [
+            getattr(value, "street", ""),
+            getattr(value, "city", ""),
+            getattr(value, "region", ""),
+            getattr(value, "code", ""),
+            getattr(value, "country", ""),
+        ]
+        return ", ".join(str(part) for part in parts if part)
 
     # =========================================================================
     # Domain: Users / Groups
@@ -708,9 +725,31 @@ class NextcloudClient:
         params = {"limit": limit, "offset": offset}
         if search:
             params["search"] = search
+        try:
+            # The details endpoint returns real user objects. The plain users
+            # endpoint only returns ids, which is useless for list users.
+            data = await self.get("/ocs/v2.php/cloud/users/details", api_key,
+                                  params=params)
+            if isinstance(data, dict) and "users" in data:
+                users = data["users"]
+                if isinstance(users, dict):
+                    users = list(users.values())
+                users = users[:limit] if limit and limit > 0 else users
+                return self._filter_fields(users, "user", include_all_fields)
+        except Exception:
+            pass
         data = await self.get("/ocs/v2.php/cloud/users", api_key, params=params)
         if isinstance(data, dict) and "users" in data:
-            return self._filter_fields(data["users"], "user", include_all_fields)
+            users = data["users"]
+            if isinstance(users, dict):
+                users = list(users.values())
+            if isinstance(users, list):
+                users = [
+                    {"id": item, "display-name": item} if isinstance(item, str) else item
+                    for item in users
+                ]
+            users = users[:limit] if limit and limit > 0 else users
+            return self._filter_fields(users, "user", include_all_fields)
         return self._filter_fields(data, "user", include_all_fields)
 
     async def get_user(self, user_id: str, api_key: str = None, 
@@ -724,18 +763,57 @@ class NextcloudClient:
         params = {"limit": limit, "offset": offset}
         if search:
             params["search"] = search
+        try:
+            # The details endpoint returns id/displayname/usercount objects.
+            data = await self.get("/ocs/v2.php/cloud/groups/details", api_key,
+                                  params=params)
+            if isinstance(data, dict) and "groups" in data:
+                groups = data["groups"]
+                if isinstance(groups, list):
+                    groups = groups[:limit] if limit and limit > 0 else groups
+                    return self._filter_fields(groups, "group", include_all_fields)
+        except Exception:
+            pass
         data = await self.get("/ocs/v2.php/cloud/groups", api_key, params=params)
         if isinstance(data, dict) and "groups" in data:
-            return self._filter_fields(data["groups"], "group", include_all_fields)
+            groups = data["groups"]
+            if isinstance(groups, list):
+                groups = [
+                    {"id": item, "displayname": item} if isinstance(item, str) else item
+                    for item in groups
+                ]
+            groups = groups[:limit] if limit and limit > 0 else groups
+            return self._filter_fields(groups, "group", include_all_fields)
         return self._filter_fields(data, "group", include_all_fields)
 
     async def get_group_members(self, group_id: str, api_key: str = None,
                                 limit: int = 100, offset: int = 0,
                                 include_all_fields: bool = False) -> Any:
         params = {"limit": limit, "offset": offset}
-        data = await self.get(f"/ocs/v2.php/cloud/groups/{quote(group_id, safe='')}/users", api_key, params=params)
+        quoted = quote(group_id, safe='')
+        try:
+            data = await self.get(
+                f"/ocs/v2.php/cloud/groups/{quoted}/users/details",
+                api_key, params=params)
+            if isinstance(data, dict) and "users" in data:
+                members = data["users"]
+                if isinstance(members, dict):
+                    members = list(members.values())
+                members = members[:limit] if limit and limit > 0 else members
+                return self._filter_fields(members, "group_member", include_all_fields)
+        except Exception:
+            pass
+        data = await self.get(f"/ocs/v2.php/cloud/groups/{quoted}/users",
+                              api_key, params=params)
         if isinstance(data, dict) and "users" in data:
-            return self._filter_fields(data["users"], "group_member", include_all_fields)
+            members = data["users"]
+            if isinstance(members, list):
+                members = [
+                    {"id": item, "display-name": item} if isinstance(item, str) else item
+                    for item in members
+                ]
+            members = members[:limit] if limit and limit > 0 else members
+            return self._filter_fields(members, "group_member", include_all_fields)
         return self._filter_fields(data, "group_member", include_all_fields)
 
     # =========================================================================
@@ -827,7 +905,12 @@ class NextcloudClient:
 
     async def get_ooo(self, user_id: str, api_key: str = None,
                       include_all_fields: bool = False) -> Any:
-        data = await self.get(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
+        try:
+            data = await self.get(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return {"userId": user_id, "status": "not_set"}
+            raise
         return self._filter_fields(data, "ooo", include_all_fields)
 
     async def set_ooo(self, user_id: str, payload: dict[str, Any],
@@ -836,7 +919,12 @@ class NextcloudClient:
         return self._filter_fields(data, "ooo", include_all_fields)
 
     async def clear_ooo(self, user_id: str, api_key: str = None, include_all_fields: bool = False) -> Any:
-        return await self.delete(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
+        try:
+            return await self.delete(f"/ocs/v2.php/apps/dav/api/v1/outOfOffice/{quote(user_id, safe='')}", api_key)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return {"userId": user_id, "status": "not_set"}
+            raise
 
     async def get_upcoming_items(self, api_key: str = None,
                                  from_date: str = "", to_date: str = "",
@@ -1072,26 +1160,31 @@ class NextcloudClient:
 
     async def list_collection(self, collection_id: str, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
-        data = await self.get(f"/ocs/v2.php/collaboration/resources/collections/{quote(collection_id, safe='')}", api_key)
+        data = await self.get(f"/ocs/v2.php/collaboration/resources/collections/{quote(str(collection_id), safe='')}", api_key)
         return self._filter_fields(data, "collection", include_all_fields)
 
     async def search_collections(self, search_query: str, api_key: str = None,
                                  limit: int = 50, include_all_fields: bool = False) -> Any:
-        params = {}
-        if search_query:
-            data = await self.get(f"/ocs/v2.php/collaboration/resources/collections/search/{quote(search_query, safe='')}", api_key, params=params or None)
-            return self._filter_fields(data, "collection", include_all_fields)
-        data = await self.get("/ocs/v2.php/collaboration/resources/collections/search/", api_key)
+        if not search_query:
+            # The API requires a non-empty filter; an empty search is a
+            # legitimate "nothing requested" case, not an error.
+            return []
+        data = await self.get(f"/ocs/v2.php/collaboration/resources/collections/search/{quote(search_query, safe='')}", api_key)
         return self._filter_fields(data, "collection", include_all_fields)
 
     async def get_collections_by_resource(self, resource_type: str, resource_id: str,
                                          api_key: str = None, include_all_fields: bool = False) -> Any:
-        data = await self.get(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(resource_id, safe='')}", api_key)
+        try:
+            data = await self.get(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(str(resource_id), safe='')}", api_key)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                return []
+            raise
         return self._filter_fields(data, "collection", include_all_fields)
 
     async def create_collection_on_resource(self, resource_type: str, resource_id: str,
                                             name: str, api_key: str = None, include_all_fields: bool = False) -> Any:
-        data = await self.post(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(resource_id, safe='')}",
+        data = await self.post(f"/ocs/v2.php/collaboration/resources/{quote(resource_type, safe='')}/{quote(str(resource_id), safe='')}",
                               api_key, json={"name": name})
         return self._filter_fields(data, "collection", include_all_fields)
 
@@ -1132,7 +1225,8 @@ class NextcloudClient:
         if cursor:
             params["cursor"] = cursor
         data = await self.get(f"/ocs/v2.php/search/providers/{quote(provider_id, safe='')}/search", api_key, params=params)
-        return self._filter_fields(data, "search_result", include_all_fields)
+        entries = data.get("entries", []) if isinstance(data, dict) else data
+        return self._filter_fields(entries, "search_result", include_all_fields)
 
     # =========================================================================
     # Domain: Capabilities
@@ -1209,12 +1303,33 @@ class NextcloudClient:
 
     async def webdav_list_favorites(self, api_key: str = None, limit: int = 50,
                                     include_all_fields: bool = False) -> Any:
-        params = {"term": "", "limit": limit, "is-favorite": "true"}
-        try:
-            data = await self.get("/ocs/v2.php/search/providers/files/search", api_key, params=params)
-            return self._filter_fields(data, "file", include_all_fields)
-        except Exception:
-            return []
+        username = self.extract_username(api_key or "")
+        if not username:
+            username = await self.webdav_get_user(api_key)
+        props = ["d:displayname", "d:getcontenttype", "d:getcontentlength",
+                 "d:getlastmodified", "d:resourcetype", "oc:fileid"]
+        prop_xml = "\n".join(f"        <{prop}/>" for prop in props)
+        body = f"""<?xml version="1.0" encoding="utf-8"?>
+<oc:filter-files xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+  <d:prop>
+{prop_xml}
+  </d:prop>
+  <oc:filter-rules>
+    <oc:favorite>1</oc:favorite>
+  </oc:filter-rules>
+</oc:filter-files>"""
+        results = await self._dav_request(
+            "REPORT",
+            f"/remote.php/dav/files/{quote(username, safe='')}/",
+            api_key, body=body, extra_headers={"Depth": "1"},
+        )
+        base = f"/remote.php/dav/files/{username}".rstrip("/")
+        results = [
+            item for item in results
+            if (item.get("href", "") or "").rstrip("/") != base
+        ]
+        parsed = self._filter_fields(results, "file", include_all_fields)
+        return parsed[:limit] if limit and limit > 0 else parsed
 
     # =========================================================================
     # Domain: Notifications
@@ -1343,7 +1458,14 @@ class NextcloudClient:
   </d:set>
 </d:propertyupdate>"""
         data = await self._dav_request("PROPPATCH", path, api_key, body=prop_xml)
-        return self._filter_fields(data, "calendar", include_all_fields)
+        updated = await self.get_calendar(calendar_uri, api_key, include_all_fields)
+        if isinstance(updated, dict) and updated:
+            updated["status"] = "updated"
+            return updated
+        result = self._filter_fields(data, "calendar", include_all_fields)
+        if isinstance(result, list):
+            result = {"status": "updated", "result": result}
+        return result
 
     async def delete_calendar(self, calendar_uri: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
@@ -1931,11 +2053,16 @@ class NextcloudClient:
                 org_val = vc.org.value if hasattr(vc, "org") else ""
                 if isinstance(org_val, list):
                     org_val = "; ".join(str(x) for x in org_val)
+                filename = href.rstrip("/").rsplit("/", 1)[-1]
+                if filename.endswith(".vcf"):
+                    filename = filename[:-4]
                 contact = {"fn": vc.fn.value if hasattr(vc, "fn") else "",
                            "email": str(vc.email.value) if hasattr(vc, "email") else "",
                            "telephone": str(vc.tel.value) if hasattr(vc, "tel") else "",
                            "organization": org_val,
-                           "contact_uid": vc.uid.value if hasattr(vc, "uid") else ""}
+                           "contact_uid": filename or (
+                               vc.uid.value if hasattr(vc, "uid") else ""),
+                           "vcard_uid": vc.uid.value if hasattr(vc, "uid") else ""}
                 parsed.append(contact)
             except Exception:
                 parsed.append({"href": href})
@@ -1956,8 +2083,9 @@ class NextcloudClient:
                 "email": str(vc.email.value) if hasattr(vc, "email") else "",
                 "telephone": str(vc.tel.value) if hasattr(vc, "tel") else "",
                 "organization": org_val,
-                "adr": str(vc.adr.value) if hasattr(vc, "adr") else "",
-                "contact_uid": vc.uid.value if hasattr(vc, "uid") else "",
+                "adr": self._address_text(vc.adr.value) if hasattr(vc, "adr") else "",
+                "contact_uid": contact_uid,
+                "vcard_uid": vc.uid.value if hasattr(vc, "uid") else "",
             }, "contact", include_all_fields)
         except Exception as e:
             return {"error": str(e), "raw": vcard_text}
@@ -1966,8 +2094,9 @@ class NextcloudClient:
                              telephone: str = "", organization: str = "",
                              adr: str = "", api_key: str = None, include_all_fields: bool = False) -> Any:
         addressbook_uri = _strip_dav_prefix(addressbook_uri, "addressbooks")
-        vcard_text = self._create_vcard(fn, email, telephone, organization, adr)
         cuid = fn.replace(" ", "_")
+        vcard_text = self._create_vcard(fn, email, telephone, organization, adr,
+                                        uid=cuid)
         result = await self._dav_put(
             f"/remote.php/dav/addressbooks/{addressbook_uri}/{cuid}.vcf",
             vcard_text, api_key, content_type="text/vcard; charset=utf-8")
@@ -1986,8 +2115,10 @@ class NextcloudClient:
             current_fn = vc.fn.value if hasattr(vc, "fn") else ""
             current_email = str(vc.email.value) if hasattr(vc, "email") else ""
             current_tel = str(vc.tel.value) if hasattr(vc, "tel") else ""
-            current_org = str(vc.org.value) if hasattr(vc, "org") else ""
-            current_adr = str(vc.adr.value) if hasattr(vc, "adr") else ""
+            current_org = vc.org.value if hasattr(vc, "org") else ""
+            if isinstance(current_org, list):
+                current_org = "; ".join(str(x) for x in current_org)
+            current_adr = self._address_text(vc.adr.value) if hasattr(vc, "adr") else ""
         except Exception:
             current_fn = current_email = current_tel = current_org = current_adr = ""
         final_fn = fn or current_fn
@@ -2047,11 +2178,22 @@ class NextcloudClient:
 
     async def deck_list_boards(self, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self.get("/index.php/apps/deck/api/v1.0/boards", api_key, is_ocs=False)
+        if isinstance(data, list):
+            # Deck keeps soft-deleted boards in the list with a deletedAt
+            # timestamp; they are inaccessible and should not be offered.
+            data = [board for board in data if not board.get("deletedAt")]
         return self._filter_fields(data, "board", include_all_fields)
+
+    @staticmethod
+    def _reject_deleted(data: Any, kind: str, resource_id: Any) -> Any:
+        if isinstance(data, dict) and data.get("deletedAt"):
+            raise ValueError(f"{kind} {resource_id} not found (deleted)")
+        return data
 
     async def deck_get_board(self, board_id: int, api_key: str = None, 
                              include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}", api_key, is_ocs=False)
+        data = self._reject_deleted(data, "Board", board_id)
         return self._filter_fields(data, "board", include_all_fields)
 
     async def deck_create_board(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
@@ -2084,6 +2226,7 @@ class NextcloudClient:
     async def deck_get_stack(self, board_id: int, stack_id: int, api_key: str = None, 
                              include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}", api_key, is_ocs=False)
+        data = self._reject_deleted(data, "Stack", stack_id)
         return self._filter_fields(data, "stack", include_all_fields)
 
     async def deck_update_stack(self, board_id: int, stack_id: int,
@@ -2112,6 +2255,7 @@ class NextcloudClient:
     async def deck_get_card(self, board_id: int, stack_id: int, card_id: int, api_key: str = None, 
                             include_all_fields: bool = False) -> Any:
         data = await self.get(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}", api_key, is_ocs=False)
+        data = self._reject_deleted(data, "Card", card_id)
         return self._filter_fields(data, "card", include_all_fields)
 
     async def deck_create_card(self, board_id: int, stack_id: int, payload: dict[str, Any],
@@ -2603,7 +2747,13 @@ class NextcloudClient:
                                 include_all_fields: bool = False) -> Any:
         data = await self.get(f"/apps/tables/api/1/tables/{table_id}/rows",
                               api_key, is_ocs=False)
-        return self._filter_fields(data, "row", include_all_fields)
+        rows = self._filter_fields(data, "row", include_all_fields)
+        if isinstance(rows, list):
+            start = max(offset, 0)
+            rows = rows[start:]
+            if limit and limit > 0:
+                rows = rows[:limit]
+        return rows
 
     async def tables_get_row(self, row_id: int, api_key: str = None, 
                               include_all_fields: bool = False) -> Any:
@@ -2822,7 +2972,24 @@ class NextcloudClient:
         data = await self.get(f"/ocs/v2.php/apps/collectives/api/v1.0/collectives/{collective_id}/search",
                              api_key, params=params)
         items = data.get("pages", data) if isinstance(data, dict) else data
-        return self._filter_fields(items, "collective_page", include_all_fields)
+        results = list(items) if isinstance(items, list) else []
+        # The API is a full-text content search; a page whose content is empty
+        # cannot be found by its title. Merge title matches so a normal title
+        # search works as users expect.
+        try:
+            pages = await self.collectives_list_pages(collective_id, api_key, True)
+            wanted = (query or "").casefold()
+            seen = {page.get("id") for page in results if isinstance(page, dict)}
+            for page in pages if isinstance(pages, list) else []:
+                if not isinstance(page, dict) or page.get("id") in seen:
+                    continue
+                if wanted and wanted in str(page.get("title", "")).casefold():
+                    results.append(page)
+        except Exception:
+            pass
+        if limit and limit > 0:
+            results = results[:limit]
+        return self._filter_fields(results, "collective_page", include_all_fields)
 
     async def collectives_list_tags(self, collective_id: int, api_key: str = None, 
                                     include_all_fields: bool = False) -> Any:

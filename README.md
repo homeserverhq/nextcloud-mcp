@@ -10,6 +10,7 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
 - **🧪 Comprehensive Testing** — 299 automated tests covering all tool domains, run via the test runner pipeline.
+- **🔍 Semantic Tool Audit** — A separate contract suite exercises every one of the 187 tools with typical arguments and asserts that responses are logically correct (671+ checks, full tool coverage).
 - **🏷️ Tool Annotations** — All tools expose standard MCP ToolAnnotations hints (readOnlyHint, destructiveHint, idempotentHint, openWorldHint). The tags field carries grouping metadata (basic/primary/advanced + nextcloud).
 
 ## 🔧 Environment Variables
@@ -20,6 +21,23 @@ This repository contains a Model Context Protocol (MCP) server that acts as a se
 | `MCP_SERVER_PORT` | Yes | Port number the MCP server listens on |
 | `ALLOW_ALL_AGGREGATE` | No | When `true`, aggregate listing tools honor the `include_all_fields` parameter. When `false` (default), the parameter is silently forced to `False` for aggregate list operations. |
 | `IS_STATEFUL` | No | When `true`, uses stateful Streamable HTTP with session tracking. When `false` (default), uses stateless mode. |
+
+## 🔍 Semantic Tool Audit
+
+`src/audit/` contains a live semantic audit that is separate from the smoke test runner. It creates namespaced fixtures, calls every tool with typical arguments, and asserts keys, types, counts, date normalization, cross-tool consistency, and cleanup.
+
+```bash
+# API_KEY is base64("user:password"), the same token used by the test runner
+python -m src.audit.runner --list-domains
+python -m src.audit.runner --domain calendar
+python -m src.audit.runner --all
+
+# Optional: second user for sharing / DM tests
+export AUDIT_SECOND_USER=solo
+export AUDIT_SECOND_PASSWORD=...
+```
+
+Reports are written to `/tmp/nextcloud-mcp-audit.md` and `.json` by default; use `--report` / `--json` to change the paths. The `--all` run fails if any live tool lacks a contract, so new tools cannot be added without coverage. The current fixture graph only uses the `MCPAudit-` / `MCP Agenda Probe` namespace and removes it afterwards. Known environment-dependent skips are listed in the report (e.g., an uncached Trash mailbox, deletion of 1:1 Talk rooms, and `create_collection`, which has no delete API). The latest report is checked into `docs/tool-audit.md`.
 
 ## 📦 Installation & Local Development
 

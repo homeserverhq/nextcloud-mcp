@@ -439,11 +439,15 @@ async def list_users(
         try:
             user = await get_client().get_user(search, get_user_token(), include_all_fields if ALLOW_ALL_AGGREGATE else False)
             if isinstance(user, dict) and user.get("id"):
-                data = [user["id"]]
+                data = [user]
         except Exception:
             pass
     if not data:
-        return {"status": "empty", "message": f"No users found matching '{search}'."}
+        return {
+            "items": json_to_toon([]),
+            "status": "empty",
+            "message": f"No users found matching '{search}'.",
+        }
     return {"items": json_to_toon(data)}
 
 
@@ -576,7 +580,15 @@ async def create_share(
     perm_map = {"read": 1, "update": 2, "create": 4, "delete": 8, "share": 16, "all": 31}
     params = CreateShareParam(path=path, shareType=share_type_map[share_type], shareWith=share_with,
                               permissions=perm_map[permissions], password=password, expireDate=expire_date)
-    return await get_client().create_share(params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
+    # Do not use exclude_defaults here: permissions=1 is a meaningful value
+    # (read-only) and dropping it makes Nextcloud apply its own default,
+    # which is 31 (full permissions) for folder shares.
+    payload = {
+        key: value
+        for key, value in params.model_dump().items()
+        if value not in ("", None)
+    }
+    return await get_client().create_share(payload, get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Update Share", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -715,16 +727,18 @@ async def list_user_statuses(
 
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get Ooo", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_ooo(
-    user_id: str,
+    user_id: str = "",
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Get out-of-office settings for a user.
 
     Args:
-        user_id: ID of the user. Get this from list_users().
+        user_id: ID of the user. Defaults to the authenticated user.
         include_all_fields: Default False (common fields only). Set True for all fields.
     """
+    if not user_id:
+        user_id = NextcloudClient.extract_username(get_user_token() or "")
     return await get_client().get_ooo(user_id, get_user_token(), include_all_fields)
 
 
@@ -753,14 +767,16 @@ async def set_ooo(
 
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Clear Ooo", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def clear_ooo(
-    user_id: str,
+    user_id: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
     """Clear out-of-office for a user.
 
     Args:
-        user_id: ID of the user. Get this from list_users().
+        user_id: ID of the user. Defaults to the authenticated user.
     """
+    if not user_id:
+        user_id = NextcloudClient.extract_username(get_user_token() or "")
     data = await get_client().clear_ooo(user_id, get_user_token())
     return {"success": True, "data": data}
 
@@ -845,12 +861,12 @@ async def list_all_folders(
     data = await get_client().get_folder_tree(get_user_token(), depth=10, path="", include_all_fields=False)
     if not data:
         return {"status": "empty", "message": "No folders found."}
-    return {"status": "success", "message": "Complete folder structure loaded — every folder in your account is shown above.", "tree": json_to_toon(data), "next_steps": "Use list_folder_contents(path='FOLDER') to see files inside a folder, or search_files to find files by name."}
+    return {"status": "success", "message": "Complete folder structure loaded.", "tree": json_to_toon(data), "next_steps": "Use list_folder_contents(path='FOLDER') to see files inside a folder, or search_files to find files by name."}
 
 
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Get Collection By Id", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def get_collection_by_id(
-    id: str,
+    id: int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -898,7 +914,7 @@ async def search_collections_raw(
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="List Collections By Resource", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_collections_by_resource(
     resource_type: str,
-    resource_id: str,
+    resource_id: str | int,
     include_all_fields: bool = False,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -916,7 +932,7 @@ async def list_collections_by_resource(
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Create Collection", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_collection(
     resource_type: str = "file",
-    resource_id: str = "",
+    resource_id: str | int = "",
     name: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1207,6 +1223,13 @@ async def list_folder_contents(
     full_path = await _resolve_path(path)
     data = await get_client().webdav_list_directory(full_path, get_user_token(), depth=1, include_all_fields=include_all_fields if ALLOW_ALL_AGGREGATE else False)
     if data:
+        # PROPFIND Depth:1 includes the requested collection itself; callers
+        # asking for folder contents expect only the children.
+        target = full_path.rstrip("/")
+        data = [
+            item for item in data
+            if (item.get("href", "") or "").rstrip("/") != target
+        ]
         for item in data:
             rt = item.get("resourcetype", [])
             if isinstance(rt, list) and "collection" in rt:
@@ -1215,7 +1238,7 @@ async def list_folder_contents(
                 item["type"] = "file"
     count = len(data) if data else 0
     msg = f"Found {count} item{'s' if count != 1 else ''}." if data else "Folder is empty."
-    return {"status": "success" if data else "empty", "message": msg, "items": json_to_toon(data) if data else []}
+    return {"status": "success" if data else "empty", "message": msg, "items": json_to_toon(data or [])}
 
 
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Move Folder", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
@@ -1332,7 +1355,7 @@ async def list_favorites(
     """
     data = await get_client().webdav_list_favorites(get_user_token(), limit, include_all_fields if ALLOW_ALL_AGGREGATE else False)
     count = len(data) if data else 0
-    return {"status": "success" if data else "empty", "message": f"Found {count} favorite(s)." if data else "No favorites.", "items": json_to_toon(data) if data else []}
+    return {"status": "success" if data else "empty", "message": f"Found {count} favorite(s)." if data else "No favorites.", "items": json_to_toon(data or [])}
 
 
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="List Notifications", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -3241,20 +3264,19 @@ async def get_collective(
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Update Collective", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def update_collective(
     id: int,
-    name: Optional[str] = None,
     emoji: Optional[str] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
-    """Update a collective's properties.
+    """Update a collective's emoji.
+
+    The Collectives API does not support renaming a collective, so this tool
+    intentionally only updates the emoji.
 
     Args:
         id: Collective ID. Get this from list_collectives().
-        name: New name.
         emoji: New emoji.
     """
     payload = {}
-    if name is not None:
-        payload["name"] = name
     if emoji is not None:
         payload["emoji"] = emoji
     return await get_client().collectives_update_collective(id, payload, get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -3791,7 +3813,7 @@ async def update_circle_member_level(
         level: Member, Moderator, Admin, or Owner.
     """
     level_map = {"member": 1, "moderator": 4, "admin": 8, "owner": 9}
-    return await get_client().circles_update_member_level(circle_id, member_id, level_map[level],
+    return await get_client().circles_update_member_level(circle_id, member_id, level_map[level.lower()],
                                                            get_user_token(), ALLOW_ALL_AGGREGATE)
 
 
