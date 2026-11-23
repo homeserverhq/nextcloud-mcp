@@ -3,22 +3,41 @@ import json
 import os
 import re
 import sys
-import datetime as dt
 from collections.abc import Callable, Awaitable
 from contextvars import ContextVar
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from fastmcp import FastMCP, Context
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator
 from toon_mcp import json_to_toon
 
-from .client import NextcloudClient
+from .client import ISO_8601_HINT, NextcloudClient, _to_date
 
 _current_user_token: ContextVar[Optional[str]] = ContextVar("current_user_token", default=None)
 
 ALLOW_ALL_AGGREGATE = os.getenv("ALLOW_ALL_AGGREGATE", "false").lower() in ("true", "1", "yes")
 IS_STATEFUL = os.getenv("IS_STATEFUL", "false").lower() in ("true", "1", "yes")
+
+
+def _require_iso_string(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError(
+            f"expected an ISO 8601 string, got {type(value).__name__}. Use {ISO_8601_HINT}."
+        )
+    return value
+
+
+def _optional_iso_string(value: Any) -> Optional[str]:
+    if value is not None and not isinstance(value, str):
+        raise ValueError(
+            f"expected an ISO 8601 string, got {type(value).__name__}. Use {ISO_8601_HINT}."
+        )
+    return value
+
+
+ISODateTime = Annotated[str, BeforeValidator(_require_iso_string)]
+OptionalISODateTime = Annotated[Optional[str], BeforeValidator(_optional_iso_string)]
 
 
 class AuthMiddleware:
@@ -229,7 +248,6 @@ class CreateEventParam(BaseModel):
     description: str
     location: str = ""
     rrule: str = ""
-    timezone: str = ""
 
 
 class UpdateEventParam(BaseModel):
@@ -256,7 +274,6 @@ class FindAvailabilityParam(BaseModel):
     calendar_uris: str
     from_date: str
     to_date: str
-    timezone: str = ""
 
 
 class CreateTodoParam(BaseModel):
@@ -542,7 +559,7 @@ async def create_share(
     share_with: str,
     permissions: str = "read",
     password: str = "",
-    expire_date: str = "",
+    expire_date: ISODateTime = "",
     ctx: Context = None
 ) -> dict[str, Any]:
     """Create a new share.
@@ -567,7 +584,7 @@ async def update_share(
     id: int,
     permissions: Optional[str] = None,
     password: Optional[str] = None,
-    expire_date: Optional[str] = None,
+    expire_date: OptionalISODateTime = None,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Update an existing share.
@@ -630,7 +647,7 @@ async def set_status(
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Set Predefined Message", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_predefined_message(
     message_id: str,
-    clear_at: str = "",
+    clear_at: ISODateTime = "",
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a predefined status message.
@@ -646,7 +663,7 @@ async def set_predefined_message(
 async def set_custom_message(
     message: str,
     status_icon: str,
-    clear_at: str = "",
+    clear_at: ISODateTime = "",
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a custom status message with icon.
@@ -713,8 +730,8 @@ async def get_ooo(
 
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set Ooo", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_ooo(
-    first_day: str,
-    last_day: str,
+    first_day: ISODateTime,
+    last_day: ISODateTime,
     status: str,
     message: str,
     ctx: Context = None
@@ -727,10 +744,8 @@ async def set_ooo(
         status: OOO status message.
         message: Long OOO message.
     """
-    first_day_dt = dt.datetime.fromisoformat(first_day) if 'T' in first_day else first_day
-    last_day_dt = dt.datetime.fromisoformat(last_day) if 'T' in last_day else last_day
-    first_day_str = first_day_dt.strftime('%Y-%m-%d') if isinstance(first_day_dt, dt.datetime) else first_day_dt
-    last_day_str = last_day_dt.strftime('%Y-%m-%d') if isinstance(last_day_dt, dt.datetime) else last_day_dt
+    first_day_str = _to_date(first_day, "first_day")
+    last_day_str = _to_date(last_day, "last_day")
     params = SetOOOParam(firstDay=first_day_str, lastDay=last_day_str, status=status, message=message)
     user_id = NextcloudClient.extract_username(get_user_token() or "")
     return await get_client().set_ooo(user_id, params.model_dump(exclude_defaults=True), get_user_token(), ALLOW_ALL_AGGREGATE)
@@ -900,7 +915,7 @@ async def get_file_reminder(
 @mcp.tool(tags={"advanced", "nextcloud"}, annotations=ToolAnnotations(title="Set File Reminder", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def set_file_reminder(
     file_id: int,
-    due_date: str,
+    due_date: ISODateTime,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Set a reminder on a file.
@@ -1490,8 +1505,8 @@ async def get_calendar(
 
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List All Events", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_all_events(
-    from_date: str = "",
-    to_date: str = "",
+    from_date: ISODateTime = "",
+    to_date: ISODateTime = "",
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1520,8 +1535,8 @@ async def list_all_events(
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Events By Calendar", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_events_by_calendar(
     calendar_uri: str,
-    from_date: str = "",
-    to_date: str = "",
+    from_date: ISODateTime = "",
+    to_date: ISODateTime = "",
     limit: int = 50,
     include_all_fields: bool = False,
     ctx: Context = None
@@ -1560,12 +1575,11 @@ async def get_event(
 async def create_event(
     calendar_uri: str,
     summary: str,
-    dtstart: str,
-    dtend: str,
+    dtstart: ISODateTime,
+    dtend: ISODateTime,
     description: str,
     location: str = "",
     rrule: str = "",
-    timezone: str = "",
     attendees: str = "",
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -1579,11 +1593,10 @@ async def create_event(
         description: Event description.
         location: Event location.
         rrule: Recurrence rule.
-        timezone: Timezone of the event.
         attendees: Comma-separated attendee email addresses to invite (e.g. 'leon@example.com'). Leave empty for no attendees.
     """
     return await get_client().create_event(calendar_uri, summary, dtstart, dtend,
-                                           description, location, rrule, timezone, api_key=get_user_token(), attendees=attendees, include_all_fields=ALLOW_ALL_AGGREGATE)
+                                           description, location, rrule, api_key=get_user_token(), attendees=attendees, include_all_fields=ALLOW_ALL_AGGREGATE)
 
 
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Update Event", readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1591,8 +1604,8 @@ async def update_event(
     calendar_uri: str,
     event_uid: str,
     summary: Optional[str] = None,
-    dtstart: Optional[str] = None,
-    dtend: Optional[str] = None,
+    dtstart: OptionalISODateTime = None,
+    dtend: OptionalISODateTime = None,
     description: Optional[str] = None,
     location: Optional[str] = None,
     attendees: Optional[str] = None,
@@ -1632,8 +1645,8 @@ async def delete_event(
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Meeting", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
 async def create_meeting(
     summary: str,
-    dtstart: str,
-    dtend: str,
+    dtstart: ISODateTime,
+    dtend: ISODateTime,
     attendees: str,
     description: str,
     location: str = "",
@@ -1658,9 +1671,8 @@ async def create_meeting(
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Find Availability", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def find_availability(
     calendar_uris: str,
-    from_date: str,
-    to_date: str,
-    timezone: str = "",
+    from_date: ISODateTime,
+    to_date: ISODateTime,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Find availability across calendars.
@@ -1669,9 +1681,8 @@ async def find_availability(
         calendar_uris: Comma-separated calendar URIs. Get these from list_all_calendars() (field calendar_uri).
         from_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
         to_date: ISO 8601 format (2026-06-22T15:00:00-04:00).
-        timezone: Timezone for availability.
     """
-    return await get_client().find_availability(calendar_uris, from_date, to_date, timezone, get_user_token())
+    return await get_client().find_availability(calendar_uris, from_date, to_date, get_user_token())
 
 
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Todos", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
@@ -1717,7 +1728,7 @@ async def list_todos_by_calendar(
 async def create_todo(
     summary: str,
     description: str,
-    due_date: str,
+    due_date: ISODateTime,
     calendar_uri: str = "",
     priority: int = 0,
     status: str = "NEEDS-ACTION",
@@ -1761,7 +1772,7 @@ async def update_todo(
     summary: Optional[str] = None,
     description: Optional[str] = None,
     priority: Optional[int] = None,
-    due_date: Optional[str] = None,
+    due_date: OptionalISODateTime = None,
     status: Optional[str] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2364,7 +2375,7 @@ async def create_deck_card(
     stack_id: int,
     title: str,
     description: str,
-    duedate: str = "",
+    duedate: ISODateTime = "",
     order: int = 0,
     ctx: Context = None
 ) -> dict[str, Any]:
@@ -2390,7 +2401,7 @@ async def update_deck_card(
     card_id: int,
     title: Optional[str] = None,
     description: Optional[str] = None,
-    duedate: Optional[str] = None,
+    duedate: OptionalISODateTime = None,
     order: Optional[int] = None,
     ctx: Context = None
 ) -> dict[str, Any]:

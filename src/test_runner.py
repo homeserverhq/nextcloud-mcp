@@ -128,6 +128,36 @@ def run_test(session, label, tool, params=None):
     log(f"  {status} {label}")
 
 
+def run_check(label, condition, detail=""):
+    """Record a plain assertion alongside the tool-call results."""
+    status = ("FAILED", "PASSED")[bool(condition)]
+    entry = {"label": label, "tool": "assert", "status": status,
+             "reason": "" if condition else detail, "data": {"detail": detail}}
+    results.append(entry)
+    global passed_count, failed_count
+    passed_count = passed_count + 1
+    failed_count = failed_count + (0, 1)[bool(condition)]
+    log(f"  {status} {label}{'' if condition else ': ' + detail}")
+
+
+def run_reject(session, label, tool, params, expected=("ISO 8601", "utc offset", "valid string")):
+    """Assert a tool rejects a malformed date/time argument."""
+    result = session.call_tool(tool, params)
+    content = result.get("content") or [{"text": ""}]
+    text = content[0].get("text", "") if content else ""
+    lowered = text.lower()
+    ok = bool(is_error(result)) and any(needle.lower() in lowered for needle in expected)
+    detail = f"expected rejection containing {expected}, got {text[:200]!r}"
+    status = ("FAILED", "PASSED")[ok]
+    entry = {"label": label, "tool": tool, "status": status,
+             "reason": "" if ok else detail, "data": {"detail": detail}}
+    results.append(entry)
+    global passed_count, failed_count
+    passed_count = passed_count + 1
+    failed_count = failed_count + (0, 1)[ok]
+    log(f"  {status} {label}{'' if ok else ': ' + detail}")
+
+
 # _check_verify_fields removed — unused after Phase 3 flattening
 
 
@@ -203,7 +233,7 @@ def find_message_by_subject(messages_data, subject):
     return 0
 
 
-DT = "2026-12-31T23:59:00+00:00"
+DT = "2026-12-31T18:59:00-05:00"
 
 
 def _cleanup_test_collectives(session):
@@ -435,9 +465,21 @@ def main():
         store["Stack"] = safe_data()
         store["Stack_id"] = safe_data("id")
 
-        run_test(session, "3A create_card", "create_deck_card", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "title": make_name("Card"), "description": "test"})
+        run_test(session, "3A create_card", "create_deck_card", {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0), "title": make_name("Card"), "description": "test", "duedate": "2026-11-25T14:30:00-06:00"})
         store["Card"] = safe_data()
         store["Card_id"] = safe_data("id")
+        run_check("3A create_card due date normalized to UTC",
+                  (store["Card"].get("duedate") or "").startswith("2026-11-25T20:30:00"),
+                  f"got {store['Card'].get('duedate')!r}")
+        run_reject(session, "3A create_card rejects naive datetime", "create_deck_card",
+                   {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0),
+                    "title": make_name("BadCard"), "description": "bad", "duedate": "2026-11-25T14:30:00"})
+        run_reject(session, "3A create_card rejects date-only", "create_deck_card",
+                   {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0),
+                    "title": make_name("BadCard"), "description": "bad", "duedate": "2026-11-25"})
+        run_reject(session, "3A create_card rejects epoch integer", "create_deck_card",
+                   {"board_id": store.get("Board", {}).get("id", 0), "stack_id": store.get("Stack", {}).get("id", 0),
+                    "title": make_name("BadCard"), "description": "bad", "duedate": 1795638600})
 
         run_test(session, "3A create_event", "create_event", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("Event"), "dtstart": DT, "dtend": DT, "description": "test"})
         store["Event"] = safe_data()
@@ -446,6 +488,19 @@ def main():
         run_test(session, "3A create_todo", "create_todo", {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("Todo"), "description": "test", "due_date": DT})
         store["Todo"] = safe_data()
         store["Todo_id"] = safe_data("todo_uid")
+        run_reject(session, "3A create_todo rejects epoch integer", "create_todo",
+                   {"calendar_uri": store.get("Calendar_id", ""), "summary": make_name("BadTodo"),
+                    "description": "bad", "due_date": 1795638600})
+
+        run_test(session, "3A get_todo_due", "get_todo", {"todo_uid": store.get("Todo_id", ""), "calendar_uri": store.get("Calendar_id", "")})
+        run_check("3A todo due returned as UTC ISO 8601",
+                  (safe_data("due") or "").startswith("2026-12-31T23:59:00"),
+                  f"got {safe_data('due')!r}")
+
+        run_test(session, "3A get_event_dtstart", "get_event", {"event_uid": store.get("Event_id", ""), "calendar_uri": store.get("Calendar_id", "")})
+        run_check("3A event dtstart returned as UTC ISO 8601",
+                  (safe_data("dtstart") or "").startswith("2026-12-31T23:59:00"),
+                  f"got {safe_data('dtstart')!r}")
 
         run_test(session, "3A create_contact", "create_contact", {"addressbook_uri": store.get("Addressbook_id", ""), "fn": make_name("Contact"), "email": "test@example.com", "telephone": "+1234567890", "organization": "TestOrg"})
         store["Contact"] = safe_data()
@@ -502,9 +557,16 @@ def main():
         run_test(session, "3C update_collective", "update_collective", {"id": store["Collective_id"], "emoji": "🌈"})
         run_test(session, "3C update_stack", "update_deck_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"], "title": make_name("Stack-upd")})
         run_test(session, "3C update_card", "update_deck_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"], "title": make_name("Card-upd")})
+        run_test(session, "3C update_card_due_only", "update_deck_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"], "duedate": "2026-11-26T09:15:00-06:00"})
+        run_check("3C update_card due date normalized to UTC",
+                  (safe_data("duedate") or "").startswith("2026-11-26T15:15:00"),
+                  f"got {safe_data('duedate')!r}")
         run_test(session, "3C update_tag", "update_collective_tag", {"tag_id": store["Tag_id"], "collective_id": store["Collective_id"], "name": make_name("Tag-upd"), "color": "00FF00"})
         run_test(session, "3C update_event", "update_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Event-upd")})
         run_test(session, "3C update_todo", "update_todo", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"], "summary": make_name("Todo-upd")})
+        run_test(session, "3C clear_todo_due", "update_todo", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"], "due_date": ""})
+        run_test(session, "3C verify_todo_due_cleared", "get_todo", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
+        run_check("3C todo due date cleared", not (safe_data("due") or ""), f"got {safe_data('due')!r}")
         run_test(session, "3C update_contact", "update_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"], "fn": make_name("Contact-upd")})
         run_test(session, "3C update_row", "update_table_row", {"row_id": store["Row_id"], "data": {"col1": "upd"}})
         run_test(session, "3C update_page", "update_collective_page", {"page_id": store["Page_id"], "collective_id": store["Collective_id"], "title": make_name("Page-upd")})

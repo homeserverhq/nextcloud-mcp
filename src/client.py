@@ -22,39 +22,90 @@ NS_CAL = "urn:ietf:params:xml:ns:caldav"
 NS_CARD = "urn:ietf:params:xml:ns:carddav"
 
 
-def _normalize_datetime(value: str) -> str:
-    if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$', value):
-        parsed = dt.datetime.fromisoformat(value)
-        parsed = parsed.astimezone(dt.timezone.utc)
-        return parsed.strftime('%Y-%m-%d %H:%M:%S')
-    if re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+ISO_8601_HINT = "ISO 8601 (YYYY-MM-DDTHH:MM:SS+HH:MM or ...Z, e.g. 2026-06-22T15:00:00-04:00)"
+
+
+def _parse_iso_datetime(value: str, field: str = "datetime") -> dt.datetime:
+    """Parse the one ISO 8601 format accepted by every tool.
+
+    Tools accept only strings with an explicit UTC offset. Naive datetimes,
+    date-only values, epoch numbers, and other types are rejected so a
+    timestamp is never silently interpreted in the server's local timezone.
+    """
+    if not isinstance(value, str):
         raise ValueError(
-            f"Invalid datetime: {value}. Timezone offset is required. "
-            "Must use format: 2026-06-22T15:00:00-04:00"
+            f"Invalid {field}: expected an ISO 8601 string, got {type(value).__name__}. "
+            f"Use {ISO_8601_HINT}."
         )
-    return value
-
-
-def _to_dav_datetime(value: str) -> str:
-    """Convert an ISO 8601 date-time string to DAV/ICAL format."""
+    text = value.strip()
     try:
-        dt_obj = dt.datetime.fromisoformat(value)
-        return dt_obj.strftime("%Y%m%dT%H%M%S")
-    except Exception:
-        return value.replace("-", "").replace(":", "").replace("+", "")[:15]
+        parsed = dt.datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid {field}: {value!r} is not a valid ISO 8601 datetime. "
+            f"Use {ISO_8601_HINT}."
+        ) from exc
+    if "T" not in text:
+        raise ValueError(
+            f"Invalid {field}: {value!r} must be a full date and time separated by 'T'. "
+            f"Use {ISO_8601_HINT}."
+        )
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(
+            f"Invalid {field}: {value!r} is missing a UTC offset. "
+            f"Use {ISO_8601_HINT}."
+        )
+    return parsed
 
 
-def _to_utc_datetime(value: str) -> dt.datetime:
+def _to_utc_datetime(value: str, field: str = "datetime") -> dt.datetime:
     """Parse an ISO 8601 datetime, normalizing offset-aware values to UTC.
 
     icalendar otherwise serializes numeric offsets such as -06:00 as
     TZID="UTC-06:00", which CalDAV clients using node-ical (e.g. Twenty)
     cannot parse, causing the event to be skipped during sync.
     """
-    parsed = dt.datetime.fromisoformat(value)
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(dt.timezone.utc)
-    return parsed
+    return _parse_iso_datetime(value, field).astimezone(dt.timezone.utc)
+
+
+def _to_utc_iso(value: str, field: str = "datetime") -> str:
+    """Return the UTC ISO 8601 representation used by JSON APIs."""
+    return _to_utc_datetime(value, field).isoformat()
+
+
+def _to_dav_datetime(value: str, field: str = "datetime") -> str:
+    """Convert an ISO 8601 date-time string to DAV/ICAL format."""
+    return _to_utc_datetime(value, field).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _to_date(value: str, field: str = "datetime") -> str:
+    """Return the calendar date as written in the supplied offset."""
+    return _parse_iso_datetime(value, field).strftime("%Y-%m-%d")
+
+
+def _to_epoch(value: str, field: str = "datetime") -> int:
+    """Return the Unix timestamp in seconds for an ISO 8601 datetime."""
+    return int(_to_utc_datetime(value, field).timestamp())
+
+
+ICAL_DATETIME_KEYS = {"DTSTART", "DTEND", "DUE", "DTSTAMP", "CREATED", "LAST-MODIFIED"}
+
+
+def _ical_value_to_iso(value: Any) -> Optional[str]:
+    """Normalize an icalendar date/datetime property to UTC ISO 8601.
+
+    Tools return the same ISO 8601 shape they accept so values can be read
+    back and passed straight into another call without reformatting.
+    """
+    dt_obj = getattr(value, "dt", None)
+    if isinstance(dt_obj, dt.datetime):
+        if dt_obj.tzinfo is None or dt_obj.utcoffset() is None:
+            dt_obj = dt_obj.replace(tzinfo=dt.timezone.utc)
+        return dt_obj.astimezone(dt.timezone.utc).isoformat()
+    if isinstance(dt_obj, dt.date):
+        return dt.datetime(dt_obj.year, dt_obj.month, dt_obj.day,
+                           tzinfo=dt.timezone.utc).isoformat()
+    return None
 
 
 def _strip_dav_prefix(uri: str, resource: str) -> str:
@@ -505,7 +556,7 @@ class NextcloudClient:
 
     def _create_ics_event(self, summary: str, dtstart: str, dtend: str,
                           description: str = "", location: str = "",
-                          rrule: str = "", timezone: str = "",
+                          rrule: str = "",
                           uid: str = "",
                           attendees: list[dict] = None,
                           organizer: dict = None,
@@ -545,7 +596,11 @@ class NextcloudClient:
                             "LOCATION", "UID", "RRULE", "STATUS", "DTSTAMP"):
                     val = component.get(key)
                     if val:
-                        if hasattr(val, "to_ical"):
+                        if key in ICAL_DATETIME_KEYS:
+                            iso = _ical_value_to_iso(val)
+                            if iso:
+                                event[key.lower()] = iso
+                        elif hasattr(val, "to_ical"):
                             event[key.lower()] = val.to_ical().decode("utf-8")
                         else:
                             event[key.lower()] = str(val)
@@ -564,7 +619,7 @@ class NextcloudClient:
         if description:
             todo.add("description", description)
         if due_date:
-            todo.add("due", dt.datetime.fromisoformat(due_date))
+            todo.add("due", _to_utc_datetime(due_date, "due_date"))
         if priority:
             todo.add("priority", priority)
         todo.add("status", status)
@@ -583,7 +638,11 @@ class NextcloudClient:
                             "STATUS", "UID", "DTSTAMP"):
                     val = component.get(key)
                     if val:
-                        if hasattr(val, "to_ical"):
+                        if key in ICAL_DATETIME_KEYS:
+                            iso = _ical_value_to_iso(val)
+                            if iso:
+                                todo[key.lower()] = iso
+                        elif hasattr(val, "to_ical"):
                             todo[key.lower()] = val.to_ical().decode("utf-8")
                         else:
                             todo[key.lower()] = str(val)
@@ -678,12 +737,22 @@ class NextcloudClient:
         return self._filter_fields(data, "share", include_all_fields)
 
     async def create_share(self, payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
+        payload = self._normalize_share_expiry(payload)
         data = await self.post("/ocs/v2.php/apps/files_sharing/api/v1/shares", api_key, json=payload)
         return self._filter_fields(data, "share", include_all_fields)
+
     async def update_share(self, share_id: int, payload: dict[str, Any],
                            api_key: str = None, include_all_fields: bool = False) -> Any:
+        payload = self._normalize_share_expiry(payload)
         data = await self.put(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key, json=payload)
         return self._filter_fields(data, "share", include_all_fields)
+
+    @staticmethod
+    def _normalize_share_expiry(payload: dict[str, Any]) -> dict[str, Any]:
+        payload = dict(payload)
+        if payload.get("expireDate"):
+            payload["expireDate"] = _to_date(payload["expireDate"], "expire_date")
+        return payload
 
     async def delete_share(self, share_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/files_sharing/api/v1/shares/{share_id}", api_key)
@@ -704,7 +773,7 @@ class NextcloudClient:
                                      clear_at: str = "", include_all_fields: bool = False) -> Any:
         body = {"messageId": message_id}
         if clear_at:
-            body["clearAt"] = clear_at
+            body["clearAt"] = _to_epoch(clear_at, "clear_at")
         data = await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/predefined", api_key, json=body)
         return self._filter_fields(data, "user_status", include_all_fields)
 
@@ -713,7 +782,7 @@ class NextcloudClient:
                                  include_all_fields: bool = False) -> Any:
         body = {"message": message, "statusIcon": status_icon}
         if clear_at:
-            body["clearAt"] = clear_at
+            body["clearAt"] = _to_epoch(clear_at, "clear_at")
         data = await self.put("/ocs/v2.php/apps/user_status/api/v1/user_status/message/custom", api_key, json=body)
         return self._filter_fields(data, "user_status", include_all_fields)
 
@@ -826,7 +895,11 @@ class NextcloudClient:
         return self._filter_fields(data, "file_reminder", include_all_fields)
 
     async def set_file_reminder(self, file_id: int, due_date: str, api_key: str = None, include_all_fields: bool = False) -> Any:
-        data = await self.put(f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}", api_key, json={"dueDate": due_date})
+        data = await self.put(
+            f"/ocs/v2.php/apps/files_reminders/api/v1/{file_id}",
+            api_key,
+            json={"dueDate": _to_utc_iso(due_date, "due_date")},
+        )
         return self._filter_fields(data, "file_reminder", include_all_fields)
 
     async def delete_file_reminder(self, file_id: int, api_key: str = None, include_all_fields: bool = False) -> Any:
@@ -1131,7 +1204,7 @@ class NextcloudClient:
 
     async def create_event(self, calendar_uri: str, summary: str,
                            dtstart: str, dtend: str, description: str = "",
-                           location: str = "", rrule: str = "", timezone: str = "",
+                           location: str = "", rrule: str = "",
                            api_key: str = None, uid: str = "",
                            attendees: str = "", include_all_fields: bool = False) -> Any:
         calendar_uri = _strip_dav_prefix(calendar_uri, "calendars")
@@ -1139,7 +1212,7 @@ class NextcloudClient:
         organizer = await self._get_organizer(api_key) if resolved else None
         euid = uid or uuid.uuid4().hex
         ics = self._create_ics_event(summary, dtstart, dtend, description,
-                                      location, rrule, timezone, euid,
+                                      location, rrule, euid,
                                       attendees=resolved, organizer=organizer)
         result = await self._dav_put(
             f"/remote.php/dav/calendars/{calendar_uri}/{euid}.ics",
@@ -1378,7 +1451,7 @@ class NextcloudClient:
         return self._filter_fields(result, "event", include_all_fields)
 
     async def find_availability(self, calendar_uris: str, from_date: str,
-                                to_date: str, timezone: str = "",
+                                to_date: str,
                                 api_key: str = None, include_all_fields: bool = False) -> Any:
         start = _to_dav_datetime(from_date)
         end = _to_dav_datetime(to_date)
@@ -1476,7 +1549,7 @@ class NextcloudClient:
         current = existing[0] if existing else {}
         final_summary = summary or current.get("summary", "")
         final_desc = description if description is not None else current.get("description", "")
-        final_due = due_date or current.get("due", "")
+        final_due = current.get("due", "") if due_date is None else due_date
         final_priority = priority if priority is not None else int(current.get("priority", 0))
         final_status = status or current.get("status", "NEEDS-ACTION")
         new_ics = self._create_ics_todo(final_summary, final_desc, final_due,
@@ -1802,6 +1875,9 @@ class NextcloudClient:
 
     async def deck_create_card(self, board_id: int, stack_id: int, payload: dict[str, Any],
                                 api_key: str = None, include_all_fields: bool = False) -> Any:
+        payload = dict(payload)
+        if payload.get("duedate"):
+            payload["duedate"] = _to_utc_iso(payload["duedate"], "duedate")
         data = await self.post(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards",
                                api_key, json=payload, is_ocs=False)
         return self._filter_fields(data, "card", include_all_fields)
@@ -1810,19 +1886,36 @@ class NextcloudClient:
                                 payload: dict[str, Any], api_key: str = None, include_all_fields: bool = False) -> Any:
         allowed = {"title", "description", "duedate", "order"}
         clean = {k: v for k, v in payload.items() if k in allowed and v is not None}
-        try:
-            card_data = await self.get(
-                f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
-                api_key, is_ocs=False
-            )
-            if isinstance(card_data, dict):
-                clean.setdefault("type", card_data.get("type", "plain"))
-                owner = card_data.get("owner", {})
-                if isinstance(owner, dict):
-                    clean.setdefault("owner", owner.get("uid", ""))
-        except Exception:
-            clean.setdefault("type", "plain")
-            clean.setdefault("owner", "")
+
+        # Deck's update endpoint replaces the card and requires the full
+        # title/type/owner payload, so merge the current card's values in.
+        card_data = await self.get(
+            f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
+            api_key, is_ocs=False
+        )
+        if not isinstance(card_data, dict):
+            raise ValueError(f"Card {card_id} could not be loaded for update")
+        clean.setdefault("title", card_data.get("title") or "")
+        clean.setdefault("description", card_data.get("description") or "")
+        clean.setdefault("type", card_data.get("type") or "plain")
+        clean.setdefault("order", card_data.get("order") or 0)
+        owner = card_data.get("owner")
+        if isinstance(owner, dict):
+            clean["owner"] = owner.get("uid") or owner.get("primaryKey") or ""
+        elif isinstance(owner, str):
+            clean["owner"] = owner
+        else:
+            clean["owner"] = ""
+
+        # Deck's update() nulls out due date, start date, color, and done when
+        # those fields are omitted, so carry the current values through.
+        for field in ("duedate", "startdate", "color", "done"):
+            if field not in clean and card_data.get(field):
+                clean[field] = card_data[field]
+
+        if clean.get("duedate"):
+            clean["duedate"] = _to_utc_iso(clean["duedate"], "duedate")
+
         data = await self.put(f"/index.php/apps/deck/api/v1.0/boards/{board_id}/stacks/{stack_id}/cards/{card_id}",
                               api_key, json=clean, is_ocs=False)
         return self._filter_fields(data, "card", include_all_fields)
