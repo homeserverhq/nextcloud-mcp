@@ -310,6 +310,10 @@ class NextcloudClient:
 
         timeout = kwargs.pop("timeout", 60.0)
         response = await self._request_with_retry(method, url, headers, timeout=timeout, **kwargs)
+        if response.status_code == 304:
+            # Nextcloud returns 304 for empty activity streams (and other
+            # conditional GETs) with no body; treat it as "no data".
+            return [] if is_ocs else {}
         response.raise_for_status()
         if response.status_code == 204:
             return {}
@@ -2203,6 +2207,18 @@ class NextcloudClient:
         norm = self._norm(recipient)
         users = await self.get_users(api_key=api_key, search=recipient, limit=50)
         users = users if isinstance(users, list) else []
+        if not users and recipient:
+            # OCS user search does not cover LDAP-backed users, so list the
+            # user directory and match client-side instead.
+            page_size = 100
+            for offset in range(0, 1000, page_size):
+                page = await self.get_users(api_key=api_key, limit=page_size, offset=offset)
+                page = page if isinstance(page, list) else []
+                if not page:
+                    break
+                users.extend(page)
+                if len(page) < page_size:
+                    break
         candidates: list[dict] = []
         for u in users:
             # get_users may return a list of user-ID strings, or a list of dicts.
@@ -2317,6 +2333,18 @@ class NextcloudClient:
     async def tables_delete_table(self, table_id: int, api_key: str = None) -> Any:
         return await self.delete(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
 
+    async def tables_create_text_column(self, table_id: int, title: str,
+                                        subtype: str = "line",
+                                        api_key: str = None,
+                                        include_all_fields: bool = False) -> Any:
+        data = await self.post(
+            "/ocs/v2.php/apps/tables/api/2/columns/text",
+            api_key,
+            json={"baseNodeId": table_id, "baseNodeType": "table",
+                  "title": title, "subtype": subtype},
+        )
+        return self._filter_fields(data, "column", include_all_fields)
+
     async def tables_get_schema(self, table_id: int, api_key: str = None, 
                                 include_all_fields: bool = False) -> Any:
         table = await self.get(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}", api_key)
@@ -2346,16 +2374,44 @@ class NextcloudClient:
                               api_key, is_ocs=False)
         return self._filter_fields(data, "row", include_all_fields)
 
+    async def _tables_column_id_map(self, table_id: int,
+                                    api_key: str = None) -> dict[str, int]:
+        columns = await self.get(
+            f"/ocs/v2.php/apps/tables/api/2/columns/table/{table_id}", api_key)
+        columns = columns if isinstance(columns, list) else []
+        mapping: dict[str, int] = {}
+        for col in columns:
+            if not isinstance(col, dict) or col.get("id") is None:
+                continue
+            cid = int(col["id"])
+            for key in (col.get("title"), col.get("technicalName"), str(cid)):
+                if key is not None and str(key).strip():
+                    mapping[str(key).strip().lower()] = cid
+        return mapping
+
+    @staticmethod
+    def _resolve_table_row_data(data: Any, column_map: dict[str, int]) -> dict[str, Any]:
+        if not isinstance(data, dict):
+            return {}
+        resolved: dict[str, Any] = {}
+        for key, value in data.items():
+            cid = column_map.get(str(key).strip().lower())
+            if cid is None and str(key).strip().isdigit():
+                cid = int(str(key).strip())
+            if cid is None:
+                raise ValueError(
+                    f"Unknown column {key!r}; use a title or ID from get_table_schema()")
+            resolved[str(cid)] = value
+        return resolved
+
     async def tables_create_row(self, table_id: int, data: str,
                                  api_key: str = None, include_all_fields: bool = False) -> Any:
         import json as _json
         data_obj = _json.loads(data) if isinstance(data, str) else data
-        try:
-            data = await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
-                                  api_key, json={"data": data_obj})
-        except Exception:
-            data = await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
-                                  api_key, json={"data": {}})
+        column_map = await self._tables_column_id_map(table_id, api_key)
+        data_obj = self._resolve_table_row_data(data_obj, column_map)
+        data = await self.post(f"/ocs/v2.php/apps/tables/api/2/tables/{table_id}/rows",
+                              api_key, json={"data": data_obj})
         return self._filter_fields(data, "row", include_all_fields)
 
     async def tables_update_row(self, row_id: int, data: str = None,
@@ -2363,13 +2419,16 @@ class NextcloudClient:
         import json as _json
         payload = {}
         if data is not None:
-            payload["data"] = _json.loads(data) if isinstance(data, str) else data
-        try:
-            data = await self.put(f"/apps/tables/api/1/rows/{row_id}",
-                                  api_key, is_ocs=False, json=payload)
-        except Exception:
-            data = await self.put(f"/apps/tables/api/1/rows/{row_id}",
-                                  api_key, is_ocs=False, json={"data": {}})
+            data_obj = _json.loads(data) if isinstance(data, str) else data
+            row = await self.get(f"/apps/tables/api/1/rows/{row_id}",
+                                 api_key, is_ocs=False)
+            table_id = row.get("tableId") if isinstance(row, dict) else None
+            if table_id is not None:
+                column_map = await self._tables_column_id_map(table_id, api_key)
+                data_obj = self._resolve_table_row_data(data_obj, column_map)
+            payload["data"] = data_obj
+        data = await self.put(f"/apps/tables/api/1/rows/{row_id}",
+                              api_key, is_ocs=False, json=payload)
         return self._filter_fields(data, "row", include_all_fields)
 
     async def tables_delete_row(self, row_id: int, api_key: str = None) -> Any:

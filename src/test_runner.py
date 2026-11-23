@@ -136,7 +136,7 @@ def run_check(label, condition, detail=""):
     results.append(entry)
     global passed_count, failed_count
     passed_count = passed_count + 1
-    failed_count = failed_count + (0, 1)[bool(condition)]
+    failed_count = failed_count + (1, 0)[bool(condition)]
     log(f"  {status} {label}{'' if condition else ': ' + detail}")
 
 
@@ -154,19 +154,27 @@ def run_reject(session, label, tool, params, expected=("ISO 8601", "utc offset",
     results.append(entry)
     global passed_count, failed_count
     passed_count = passed_count + 1
-    failed_count = failed_count + (0, 1)[ok]
+    failed_count = failed_count + (1, 0)[ok]
     log(f"  {status} {label}{'' if ok else ': ' + detail}")
 
 
 # _check_verify_fields removed — unused after Phase 3 flattening
 
 
-def run_verify_delete(session, label, get_tool=None, params=None, list_tool=None, list_params=None, match_field=None, expected_value=None):
+def run_verify_delete(session, label, get_tool=None, params=None, list_tool=None, list_params=None, match_field=None, expected_value=None, allow_forbidden=False):
     result = session.call_tool(get_tool, params)
     err = is_error(result)
     err_l = err.lower()
     content_text = (result.get("content") or [{}])[0].get("text", "").lower()
-    is_deleted = (" not found" in err_l) | err_l.startswith("not found") | ("does not exist" in err_l) | ("404" in err) | ("403" in err) | ("not found" in content_text) | ("has been deleted" in content_text) | ("does not exist" in content_text)
+    is_deleted = any((
+        " not found" in err_l,
+        err_l.startswith("not found"),
+        "does not exist" in err_l,
+        "404" in err,
+        "not found" in content_text,
+        "has been deleted" in content_text,
+        "does not exist" in content_text,
+    )) or (allow_forbidden and "403" in err)
     status = ("FAILED", "PASSED")[is_deleted]
     entry = {"label": label, "tool": get_tool, "status": status, "reason": err, "data": {"verified": "deleted"}}
     results.append(entry)
@@ -436,6 +444,7 @@ def main():
         store["Table"] = safe_data()
         store["Table_id"] = safe_data("id")
         log(f"  => Table ID: {store['Table_id'] or 0}")
+        run_test(session, "3A create_table_column", "create_table_column", {"table_id": store["Table_id"], "title": "col1"})
 
         run_test(session, "3A create_board", "create_deck_board", {"title": make_name("Board"), "color": "FF0000", "archived": False})
         store["Board"] = safe_data()
@@ -675,7 +684,9 @@ def main():
 
         # ---- Phase 5G: Collaboration Tests ----
         log("\n=== Phase 5G: Collaboration Tests ===")
-        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": store.get("circle_id", 0), "permissions": "read"})
+        run_test(session, "5G create_circle_fixture", "create_circle", {"name": make_name("circle-share")})
+        circle_share_id = safe_data("id", 0)
+        run_test(session, "5G create_circle_share", "create_share", {"path": rel_path, "share_type": "circle", "share_with": str(circle_share_id), "permissions": "read"})
         store["share5g_id"] = safe_data("id", 0)
         run_test(session, "5G list_all_shares", "list_all_shares", {})
         run_test(session, "5G create_collection", "create_collection", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0)), "name": "test-collection-5g"})
@@ -684,6 +695,7 @@ def main():
         run_test(session, "5G get_collection_by_id", "get_collection_by_id", {"id": store.get("collection_5g_id", "")})
         run_test(session, "5G list_collections_by_resource", "list_collections_by_resource", {"resource_type": "file", "resource_id": str(store.get("fixture_file_id", 0))})
         run_test(session, "5G delete_circle_share", "delete_share", {"id": store.get("share5g_id", 0)})
+        run_test(session, "5G delete_circle_fixture", "delete_circle", {"circle_id": str(circle_share_id)})
 
         # ---- Phase 5H: Reminder Tests ----
         log("\n=== Phase 5H: Reminder Tests ===")
@@ -883,12 +895,12 @@ def main():
         run_verify_delete(session, "3E verify_delete_contact", "get_contact", {"contact_uid": store["Contact_id"], "addressbook_uri": store["Addressbook_id"]})
         run_verify_delete(session, "3E verify_delete_todo", "get_todo", {"todo_uid": store["Todo_id"], "calendar_uri": store["Calendar_id"]})
         run_verify_delete(session, "3E verify_delete_event", "get_event", {"event_uid": store["Event_id"], "calendar_uri": store["Calendar_id"]})
-        run_verify_delete(session, "3E verify_delete_card", "get_deck_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]})
-        run_verify_delete(session, "3E verify_delete_stack", "get_deck_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]})
+        run_verify_delete(session, "3E verify_delete_card", "get_deck_card", {"card_id": store["Card_id"], "board_id": store["Board_id"], "stack_id": store["Stack_id"]}, allow_forbidden=True)
+        run_verify_delete(session, "3E verify_delete_stack", "get_deck_stack", {"stack_id": store["Stack_id"], "board_id": store["Board_id"]}, allow_forbidden=True)
         run_verify_delete(session, "3E verify_delete_collective", "get_collective", {"id": store["Collective_id"]})
         run_verify_delete(session, "3E verify_delete_addressbook", "get_addressbook", {"addressbook_uri": store["Addressbook_id"]})
         run_verify_delete(session, "3E verify_delete_calendar", "get_calendar", {"calendar_uri": store["Calendar_id"]})
-        run_verify_delete(session, "3E verify_delete_board", "get_deck_board", {"board_id": store["Board_id"]})
+        run_verify_delete(session, "3E verify_delete_board", "get_deck_board", {"board_id": store["Board_id"]}, allow_forbidden=True)
         run_verify_delete(session, "3E verify_delete_table", "get_table", {"table_id": store["Table_id"]})
         run_verify_delete(session, "3E verify_delete_note", "get_note", {"id": store["Note_id"]})
 
@@ -917,7 +929,14 @@ def main():
         print(f"| PASSED | {actual_passed} |")
         print(f"| FAILED | {failed_count} |")
         print(f"\n## PASSED ({actual_passed})\n")
+        for r in results:
+            if r.get("status") == "PASSED":
+                print(f"- {r.get('label', '')}")
         print(f"\n## FAILED ({failed_count})\n")
+        for r in results:
+            if r.get("status") == "FAILED":
+                reason = " ".join((r.get("reason") or "").split())
+                print(f"- {r.get('label', '')}" + (f" — {reason}" if reason else ""))
         print(f"\n## Iteration History\n")
         print(f"| Iteration | Passed | Failed | Fixes Applied |")
         print(f"|-----------|--------|--------|---------------|")
@@ -926,6 +945,8 @@ def main():
         print(f"**Total tests:** {len(results)} | **PASSED:** {actual_passed} | FAILED: {failed_count}")
         conclusion = ("**TESTS FAILING** — see above for details", "**ALL TESTS PASS**")[failed_count == 0]
         print(f"\n{conclusion}")
+        if failed_count:
+            sys.exit(1)
 
 
 main()

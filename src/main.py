@@ -3065,6 +3065,23 @@ async def get_table_schema(
     return await get_client().tables_get_schema(table_id, get_user_token(), include_all_fields)
 
 
+@mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="Create Table Column", readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+async def create_table_column(
+    table_id: int,
+    title: str,
+    subtype: str = "line",
+    ctx: Context = None
+) -> dict[str, Any]:
+    """Create a text column in a table.
+
+    Args:
+        table_id: Table ID. Get this from list_tables().
+        title: Column title.
+        subtype: Text subtype (line or rich). Defaults to line.
+    """
+    return await get_client().tables_create_text_column(table_id, title, subtype, get_user_token(), ALLOW_ALL_AGGREGATE)
+
+
 @mcp.tool(tags={"primary", "nextcloud"}, annotations=ToolAnnotations(title="List Table Rows", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def list_table_rows(
     table_id: int,
