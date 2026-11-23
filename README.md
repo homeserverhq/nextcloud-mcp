@@ -1,15 +1,15 @@
 # Nextcloud MCP Multi-Tenant Proxy Server
 
-This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **186 MCP tools** covering 22 resource domains with full CRUD, collaboration, and data management capabilities.
+This repository contains a Model Context Protocol (MCP) server that acts as a secure, multi-tenant proxy between an AI Assistant and the Nextcloud backend API. It exposes **187 MCP tools** covering 21 resource domains with full CRUD, collaboration, and data management capabilities.
 
 ## ✨ Features
 
 - **🔑 Identity Passthrough** — Extracts the `Authorization: Bearer <token>` header from incoming HTTP requests and forwards it to the Nextcloud API without server-side authentication.
 - **👥 Multi-Tenancy** — Uses Python `contextvars` to maintain thread-safe user identity isolation, ensuring all AI-driven actions are scoped to the authenticated user's permissions.
-- **📊 Full Nextcloud Coverage** — 186 tools mapped to Nextcloud API endpoints across 22 resource domains.
+- **📊 Full Nextcloud Coverage** — 187 tools mapped to Nextcloud API endpoints across 21 resource domains.
 - **⚡ TOON Optimization** — Bulk list responses are automatically compressed using TOON (Token-Optimized Object Notation) to reduce token consumption and maximize context window efficiency.
 - **🚀 Efficient Gets** — GET responses return only commonly used fields by default. Full objects are available via an `include_all_fields` flag.
-- **🧪 Comprehensive Testing** — 272 automated tests covering all tool domains, run via the test runner pipeline.
+- **🧪 Comprehensive Testing** — 289 automated tests covering all tool domains, run via the test runner pipeline.
 - **🏷️ Tool Annotations** — All tools expose standard MCP ToolAnnotations hints (readOnlyHint, destructiveHint, idempotentHint, openWorldHint). The tags field carries grouping metadata (basic/primary/advanced + nextcloud).
 
 ## 🔧 Environment Variables
@@ -59,7 +59,7 @@ The MCP server serves at `http://nextcloud-mcp:80/mcp` (Streamable HTTP).
 
 ## 🛠️ API Tool Mapping
 
-The server implements 186 MCP tools organized into the following categories:
+The server implements 187 MCP tools organized into the following categories:
 
 ### ✅ Status & Capabilities (2 tools)
 - `check_server_status` — Health check endpoint for backend connectivity
@@ -96,7 +96,7 @@ The server implements 186 MCP tools organized into the following categories:
 - `get_direct_download_url` — Get a direct download URL for a file
 
 ### 📁 File/Folder Operations (14 tools)
-- `list_full_files_folders` — Complete overview of every file and folder in Nextcloud
+- `list_all_folders` — Complete folder hierarchy (folders only), for navigation
 - `write_file` — Create or overwrite a file
 - `read_file` — Read file content
 - `search_files` — Search files by name
@@ -104,7 +104,7 @@ The server implements 186 MCP tools organized into the following categories:
 - `copy_file` — Copy a file
 - `delete_file` — Delete a file (errors if it's a folder)
 - `create_folder` — Create a directory
-- `show_folder` — Show contents of a folder
+- `list_folder_contents` — List files and folders inside a specific folder
 - `move_folder` — Move or rename a folder
 - `copy_folder` — Copy a folder
 - `delete_folder` — Delete a folder (errors if it's a file)
@@ -127,7 +127,8 @@ The server implements 186 MCP tools organized into the following categories:
 - `list_search_providers` — List search providers
 - `search` — Search across providers
 
-### 🔔 Notifications (4 tools)
+### 🔔 Notifications (5 tools)
+- `create_notification` — Create a notification for a user (admin only)
 - `list_notifications` — List all notifications
 - `get_notification` — Get a notification by ID
 - `delete_notification` — Delete a notification by ID
@@ -210,13 +211,14 @@ The server implements 186 MCP tools organized into the following categories:
 - `assign_deck_user` — Assign a user to a card
 - `remove_deck_user` — Remove a user from a card
 
-### 📧 Mail (8 tools)
+### 📧 Mail (9 tools)
 - `list_all_accounts` — List all mail accounts
 - `list_mailboxes` — List mailboxes in an account
 - `list_messages` — List messages in a mailbox
 - `get_message` — Get a message by ID
 - `get_message_body` — Get the body of a message
 - `send_message` — Send a new message, optionally attaching files stored in Nextcloud by path
+- `create_email_draft` — Create a draft email saved to the IMAP Drafts folder
 - `set_message_flags` — Set message flags
 - `move_message` — Move a message to another mailbox
 
@@ -234,13 +236,14 @@ The server implements 186 MCP tools organized into the following categories:
 - `list_chat_messages` — Get chat messages from a room
 - `delete_chat_message` — Delete a chat message
 
-### 📊 Tables (11 tools)
+### 📊 Tables (12 tools)
 - `list_tables` — List all tables
 - `get_table` — Get a table by ID
 - `create_table` — Create a new table
 - `update_table` — Update an existing table
 - `delete_table` — Delete a table by ID
 - `get_table_schema` — Get the schema of a table
+- `create_table_column` — Create a text column in a table
 - `list_table_rows` — List rows in a table
 - `get_table_row` — Get a row by ID
 - `create_table_row` — Create a new row
