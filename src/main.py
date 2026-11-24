@@ -1069,17 +1069,41 @@ async def write_file(
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Read File", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))
 async def read_file(
     path: str,
+    max_chars: int = 50_000,
+    start_page: Optional[int] = None,
+    end_page: Optional[int] = None,
     ctx: Context = None
 ) -> dict[str, Any]:
     """Read a file's contents by its path. Use after search_files or
     list_folder_contents to view the file you found.
 
+    Text files return their text, PDFs and Office documents return extracted
+    text, and other binary files return metadata only (no raw bytes).
+
     Args:
         path: Full path to the file (e.g. 'Documents/report.pdf').
+        max_chars: Maximum characters to return. Defaults to 50000.
+            Use 0 for no limit.
+        start_page: First PDF page to extract (1-based). Defaults to the first page.
+        end_page: Last PDF page to extract (inclusive). Defaults to the last page.
     """
     full_path = await _resolve_path(path)
-    content = await get_client().webdav_read_file(full_path, get_user_token())
-    return {"status": "success", "message": f"Read file '{path}'.", "content": content}
+    payload = await get_client().webdav_read_file(
+        full_path,
+        get_user_token(),
+        max_chars=max_chars,
+        start_page=start_page,
+        end_page=end_page,
+    )
+    status = payload.pop("status", "success")
+    detail = payload.pop("message", "")
+    if status == "success":
+        message = f"Read file '{path}'."
+        if detail:
+            message += " " + detail
+    else:
+        message = detail or f"Could not read '{path}'."
+    return {"status": status, "message": message, **payload}
 
 
 @mcp.tool(tags={"basic", "nextcloud"}, annotations=ToolAnnotations(title="Search Files", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False))

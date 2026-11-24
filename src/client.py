@@ -16,6 +16,8 @@ import vobject
 from vobject import vCard as VCard, readOne as vcard_read
 from vobject.vcard import Address as VCardAddress
 
+from .extract import extract_content
+
 
 # DAV XML namespaces
 NS_DAV = "DAV:"
@@ -443,12 +445,13 @@ class NextcloudClient:
             return self._parse_dav_multistatus(response.text)
         return response.text
 
-    async def _dav_get(self, path: str, api_key: Optional[str] = None) -> str:
+    async def _dav_get_bytes(self, path: str, api_key: Optional[str] = None) -> tuple[bytes, str]:
         headers = self._get_dav_headers(api_key)
         url = f"{self.base_url}{path}"
-        response = await self._request_with_retry("GET", url, headers, timeout=60.0)
+        response = await self._request_with_retry("GET", url, headers, timeout=120.0)
         response.raise_for_status()
-        return response.text
+        content_type = response.headers.get("content-type", "").split(";")[0].strip()
+        return response.content, content_type
 
     async def download_dav_file_to_temp(self, path: str, api_key: Optional[str] = None) -> tuple[str, str, str]:
         headers = self._get_dav_headers(api_key)
@@ -477,7 +480,12 @@ class NextcloudClient:
                 pass
             raise
 
-    async def _dav_put(self, path: str, body: str, api_key: Optional[str] = None, content_type: str = "text/calendar; charset=utf-8") -> Any:
+    async def _dav_get(self, path: str, api_key: Optional[str] = None) -> str:
+        """Fetch a DAV resource that is known to be text (iCalendar/vCard)."""
+        data, _ = await self._dav_get_bytes(path, api_key)
+        return data.decode("utf-8", errors="replace")
+
+    async def _dav_put(self, path: str, body: str | bytes, api_key: Optional[str] = None, content_type: str = "text/calendar; charset=utf-8") -> Any:
         headers = self._get_dav_headers(api_key)
         headers["Content-Type"] = content_type
         url = f"{self.base_url}{path}"
@@ -496,14 +504,6 @@ class NextcloudClient:
         response.raise_for_status()
         return {"status": response.status_code}
 
-    async def _get_dav_content_type(self, path: str, api_key: str = None) -> str:
-        props = self._propfind_xml(["d:getcontenttype"])
-        meta = await self._dav_request("PROPFIND", path, api_key, body=props, extra_headers={"Depth": "0"})
-        ct = "application/octet-stream"
-        if isinstance(meta, list) and meta and isinstance(meta[0], dict):
-            ct = meta[0].get("getcontenttype", ct) or ct
-        return ct
-
     def _full_dav_url(self, path: str) -> str:
         base = self.base_url.rstrip("/")
         return f"{base}{path}"
@@ -516,9 +516,8 @@ class NextcloudClient:
         if response.status_code in (200, 201, 204):
             return {"status": response.status_code}
         if response.status_code == 403:
-            content = await self._dav_get(source, api_key)
-            ct = await self._get_dav_content_type(source, api_key)
-            await self._dav_put(destination, content, api_key, content_type=ct)
+            content, content_type = await self._dav_get_bytes(source, api_key)
+            await self._dav_put(destination, content, api_key, content_type=content_type)
             await self._dav_delete(source, api_key)
             return {"status": 201}
         response.raise_for_status()
@@ -532,9 +531,8 @@ class NextcloudClient:
         if response.status_code in (200, 201, 204):
             return {"status": response.status_code}
         if response.status_code == 403:
-            content = await self._dav_get(source, api_key)
-            ct = await self._get_dav_content_type(source, api_key)
-            await self._dav_put(destination, content, api_key, content_type=ct)
+            content, content_type = await self._dav_get_bytes(source, api_key)
+            await self._dav_put(destination, content, api_key, content_type=content_type)
             return {"status": 201}
         response.raise_for_status()
         return {"status": response.status_code}
@@ -1260,9 +1258,15 @@ class NextcloudClient:
                                           extra_headers={"Depth": str(depth)})
         return self._filter_fields(results, "file", include_all_fields)
 
-    async def webdav_read_file(self, path: str, api_key: str = None, include_all_fields: bool = False) -> Any:
-        data = await self._dav_get(path, api_key)
-        return self._filter_fields(data, "file", include_all_fields)
+    async def webdav_read_file(self, path: str, api_key: str = None,
+                               max_chars: int = 50_000,
+                               start_page: int | None = None,
+                               end_page: int | None = None) -> Any:
+        data, content_type = await self._dav_get_bytes(path, api_key)
+        return extract_content(
+            data, content_type, path,
+            max_chars=max_chars, start_page=start_page, end_page=end_page,
+        )
 
     async def webdav_write_file(self, path: str, content: str, api_key: str = None, include_all_fields: bool = False) -> Any:
         data = await self._dav_put(path, content, api_key, content_type="application/octet-stream")
@@ -1285,9 +1289,11 @@ class NextcloudClient:
 
     async def webdav_touch_file(self, path: str, api_key: str = None) -> None:
         try:
-            content = await self._dav_get(path, api_key)
-            ct = await self._get_dav_content_type(path, api_key)
-            await self._dav_put(path, content, api_key, content_type=ct)
+            content, content_type = await self._dav_get_bytes(path, api_key)
+            await self._dav_put(
+                path, content, api_key,
+                content_type=content_type or "application/octet-stream",
+            )
         except Exception:
             pass
 

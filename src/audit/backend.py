@@ -68,6 +68,19 @@ class Backend:
         )
         response.raise_for_status()
 
+    def put_bytes(self, path: str, data: bytes,
+                  content_type: str = "application/octet-stream") -> None:
+        """Upload a binary fixture that cannot be written as a string."""
+        response = httpx.request(
+            "PUT",
+            f"{self.base_url}{self.dav_path(path)}",
+            auth=self.auth,
+            headers={"Content-Type": content_type},
+            content=data,
+            timeout=60.0,
+        )
+        response.raise_for_status()
+
     def fetch(self, url: str) -> httpx.Response:
         if url.startswith("/"):
             url = f"{self.base_url}{url}"
